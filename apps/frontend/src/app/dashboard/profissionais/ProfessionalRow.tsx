@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import Link from "next/link";
 import clsx from "clsx";
 import { toggleProfessionalActiveAction } from "./actions";
 
@@ -22,7 +23,12 @@ export function ProfessionalRow({
   return (
     <li className="flex items-center justify-between gap-4 py-4">
       <div>
-        <p className="font-medium text-zinc-900 dark:text-white">{name}</p>
+        <Link
+          href={`/dashboard/profissionais/${id}`}
+          className="font-medium text-zinc-900 hover:text-accent-600 dark:text-white dark:hover:text-accent-300"
+        >
+          {name}
+        </Link>
         <p className="text-sm text-zinc-500 dark:text-stone-400">{email}</p>
       </div>
 
@@ -37,6 +43,13 @@ export function ProfessionalRow({
         >
           {isActive ? "Ativo" : "Inativo"}
         </span>
+
+        <Link
+          href={`/dashboard/profissionais/${id}`}
+          className="text-sm font-medium text-zinc-500 hover:text-zinc-800 dark:text-stone-400 dark:hover:text-stone-200"
+        >
+          Gerenciar
+        </Link>
 
         {canManage ? (
           <button

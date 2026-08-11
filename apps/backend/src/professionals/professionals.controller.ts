@@ -34,6 +34,14 @@ export class ProfessionalsController {
     return this.professionalsService.findAllByTenant(user.tenantId);
   }
 
+  @Get(":id")
+  findOne(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+    if (user.role === Role.PROFESSIONAL && user.professionalId !== id) {
+      throw new ForbiddenException("Você só pode ver os próprios dados.");
+    }
+    return this.professionalsService.findOneOrThrow(user.tenantId, id);
+  }
+
   @Roles(Role.OWNER)
   @Patch(":id")
   update(
