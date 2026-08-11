@@ -45,6 +45,7 @@ export interface PublicBooking {
   rescheduledCount: number;
   service?: { name: string };
   professional?: { id: string; user: { name: string } };
+  tenant?: { slug: string };
 }
 
 export interface CreateWaitlistInput {

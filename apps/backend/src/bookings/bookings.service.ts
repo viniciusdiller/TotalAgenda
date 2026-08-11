@@ -72,6 +72,10 @@ export class BookingsService {
           priceCentsSnapshot,
           manageToken: nanoid(MANAGE_TOKEN_LENGTH),
         },
+        include: {
+          service: { select: { name: true } },
+          professional: { include: { user: { select: { name: true } } } },
+        },
       });
     });
   }
@@ -82,6 +86,7 @@ export class BookingsService {
       include: {
         service: { select: { name: true } },
         professional: { include: { user: { select: { name: true } } } },
+        tenant: { select: { slug: true } },
       },
     });
     if (!booking) {
@@ -99,6 +104,11 @@ export class BookingsService {
     return this.prisma.booking.update({
       where: { id: booking.id },
       data: { status: BookingStatus.CANCELED, canceledAt: new Date() },
+      include: {
+        service: { select: { name: true } },
+        professional: { include: { user: { select: { name: true } } } },
+        tenant: { select: { slug: true } },
+      },
     });
   }
 
@@ -150,6 +160,11 @@ export class BookingsService {
           startAt: startAt.toJSDate(),
           endAt: endAt.toJSDate(),
           rescheduledCount: { increment: 1 },
+        },
+        include: {
+          service: { select: { name: true } },
+          professional: { include: { user: { select: { name: true } } } },
+          tenant: { select: { slug: true } },
         },
       });
     });
