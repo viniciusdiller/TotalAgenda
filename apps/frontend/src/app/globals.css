@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+
+  /* Accent: raspberry, deliberately not purple/blue-SaaS/brass-craft. Locked across the whole page. */
+  --color-accent-50: #fdf2f6;
+  --color-accent-100: #fce7ef;
+  --color-accent-300: #f4a0c0;
+  --color-accent-500: #c2255c;
+  --color-accent-600: #a91d4e;
+  --color-accent-700: #8a1740;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+::selection {
+  background-color: var(--color-accent-500);
+  color: white;
+}
