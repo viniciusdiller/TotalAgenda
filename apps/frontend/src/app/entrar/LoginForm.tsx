@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { loginAction, type LoginState } from "./actions";
 
+const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL ?? "https://totalsoftware.com.br";
 const initialState: LoginState = {};
 
 export function LoginForm() {
@@ -32,7 +33,7 @@ export function LoginForm() {
 
       <p className="text-center text-sm text-zinc-500 dark:text-stone-400">
         Ainda não tem conta?{" "}
-        <Link href="/cadastro" className="font-semibold text-accent-600 dark:text-accent-300">
+        <Link href={LANDING_URL} className="font-semibold text-accent-600 dark:text-accent-300">
           Criar conta grátis
         </Link>
       </p>

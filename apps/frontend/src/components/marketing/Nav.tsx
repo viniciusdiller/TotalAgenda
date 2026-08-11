@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { motion, useMotionValueEvent, useScroll } from "motion/react";
 import { List, X } from "@phosphor-icons/react/dist/ssr";
 import { Container } from "../ui/Container";
 import { Button } from "../ui/Button";
 
+const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL ?? "https://totalsoftware.com.br";
+
 const links = [
   { href: "#como-funciona", label: "Como funciona" },
   { href: "#recursos", label: "Recursos" },
-  { href: "#planos", label: "Planos" },
   { href: "#faq", label: "Perguntas" },
 ];
 
@@ -53,13 +53,10 @@ export function Nav() {
             </ul>
 
             <div className="hidden items-center gap-3 lg:flex">
-              <Link
-                href="/entrar"
-                className="text-sm font-semibold text-zinc-700 hover:text-zinc-900 dark:text-stone-200 dark:hover:text-white"
-              >
+              <Button href="/entrar" variant="ghost" className="px-5 py-2.5 text-sm">
                 Entrar
-              </Link>
-              <Button href="/cadastro" className="px-5 py-2.5 text-sm">
+              </Button>
+              <Button href={LANDING_URL} className="px-5 py-2.5 text-sm">
                 Começar grátis
               </Button>
             </div>
@@ -90,10 +87,10 @@ export function Nav() {
               </a>
             ))}
             <div className="mt-2 flex flex-col gap-2 px-3">
-              <Link href="/entrar" className="text-sm font-semibold text-zinc-700 dark:text-stone-200">
+              <Button href="/entrar" variant="ghost" className="w-full">
                 Entrar
-              </Link>
-              <Button href="/cadastro" className="w-full">
+              </Button>
+              <Button href={LANDING_URL} className="w-full">
                 Começar grátis
               </Button>
             </div>

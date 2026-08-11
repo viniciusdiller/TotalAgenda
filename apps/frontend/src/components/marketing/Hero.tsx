@@ -6,6 +6,8 @@ import { CalendarCheck, LinkSimple } from "@phosphor-icons/react/dist/ssr";
 import { Container } from "../ui/Container";
 import { Button } from "../ui/Button";
 
+const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL ?? "https://totalsoftware.com.br";
+
 export function Hero() {
   const reduce = useReducedMotion();
 
@@ -41,7 +43,7 @@ export function Hero() {
               transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
               className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center"
             >
-              <Button href="/cadastro">Começar grátis</Button>
+              <Button href={LANDING_URL}>Começar grátis</Button>
               <Button href="#como-funciona" variant="ghost">
                 Ver como funciona
               </Button>

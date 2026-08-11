@@ -1,19 +1,20 @@
 import { Container } from "../ui/Container";
 
+const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL ?? "https://totalsoftware.com.br";
+
 const columns = [
   {
     title: "Produto",
     links: [
       { href: "#como-funciona", label: "Como funciona" },
       { href: "#recursos", label: "Recursos" },
-      { href: "#planos", label: "Planos" },
     ],
   },
   {
     title: "Conta",
     links: [
       { href: "/entrar", label: "Entrar" },
-      { href: "/cadastro", label: "Criar conta" },
+      { href: LANDING_URL, label: "Começar grátis" },
       { href: "#faq", label: "Perguntas frequentes" },
     ],
   },

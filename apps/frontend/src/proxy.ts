@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
-const AUTH_PAGES = ["/entrar", "/cadastro"];
+const AUTH_PAGES = ["/entrar"];
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
@@ -22,5 +22,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/entrar", "/cadastro"],
+  matcher: ["/dashboard/:path*", "/entrar"],
 };
