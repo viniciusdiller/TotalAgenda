@@ -21,15 +21,21 @@ class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
-  STRIPE_SECRET_KEY?: string;
-
-  @IsOptional()
-  @IsString()
-  STRIPE_WEBHOOK_SECRET?: string;
-
-  @IsOptional()
-  @IsString()
   FRONTEND_URL?: string;
+
+  // Segredo compartilhado com o Admin-TotalSoftware para autenticar os webhooks de
+  // provisionamento/sincronização de assinatura (ver src/webhooks). Obrigatório: sem ele
+  // o WebhookSecretGuard rejeita todas as chamadas (fail closed).
+  @IsString()
+  @IsNotEmpty()
+  TOTALAGENDA_WEBHOOK_SECRET!: string;
+
+  // Documental: URL pública deste backend que o Admin-TotalSoftware chama para os
+  // webhooks de provisionamento/sincronização. Não é lida pelo código, só existe para
+  // manter o contrato de nomes entre os dois repositórios.
+  @IsOptional()
+  @IsString()
+  TOTALAGENDA_PROVISION_WEBHOOK_URL?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

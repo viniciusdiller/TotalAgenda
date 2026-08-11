@@ -18,6 +18,11 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
+  // Cadastro trial-apenas: nunca cria uma Subscription (o tenant fica sem assinatura até
+  // pagar). Isso é intencional agora que o checkout real vive só no Admin-TotalSoftware —
+  // manter esse método criando só o trial evita um registro de Subscription "fantasma"
+  // aqui desalinhado com o Stripe real de lá. Quando o trial expira sem conversão externa
+  // (ver src/webhooks), o TenantBillingGuard já bloqueia o acesso via computeBillingStatus.
   async registerOwner(dto: RegisterOwnerDto) {
     const existingUser = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (existingUser) {

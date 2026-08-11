@@ -16,6 +16,7 @@ import { TimeBlocksModule } from "./time-blocks/time-blocks.module";
 import { BookingsModule } from "./bookings/bookings.module";
 import { WaitlistModule } from "./waitlist/waitlist.module";
 import { BillingModule } from "./billing/billing.module";
+import { WebhooksModule } from "./webhooks/webhooks.module";
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { BillingModule } from "./billing/billing.module";
     BookingsModule,
     WaitlistModule,
     BillingModule,
+    WebhooksModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

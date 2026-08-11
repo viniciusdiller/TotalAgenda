@@ -65,6 +65,10 @@ model Tenant {
   createdAt   DateTime @default(now()) @db.Timestamptz(6)
   updatedAt   DateTime @updatedAt @db.Timestamptz(6)
 
+  // Id do cliente no sistema externo (Admin-TotalSoftware) que originou este tenant via
+  // webhook de provisionamento. Nulo para tenants criados via cadastro trial local.
+  externalCustomerId Int? @unique
+
   users         User[]
   professionals Professional[]
   services      Service[]
@@ -240,8 +244,12 @@ model WaitlistEntry {
 }
 
 // ─────────────────────────────────────────────
-// Billing (Stripe)
+// Billing
 // ─────────────────────────────────────────────
+// A cobrança real (checkout, portal, ciclo do Stripe) vive no Admin-TotalSoftware.
+// Este backend só mantém o "espelho" necessário para aplicar limites por plano
+// (PlanLimitService) e liberar/bloquear acesso (TenantBillingGuard), atualizado pelos
+// webhooks de provisionamento/sincronização em src/webhooks.
 
 model Plan {
   id               String   @id @default(uuid())
@@ -263,7 +271,9 @@ model Subscription {
   stripeCustomerId     String
   stripeSubscriptionId String             @unique
   status               SubscriptionStatus
-  currentPeriodEnd     DateTime           @db.Timestamptz(6)
+  // Nula quando a origem (provisionamento) não informa a próxima cobrança; preenchida a
+  // partir de "proximaCobranca" pelo webhook de sincronização de status.
+  currentPeriodEnd     DateTime?          @db.Timestamptz(6)
   cancelAtPeriodEnd    Boolean            @default(false)
   createdAt            DateTime           @default(now()) @db.Timestamptz(6)
   updatedAt            DateTime           @updatedAt @db.Timestamptz(6)

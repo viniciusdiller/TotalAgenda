@@ -33,6 +33,8 @@ const plans = [
   },
 ];
 
+const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL ?? "https://totalsoftware.com.br";
+
 export function Pricing() {
   return (
     <section id="planos" className="bg-white py-20 lg:py-28 dark:bg-zinc-900/40">
@@ -104,7 +106,7 @@ export function Pricing() {
                 </ul>
 
                 <Button
-                  href="/cadastro"
+                  href={LANDING_URL}
                   variant={plan.highlighted ? "primary" : "ghost"}
                   className={clsx("mt-8 w-full", !plan.highlighted && "dark:ring-white/20")}
                 >
