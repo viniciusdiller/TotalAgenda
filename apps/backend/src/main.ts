@@ -1,11 +1,17 @@
 import "reflect-metadata";
+import { mkdirSync } from "fs";
 import { NestFactory } from "@nestjs/core";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { ValidationPipe } from "@nestjs/common";
 import { AppModule } from "./app.module";
 import { PrismaExceptionFilter } from "./common/filters/prisma-exception.filter";
+import { UPLOADS_DIR } from "./common/constants/uploads";
 
 async function bootstrap() {
+  // uploads/ fica no .gitignore (arquivos enviados pelos donos, não versionados), então não
+  // existe em um clone novo — o ServeStaticModule (app.module.ts) precisa que exista.
+  mkdirSync(UPLOADS_DIR, { recursive: true });
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // O wizard público de agendamento (apps/frontend) chama os endpoints /public/* direto do

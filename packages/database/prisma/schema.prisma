@@ -69,6 +69,13 @@ model Tenant {
   // webhook de provisionamento. Nulo para tenants criados via cadastro trial local.
   externalCustomerId Int? @unique
 
+  // Perfil público exibido em /[slug] — todos opcionais, editados pelo dono no dashboard.
+  description   String?
+  address       String?
+  businessHours String? // texto livre (ex: "Seg-Sex 9h-19h"), não agregado automaticamente
+  logoUrl       String? // caminho servido pelo backend, ex: /uploads/tenants/<id>/logo.webp
+  accentColor   String? // hex "#RRGGBB"; nulo usa o rosa padrão do TotalAgenda
+
   users         User[]
   professionals Professional[]
   services      Service[]
@@ -76,6 +83,7 @@ model Tenant {
   timeBlocks    TimeBlock[]
   waitlist      WaitlistEntry[]
   subscription  Subscription?
+  clients       Client[]
 
   @@index([slug])
 }
@@ -202,8 +210,11 @@ model Booking {
   tenantId           String
   professionalId     String
   serviceId          String
+  // Snapshot do momento do agendamento (auditoria, mesmo padrão de priceCentsSnapshot) —
+  // não editado depois. A identidade "viva" do cliente é a relação clientId abaixo.
   clientName         String
   clientPhone        String
+  clientId           String?
   startAt            DateTime      @db.Timestamptz(6)
   endAt              DateTime      @db.Timestamptz(6)
   priceCentsSnapshot Int
@@ -217,9 +228,11 @@ model Booking {
   tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   professional Professional @relation(fields: [professionalId], references: [id], onDelete: Restrict)
   service      Service      @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  client       Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, startAt])
   @@index([professionalId, startAt])
+  @@index([clientId])
   // Constraint EXCLUDE anti-overlap é adicionada manualmente na migration SQL (ver migration.sql)
 }
 
@@ -230,6 +243,7 @@ model WaitlistEntry {
   professionalId String?
   clientName     String
   clientPhone    String
+  clientId       String?
   preferredDate  DateTime?      @db.Date
   notes          String?
   status         WaitlistStatus @default(PENDING)
@@ -239,8 +253,32 @@ model WaitlistEntry {
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   service      Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   professional Professional? @relation(fields: [professionalId], references: [id], onDelete: SetNull)
+  client       Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, status])
+}
+
+// ─────────────────────────────────────────────
+// Clientes finais (quem agenda) — identidade por telefone, escopada por tenant
+// ─────────────────────────────────────────────
+// Criado/atualizado automaticamente a cada agendamento público (upsert por
+// [tenantId, phone] normalizado), o que permite login "só por telefone" sem cadastro
+// prévio: o primeiro agendamento já cria a conta. v1 não tem verificação (OTP) — ver
+// ClientAuthService no backend para o racional e o ponto de extensão futuro.
+model Client {
+  id        String   @id @default(uuid())
+  tenantId  String
+  phone     String // normalizado: só dígitos, sem DDI 55
+  name      String
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bookings        Booking[]
+  waitlistEntries WaitlistEntry[]
+
+  @@unique([tenantId, phone])
+  @@index([tenantId])
 }
 
 // ─────────────────────────────────────────────

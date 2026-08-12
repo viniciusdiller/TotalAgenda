@@ -5,10 +5,14 @@ interface InputProps extends ComponentPropsWithoutRef<"input"> {
   label: string;
   error?: string;
   hint?: string;
+  // true dentro da página pública do tenant/wizard/conta do cliente, onde o foco deve usar
+  // a cor de destaque escopada ao tenant (--tenant-accent) em vez da marca fixa do
+  // TotalAgenda. Padrão false — não afeta staff login nem formulários do dashboard.
+  accentScoped?: boolean;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { label, error, hint, id, className, ...props },
+  { label, error, hint, id, className, accentScoped, ...props },
   ref,
 ) {
   const inputId = id ?? props.name;
@@ -22,7 +26,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         ref={ref}
         id={inputId}
         className={clsx(
-          "rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20 focus:outline-none dark:border-white/15 dark:bg-zinc-900 dark:text-white dark:placeholder:text-stone-500",
+          "rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:outline-none dark:border-white/15 dark:bg-zinc-900 dark:text-white dark:placeholder:text-stone-500",
+          accentScoped
+            ? "focus:border-(--tenant-accent) focus:ring-2 focus:ring-(--tenant-accent)/20"
+            : "focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20",
           error && "border-red-400 focus:border-red-500 focus:ring-red-500/20",
           className,
         )}

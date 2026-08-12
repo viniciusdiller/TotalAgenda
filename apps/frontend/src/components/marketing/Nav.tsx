@@ -6,7 +6,9 @@ import { List, X } from "@phosphor-icons/react/dist/ssr";
 import { Container } from "../ui/Container";
 import { Button } from "../ui/Button";
 
-const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL ?? "https://totalsoftware.com.br";
+const LANDING_URL =
+  process.env.NEXT_PUBLIC_LANDING_URL ??
+  "https://totalsoftware.com.br/produtos";
 
 const links = [
   { href: "#como-funciona", label: "Como funciona" },
@@ -35,7 +37,10 @@ export function Nav() {
         />
         <Container className="relative">
           <nav className="flex h-16 items-center justify-between">
-            <a href="#top" className="font-display text-lg font-bold tracking-tight text-zinc-900 dark:text-white">
+            <a
+              href="#top"
+              className="font-display text-lg font-bold tracking-tight text-zinc-900 dark:text-white"
+            >
               TotalAgenda
             </a>
 
@@ -53,7 +58,11 @@ export function Nav() {
             </ul>
 
             <div className="hidden items-center gap-3 lg:flex">
-              <Button href="/entrar" variant="ghost" className="px-5 py-2.5 text-sm">
+              <Button
+                href="/entrar"
+                variant="ghost"
+                className="px-5 py-2.5 text-sm"
+              >
                 Entrar
               </Button>
               <Button href={LANDING_URL} className="px-5 py-2.5 text-sm">

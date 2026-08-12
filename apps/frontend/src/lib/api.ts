@@ -1,6 +1,7 @@
 import type {
   ApiErrorBody,
   AvailableSlot,
+  ClientLoginResponse,
   CreateBookingInput,
   CreateWaitlistInput,
   PublicBooking,
@@ -77,5 +78,11 @@ export const publicApi = {
     request<unknown>(`/public/tenants/${slug}/waitlist`, {
       method: "POST",
       body: JSON.stringify(input),
+    }),
+
+  clientLogin: (slug: string, phone: string) =>
+    request<ClientLoginResponse>(`/public/tenants/${slug}/client-auth/login`, {
+      method: "POST",
+      body: JSON.stringify({ phone }),
     }),
 };

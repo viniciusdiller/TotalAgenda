@@ -6,6 +6,7 @@ import clsx from "clsx";
 import {
   CalendarBlank,
   ClockCounterClockwise,
+  Gear,
   Scissors,
   Users,
 } from "@phosphor-icons/react/dist/ssr";
@@ -15,6 +16,7 @@ const links = [
   { href: "/dashboard/profissionais", label: "Profissionais", icon: Users },
   { href: "/dashboard/servicos", label: "Serviços", icon: Scissors },
   { href: "/dashboard/lista-espera", label: "Lista de espera", icon: ClockCounterClockwise },
+  { href: "/dashboard/configuracoes", label: "Configurações", icon: Gear },
 ];
 
 export function SidebarNav() {

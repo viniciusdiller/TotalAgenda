@@ -4,10 +4,19 @@ import {
   BookingsController,
   PublicBookingsController,
   PublicBookingManageController,
+  ClientBookingsController,
 } from "./bookings.controller";
+import { ClientsModule } from "../clients/clients.module";
+import { ClientAuthModule } from "../client-auth/client-auth.module";
 
 @Module({
-  controllers: [BookingsController, PublicBookingsController, PublicBookingManageController],
+  imports: [ClientsModule, ClientAuthModule],
+  controllers: [
+    BookingsController,
+    PublicBookingsController,
+    PublicBookingManageController,
+    ClientBookingsController,
+  ],
   providers: [BookingsService],
   exports: [BookingsService],
 })

@@ -47,7 +47,7 @@ export function DateTimeStep({
                 className={clsx(
                   "flex w-16 shrink-0 flex-col items-center gap-0.5 rounded-2xl border py-3 transition-colors",
                   isSelected
-                    ? "border-accent-500 bg-accent-50 text-accent-700 dark:border-accent-400 dark:bg-accent-500/10 dark:text-accent-300"
+                    ? "border-(--tenant-accent) bg-(--tenant-accent)/10 text-(--tenant-accent)"
                     : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 dark:border-white/10 dark:bg-zinc-900 dark:text-stone-300",
                 )}
               >
@@ -83,7 +83,7 @@ export function DateTimeStep({
             <button
               type="button"
               onClick={onJoinWaitlist}
-              className="mt-3 text-sm font-semibold text-accent-600 hover:text-accent-700 dark:text-accent-300"
+              className="mt-3 text-sm font-semibold text-(--tenant-accent) hover:opacity-80"
             >
               Entrar na lista de espera
             </button>
@@ -100,7 +100,7 @@ export function DateTimeStep({
                   className={clsx(
                     "rounded-xl border py-2.5 text-sm font-semibold transition-colors",
                     isSelected
-                      ? "border-accent-500 bg-accent-500 text-white"
+                      ? "border-(--tenant-accent) bg-(--tenant-accent) text-white"
                       : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 dark:border-white/10 dark:bg-zinc-900 dark:text-stone-200",
                   )}
                 >

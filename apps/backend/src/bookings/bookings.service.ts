@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { nanoid } from "nanoid";
 import { DateTime } from "luxon";
 import { BookingStatus, Prisma } from "@totalagenda/database";
@@ -7,12 +13,25 @@ import { CreateBookingDto } from "./dto/create-booking.dto";
 import { RescheduleBookingDto } from "./dto/reschedule-booking.dto";
 import { AuthenticatedUser } from "../auth/types/auth-user";
 import { Role } from "@totalagenda/database";
+import { ClientsService } from "../clients/clients.service";
+import { AuthenticatedClient } from "../client-auth/types/client-auth-user";
 
 const MANAGE_TOKEN_LENGTH = 24;
 
+const BOOKING_INCLUDE = {
+  service: { select: { name: true } },
+  professional: { include: { user: { select: { name: true } } } },
+  tenant: { select: { slug: true } },
+} satisfies Prisma.BookingInclude;
+
+type BookingWithRelations = Prisma.BookingGetPayload<{ include: typeof BOOKING_INCLUDE }>;
+
 @Injectable()
 export class BookingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly clientsService: ClientsService,
+  ) {}
 
   async createFromPublicLink(tenantSlug: string, dto: CreateBookingDto) {
     const tenant = await this.prisma.tenant.findUnique({
@@ -60,6 +79,13 @@ export class BookingsService {
 
       await this.assertNoConflict(tx, dto.professionalId, startAt.toJSDate(), endAt.toJSDate());
 
+      const client = await this.clientsService.upsertForBooking(
+        tx,
+        tenant.id,
+        dto.clientName,
+        dto.clientPhone,
+      );
+
       return tx.booking.create({
         data: {
           tenantId: tenant.id,
@@ -67,6 +93,7 @@ export class BookingsService {
           serviceId: dto.serviceId,
           clientName: dto.clientName,
           clientPhone: dto.clientPhone,
+          clientId: client.id,
           startAt: startAt.toJSDate(),
           endAt: endAt.toJSDate(),
           priceCentsSnapshot,
@@ -83,11 +110,7 @@ export class BookingsService {
   async findByToken(token: string) {
     const booking = await this.prisma.booking.findUnique({
       where: { manageToken: token },
-      include: {
-        service: { select: { name: true } },
-        professional: { include: { user: { select: { name: true } } } },
-        tenant: { select: { slug: true } },
-      },
+      include: BOOKING_INCLUDE,
     });
     if (!booking) {
       throw new NotFoundException("Agendamento não encontrado.");
@@ -97,6 +120,93 @@ export class BookingsService {
 
   async cancelByToken(token: string) {
     const booking = await this.findByToken(token);
+    return this.applyCancel(booking);
+  }
+
+  async rescheduleByToken(token: string, dto: RescheduleBookingDto) {
+    const booking = await this.findByToken(token);
+    return this.applyReschedule(booking, dto);
+  }
+
+  async findForAdmin(user: AuthenticatedUser, from?: string, to?: string) {
+    const where: Prisma.BookingWhereInput = { tenantId: user.tenantId };
+
+    if (user.role === Role.PROFESSIONAL) {
+      where.professionalId = user.professionalId;
+    }
+    if (from || to) {
+      where.startAt = {
+        ...(from ? { gte: new Date(from) } : {}),
+        ...(to ? { lte: new Date(to) } : {}),
+      };
+    }
+
+    return this.prisma.booking.findMany({
+      where,
+      include: {
+        service: { select: { name: true } },
+        professional: { include: { user: { select: { name: true } } } },
+      },
+      orderBy: { startAt: "asc" },
+    });
+  }
+
+  // ─────────────────────────────────────────────
+  // Área do cliente logado (public/tenants/:slug/my-bookings) — reaproveita a mesma lógica
+  // de cancelamento/reagendamento do fluxo por token (applyCancel/applyReschedule), só muda
+  // como o booking é localizado: por dono (clientId) em vez de por manageToken.
+  // ─────────────────────────────────────────────
+
+  async findForClient(slug: string, client: AuthenticatedClient) {
+    const tenant = await this.assertClientTenant(slug, client);
+    return this.prisma.booking.findMany({
+      where: { clientId: client.clientId, tenantId: tenant.id },
+      include: {
+        service: { select: { name: true } },
+        professional: { include: { user: { select: { name: true } } } },
+      },
+      orderBy: { startAt: "desc" },
+    });
+  }
+
+  async cancelForClient(slug: string, bookingId: string, client: AuthenticatedClient) {
+    const booking = await this.findOwnedBooking(slug, bookingId, client);
+    return this.applyCancel(booking);
+  }
+
+  async rescheduleForClient(
+    slug: string,
+    bookingId: string,
+    dto: RescheduleBookingDto,
+    client: AuthenticatedClient,
+  ) {
+    const booking = await this.findOwnedBooking(slug, bookingId, client);
+    return this.applyReschedule(booking, dto);
+  }
+
+  private async findOwnedBooking(slug: string, bookingId: string, client: AuthenticatedClient) {
+    const tenant = await this.assertClientTenant(slug, client);
+    // Ownership garantida na própria query (WHERE clientId = ...), sem janela de IDOR entre
+    // "buscar" e "comparar dono depois".
+    const booking = await this.prisma.booking.findFirst({
+      where: { id: bookingId, tenantId: tenant.id, clientId: client.clientId },
+      include: BOOKING_INCLUDE,
+    });
+    if (!booking) {
+      throw new NotFoundException("Agendamento não encontrado.");
+    }
+    return booking;
+  }
+
+  private async assertClientTenant(slug: string, client: AuthenticatedClient) {
+    const tenant = await this.prisma.tenant.findUnique({ where: { slug }, select: { id: true } });
+    if (!tenant || tenant.id !== client.tenantId) {
+      throw new ForbiddenException();
+    }
+    return tenant;
+  }
+
+  private async applyCancel(booking: BookingWithRelations) {
     if (booking.status === BookingStatus.CANCELED) {
       throw new BadRequestException("Este agendamento já foi cancelado.");
     }
@@ -104,16 +214,11 @@ export class BookingsService {
     return this.prisma.booking.update({
       where: { id: booking.id },
       data: { status: BookingStatus.CANCELED, canceledAt: new Date() },
-      include: {
-        service: { select: { name: true } },
-        professional: { include: { user: { select: { name: true } } } },
-        tenant: { select: { slug: true } },
-      },
+      include: BOOKING_INCLUDE,
     });
   }
 
-  async rescheduleByToken(token: string, dto: RescheduleBookingDto) {
-    const booking = await this.findByToken(token);
+  private async applyReschedule(booking: BookingWithRelations, dto: RescheduleBookingDto) {
     if (booking.status !== BookingStatus.CONFIRMED) {
       throw new BadRequestException("Apenas agendamentos confirmados podem ser reagendados.");
     }
@@ -161,35 +266,8 @@ export class BookingsService {
           endAt: endAt.toJSDate(),
           rescheduledCount: { increment: 1 },
         },
-        include: {
-          service: { select: { name: true } },
-          professional: { include: { user: { select: { name: true } } } },
-          tenant: { select: { slug: true } },
-        },
+        include: BOOKING_INCLUDE,
       });
-    });
-  }
-
-  async findForAdmin(user: AuthenticatedUser, from?: string, to?: string) {
-    const where: Prisma.BookingWhereInput = { tenantId: user.tenantId };
-
-    if (user.role === Role.PROFESSIONAL) {
-      where.professionalId = user.professionalId;
-    }
-    if (from || to) {
-      where.startAt = {
-        ...(from ? { gte: new Date(from) } : {}),
-        ...(to ? { lte: new Date(to) } : {}),
-      };
-    }
-
-    return this.prisma.booking.findMany({
-      where,
-      include: {
-        service: { select: { name: true } },
-        professional: { include: { user: { select: { name: true } } } },
-      },
-      orderBy: { startAt: "asc" },
     });
   }
 

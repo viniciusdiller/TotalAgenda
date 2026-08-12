@@ -2,7 +2,9 @@ import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
 import { Button } from "../ui/Button";
 
-const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL ?? "https://totalsoftware.com.br";
+const LANDING_URL =
+  process.env.NEXT_PUBLIC_LANDING_URL ??
+  "https://totalsoftware.com.br/produtos";
 
 export function FinalCta() {
   return (
@@ -18,8 +20,8 @@ export function FinalCta() {
               Comece a organizar sua agenda hoje
             </h2>
             <p className="relative mx-auto mt-4 max-w-md text-[15px] text-stone-300">
-              Leva menos de cinco minutos para cadastrar seus serviços e
-              começar a receber agendamentos pelo link.
+              Leva menos de cinco minutos para cadastrar seus serviços e começar
+              a receber agendamentos pelo link.
             </p>
             <div className="relative mt-9 flex justify-center">
               <Button href={LANDING_URL}>Começar grátis</Button>

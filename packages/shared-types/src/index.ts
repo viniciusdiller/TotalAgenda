@@ -2,6 +2,34 @@ export interface PublicTenant {
   id: string;
   name: string;
   slug: string;
+  description: string | null;
+  address: string | null;
+  businessHours: string | null;
+  logoUrl: string | null;
+  accentColor: string | null;
+}
+
+export interface UpdateTenantProfileInput {
+  description?: string;
+  address?: string;
+  businessHours?: string;
+  accentColor?: string;
+}
+
+export interface PublicClient {
+  id: string;
+  name: string;
+  phone: string;
+}
+
+export interface ClientLoginResponse {
+  accessToken: string;
+  client: PublicClient;
+}
+
+export interface MyBookingsResponse {
+  client: PublicClient;
+  bookings: PublicBooking[];
 }
 
 export interface PublicService {

@@ -1,6 +1,8 @@
 import { Container } from "../ui/Container";
 
-const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL ?? "https://totalsoftware.com.br";
+const LANDING_URL =
+  process.env.NEXT_PUBLIC_LANDING_URL ??
+  "https://totalsoftware.com.br/produtos";
 
 const columns = [
   {
@@ -30,8 +32,7 @@ export function Footer() {
               TotalAgenda
             </span>
             <p className="mt-3 text-sm leading-relaxed text-zinc-500 dark:text-stone-400">
-              Agenda online para profissionais de beleza, salões e
-              barbearias.
+              Agenda online para profissionais de beleza, salões e barbearias.
             </p>
           </div>
 

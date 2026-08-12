@@ -15,7 +15,7 @@ export function StepIndicator({ currentStep }: { currentStep: number }) {
               <div
                 className={clsx(
                   "h-1.5 rounded-full transition-colors",
-                  state === "upcoming" ? "bg-zinc-200 dark:bg-white/10" : "bg-accent-500",
+                  state === "upcoming" ? "bg-zinc-200 dark:bg-white/10" : "bg-(--tenant-accent)",
                 )}
               />
               <span

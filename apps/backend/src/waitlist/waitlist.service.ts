@@ -1,11 +1,15 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { WaitlistStatus } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
+import { ClientsService } from "../clients/clients.service";
 import { CreateWaitlistEntryDto } from "./dto/create-waitlist-entry.dto";
 
 @Injectable()
 export class WaitlistService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly clientsService: ClientsService,
+  ) {}
 
   async createFromPublicLink(tenantSlug: string, dto: CreateWaitlistEntryDto) {
     const tenant = await this.prisma.tenant.findUnique({
@@ -16,6 +20,13 @@ export class WaitlistService {
       throw new NotFoundException("Negócio não encontrado.");
     }
 
+    const client = await this.clientsService.upsertForBooking(
+      this.prisma,
+      tenant.id,
+      dto.clientName,
+      dto.clientPhone,
+    );
+
     return this.prisma.waitlistEntry.create({
       data: {
         tenantId: tenant.id,
@@ -23,6 +34,7 @@ export class WaitlistService {
         professionalId: dto.professionalId,
         clientName: dto.clientName,
         clientPhone: dto.clientPhone,
+        clientId: client.id,
         preferredDate: dto.preferredDate ? new Date(dto.preferredDate) : undefined,
         notes: dto.notes,
       },

@@ -28,7 +28,7 @@ export function ProfessionalStep({
           onClick={() => onSelect(professional)}
         >
           <div className="flex items-center gap-3">
-            <UserCircle size={32} weight="light" className="shrink-0 text-accent-500" />
+            <UserCircle size={32} weight="light" className="shrink-0 text-(--tenant-accent)" />
             <div>
               <p className="font-display font-semibold text-zinc-900 dark:text-white">
                 {professional.name}

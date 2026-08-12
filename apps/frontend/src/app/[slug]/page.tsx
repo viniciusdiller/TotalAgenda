@@ -1,18 +1,6 @@
-import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { publicApi, ApiError } from "@/lib/api";
-import { BookingWizard } from "@/components/booking/BookingWizard";
-
-async function getTenant(slug: string) {
-  try {
-    return await publicApi.getTenant(slug);
-  } catch (err) {
-    if (err instanceof ApiError && err.statusCode === 404) {
-      return null;
-    }
-    throw err;
-  }
-}
+import { getTenant } from "./layout";
+import { TenantProfileHeader } from "@/components/tenant-profile/TenantProfileHeader";
 
 export async function generateMetadata({
   params,
@@ -21,24 +9,22 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const tenant = await getTenant(slug);
-  return { title: tenant ? `Agendar em ${tenant.name} - TotalAgenda` : "Negócio não encontrado" };
+  return { title: tenant ? `${tenant.name} - TotalAgenda` : "Negócio não encontrado" };
 }
 
-export default async function TenantBookingPage({
+export default async function TenantProfilePage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const tenant = await getTenant(slug);
-
-  if (!tenant) {
-    notFound();
-  }
+  // O layout (app/[slug]/layout.tsx) já chamou notFound() se o tenant não existisse — aqui
+  // é seguro assumir que existe (getTenant é cache()d, então isso não gera outro fetch).
+  const tenant = (await getTenant(slug))!;
 
   return (
-    <main className="min-h-dvh bg-stone-50 px-6 py-16 dark:bg-zinc-950">
-      <BookingWizard slug={tenant.slug} tenantName={tenant.name} />
+    <main className="min-h-dvh bg-stone-50 dark:bg-zinc-950">
+      <TenantProfileHeader tenant={tenant} />
     </main>
   );
 }

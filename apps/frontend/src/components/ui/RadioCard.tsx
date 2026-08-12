@@ -22,7 +22,7 @@ export function RadioCard({
       className={clsx(
         "w-full rounded-2xl border p-4 text-left transition-colors",
         selected
-          ? "border-accent-500 bg-accent-50 dark:border-accent-400 dark:bg-accent-500/10"
+          ? "border-(--tenant-accent) bg-(--tenant-accent)/10"
           : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-white/10 dark:bg-zinc-900 dark:hover:border-white/20",
         className,
       )}

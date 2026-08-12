@@ -23,7 +23,17 @@ const TIMEZONE = "America/Sao_Paulo";
 
 type Step = 1 | 2 | 3 | 4;
 
-export function BookingWizard({ slug, tenantName }: { slug: string; tenantName: string }) {
+export function BookingWizard({
+  slug,
+  tenantName,
+  initialClient,
+}: {
+  slug: string;
+  tenantName: string;
+  // Presente quando o visitante já tem sessão de cliente (ver app/[slug]/agendar/page.tsx)
+  // — pula a coleta manual de nome/telefone no último passo.
+  initialClient?: { name: string; phone: string } | null;
+}) {
   const [step, setStep] = useState<Step>(1);
 
   const [services, setServices] = useState<PublicService[] | null>(null);
@@ -42,8 +52,8 @@ export function BookingWizard({ slug, tenantName }: { slug: string; tenantName: 
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
   const [showWaitlist, setShowWaitlist] = useState(false);
 
-  const [clientName, setClientName] = useState("");
-  const [clientPhone, setClientPhone] = useState("");
+  const [clientName, setClientName] = useState(initialClient?.name ?? "");
+  const [clientPhone, setClientPhone] = useState(initialClient?.phone ?? "");
   const [formErrors, setFormErrors] = useState<{ clientName?: string; clientPhone?: string }>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -110,11 +120,13 @@ export function BookingWizard({ slug, tenantName }: { slug: string; tenantName: 
   }
 
   async function handleConfirmBooking() {
-    const errors: typeof formErrors = {};
-    if (clientName.trim().length < 2) errors.clientName = "Informe seu nome completo.";
-    if (clientPhone.trim().length < 8) errors.clientPhone = "Informe um telefone válido.";
-    setFormErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (!initialClient) {
+      const errors: typeof formErrors = {};
+      if (clientName.trim().length < 2) errors.clientName = "Informe seu nome completo.";
+      if (clientPhone.trim().length < 8) errors.clientPhone = "Informe um telefone válido.";
+      setFormErrors(errors);
+      if (Object.keys(errors).length > 0) return;
+    }
     if (!selectedProfessional || !selectedService || !selectedSlot) return;
 
     setSubmitting(true);
@@ -204,6 +216,7 @@ export function BookingWizard({ slug, tenantName }: { slug: string; tenantName: 
                 ) : null}
 
                 <Button
+                  variant="tenant"
                   disabled={!selectedSlot}
                   onClick={() => setStep(4)}
                   className="w-full disabled:cursor-not-allowed disabled:opacity-50"
@@ -224,6 +237,7 @@ export function BookingWizard({ slug, tenantName }: { slug: string; tenantName: 
                   onChangeName={setClientName}
                   onChangePhone={setClientPhone}
                   errors={formErrors}
+                  lockedClient={initialClient ?? undefined}
                 />
 
                 {submitError ? (
@@ -231,6 +245,7 @@ export function BookingWizard({ slug, tenantName }: { slug: string; tenantName: 
                 ) : null}
 
                 <Button
+                  variant="tenant"
                   onClick={handleConfirmBooking}
                   disabled={submitting}
                   className="w-full disabled:cursor-not-allowed disabled:opacity-60"

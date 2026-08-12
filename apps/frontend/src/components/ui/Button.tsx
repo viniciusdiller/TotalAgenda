@@ -5,7 +5,7 @@ import { motion, type HTMLMotionProps } from "motion/react";
 import clsx from "clsx";
 import Link from "next/link";
 
-type Variant = "primary" | "secondary" | "ghost";
+type Variant = "primary" | "secondary" | "ghost" | "tenant";
 
 const variantClasses: Record<Variant, string> = {
   primary:
@@ -14,6 +14,9 @@ const variantClasses: Record<Variant, string> = {
     "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-stone-200",
   ghost:
     "bg-transparent text-zinc-900 ring-1 ring-inset ring-zinc-300 hover:bg-zinc-900/5 dark:text-white dark:ring-white/20 dark:hover:bg-white/10",
+  // Cor de destaque escopada ao tenant (ver app/[slug]/layout.tsx), não a marca fixa do
+  // TotalAgenda — usado só dentro da página pública do salão/wizard/conta do cliente.
+  tenant: "bg-(--tenant-accent) text-white shadow-lg hover:brightness-90",
 };
 
 const baseClasses =

@@ -39,7 +39,7 @@ export function WaitlistForm({
   if (done) {
     return (
       <div className="flex flex-col items-center rounded-2xl border border-dashed border-zinc-300 p-6 text-center dark:border-white/15">
-        <CheckCircle size={32} weight="fill" className="text-accent-500" />
+        <CheckCircle size={32} weight="fill" className="text-(--tenant-accent)" />
         <p className="mt-3 text-sm font-medium text-zinc-900 dark:text-white">
           Você entrou na lista de espera
         </p>
@@ -59,6 +59,7 @@ export function WaitlistForm({
           name="waitlistName"
           value={clientName}
           onChange={(e) => setClientName(e.target.value)}
+          accentScoped
         />
         <Input
           label="Seu telefone"
@@ -66,10 +67,11 @@ export function WaitlistForm({
           type="tel"
           value={clientPhone}
           onChange={(e) => setClientPhone(e.target.value)}
+          accentScoped
         />
         {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
         <div className="flex gap-2">
-          <Button type="submit" disabled={submitting} className="flex-1">
+          <Button type="submit" variant="tenant" disabled={submitting} className="flex-1">
             {submitting ? "Enviando..." : "Entrar na lista"}
           </Button>
           <Button type="button" variant="ghost" onClick={onCancel}>

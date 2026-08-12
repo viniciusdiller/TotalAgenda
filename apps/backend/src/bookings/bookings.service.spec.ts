@@ -2,8 +2,15 @@ import { BadRequestException, ConflictException, NotFoundException } from "@nest
 import { BookingStatus } from "@totalagenda/database";
 import { BookingsService } from "./bookings.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { ClientsService } from "../clients/clients.service";
 
 const FUTURE_DATE = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+function buildClientsServiceMock() {
+  return {
+    upsertForBooking: jest.fn().mockResolvedValue({ id: "client-1" }),
+  } as unknown as ClientsService;
+}
 
 function buildTxMock(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -40,6 +47,8 @@ function buildPrismaMock(tx: ReturnType<typeof buildTxMock>) {
 }
 
 describe("BookingsService", () => {
+  const clientsService = buildClientsServiceMock();
+
   const baseDto = {
     professionalId: "prof-1",
     serviceId: "svc-1",
@@ -51,7 +60,7 @@ describe("BookingsService", () => {
   it("cria um booking com sucesso quando não há conflito", async () => {
     const tx = buildTxMock();
     const prisma = buildPrismaMock(tx);
-    const service = new BookingsService(prisma);
+    const service = new BookingsService(prisma, clientsService);
 
     const result = await service.createFromPublicLink("slug", baseDto);
 
@@ -67,7 +76,7 @@ describe("BookingsService", () => {
       },
     });
     const prisma = buildPrismaMock(tx);
-    const service = new BookingsService(prisma);
+    const service = new BookingsService(prisma, clientsService);
 
     await expect(service.createFromPublicLink("slug", baseDto)).rejects.toThrow(ConflictException);
     expect(tx.booking.create).not.toHaveBeenCalled();
@@ -78,7 +87,7 @@ describe("BookingsService", () => {
       timeBlock: { findFirst: jest.fn().mockResolvedValue({ id: "block-1" }) },
     });
     const prisma = buildPrismaMock(tx);
-    const service = new BookingsService(prisma);
+    const service = new BookingsService(prisma, clientsService);
 
     await expect(service.createFromPublicLink("slug", baseDto)).rejects.toThrow(ConflictException);
   });
@@ -86,7 +95,7 @@ describe("BookingsService", () => {
   it("lança BadRequestException ao tentar agendar no passado", async () => {
     const tx = buildTxMock();
     const prisma = buildPrismaMock(tx);
-    const service = new BookingsService(prisma);
+    const service = new BookingsService(prisma, clientsService);
 
     await expect(
       service.createFromPublicLink("slug", { ...baseDto, startAt: "2020-01-01T10:00:00-03:00" }),
@@ -97,7 +106,7 @@ describe("BookingsService", () => {
     const tx = buildTxMock();
     const prisma = buildPrismaMock(tx);
     (prisma.professionalService.findUnique as jest.Mock).mockResolvedValue(null);
-    const service = new BookingsService(prisma);
+    const service = new BookingsService(prisma, clientsService);
 
     await expect(service.createFromPublicLink("slug", baseDto)).rejects.toThrow(NotFoundException);
   });
@@ -113,7 +122,7 @@ describe("BookingsService", () => {
       (prisma as any).booking.update = jest
         .fn()
         .mockImplementation(({ data }) => ({ id: "booking-1", ...data }));
-      const service = new BookingsService(prisma);
+      const service = new BookingsService(prisma, clientsService);
 
       const result = await service.cancelByToken("token-1");
 
@@ -127,7 +136,7 @@ describe("BookingsService", () => {
         id: "booking-1",
         status: BookingStatus.CANCELED,
       });
-      const service = new BookingsService(prisma);
+      const service = new BookingsService(prisma, clientsService);
 
       await expect(service.cancelByToken("token-1")).rejects.toThrow(BadRequestException);
     });
@@ -136,7 +145,7 @@ describe("BookingsService", () => {
       const tx = buildTxMock();
       const prisma = buildPrismaMock(tx);
       (prisma.booking.findUnique as jest.Mock).mockResolvedValue(null);
-      const service = new BookingsService(prisma);
+      const service = new BookingsService(prisma, clientsService);
 
       await expect(service.cancelByToken("token-invalido")).rejects.toThrow(NotFoundException);
     });
@@ -152,7 +161,7 @@ describe("BookingsService", () => {
         professionalId: "prof-1",
         serviceId: "svc-1",
       });
-      const service = new BookingsService(prisma);
+      const service = new BookingsService(prisma, clientsService);
 
       await service.rescheduleByToken("token-1", { startAt: FUTURE_DATE });
 
@@ -177,7 +186,7 @@ describe("BookingsService", () => {
         professionalId: "prof-1",
         serviceId: "svc-1",
       });
-      const service = new BookingsService(prisma);
+      const service = new BookingsService(prisma, clientsService);
 
       await expect(service.rescheduleByToken("token-1", { startAt: FUTURE_DATE })).rejects.toThrow(
         ConflictException,
@@ -191,7 +200,7 @@ describe("BookingsService", () => {
         id: "booking-1",
         status: BookingStatus.CANCELED,
       });
-      const service = new BookingsService(prisma);
+      const service = new BookingsService(prisma, clientsService);
 
       await expect(service.rescheduleByToken("token-1", { startAt: FUTURE_DATE })).rejects.toThrow(
         BadRequestException,

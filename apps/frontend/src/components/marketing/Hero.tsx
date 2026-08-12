@@ -6,7 +6,9 @@ import { CalendarCheck, LinkSimple } from "@phosphor-icons/react/dist/ssr";
 import { Container } from "../ui/Container";
 import { Button } from "../ui/Button";
 
-const LANDING_URL = process.env.NEXT_PUBLIC_LANDING_URL ?? "https://totalsoftware.com.br";
+const LANDING_URL =
+  process.env.NEXT_PUBLIC_LANDING_URL ??
+  "https://totalsoftware.com.br/produtos";
 
 export function Hero() {
   const reduce = useReducedMotion();
@@ -29,18 +31,25 @@ export function Hero() {
             <motion.p
               initial={reduce ? false : { opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+              transition={{
+                duration: 0.6,
+                delay: 0.1,
+                ease: [0.16, 1, 0.3, 1],
+              }}
               className="mt-6 max-w-[46ch] text-lg leading-relaxed text-zinc-600 dark:text-stone-300"
             >
               Cada profissional tem sua própria agenda online, com link para
-              clientes marcarem sozinhos. Teste grátis por 14 dias, sem
-              cartão.
+              clientes marcarem sozinhos. Teste grátis por 14 dias, sem cartão.
             </motion.p>
 
             <motion.div
               initial={reduce ? false : { opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              transition={{
+                duration: 0.6,
+                delay: 0.2,
+                ease: [0.16, 1, 0.3, 1],
+              }}
               className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center"
             >
               <Button href={LANDING_URL}>Começar grátis</Button>
@@ -88,7 +97,10 @@ export function Hero() {
               transition={{ duration: 0.5, delay: 0.65 }}
               className="absolute -right-4 top-8 hidden items-center gap-2 rounded-full bg-white/95 px-4 py-2.5 shadow-xl ring-1 ring-zinc-900/5 backdrop-blur sm:flex dark:bg-zinc-900/95 dark:ring-white/10"
             >
-              <LinkSimple size={16} className="text-zinc-500 dark:text-stone-400" />
+              <LinkSimple
+                size={16}
+                className="text-zinc-500 dark:text-stone-400"
+              />
               <span className="text-xs font-medium text-zinc-700 dark:text-stone-200">
                 totalagenda.com/studio-da-ana
               </span>

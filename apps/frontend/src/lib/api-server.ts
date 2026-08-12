@@ -10,10 +10,14 @@ export async function authedFetch<T>(path: string, init?: RequestInit): Promise<
     throw new ApiError("Não autenticado.", 401);
   }
 
+  // Upload de arquivo (FormData) não pode ter Content-Type forçado pra application/json —
+  // o browser precisa setar multipart/form-data; boundary=... sozinho.
+  const isFormData = init?.body instanceof FormData;
+
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       Authorization: `Bearer ${session.accessToken}`,
       ...init?.headers,
     },

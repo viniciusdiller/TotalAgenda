@@ -13,7 +13,7 @@ export function ConfirmationStep({ booking }: { booking: PublicBooking }) {
 
   return (
     <div className="flex flex-col items-center py-6 text-center">
-      <CheckCircle size={56} weight="fill" className="text-accent-500" />
+      <CheckCircle size={56} weight="fill" className="text-(--tenant-accent)" />
       <h2 className="mt-5 font-display text-2xl font-bold text-zinc-900 dark:text-white">
         Agendamento confirmado
       </h2>
