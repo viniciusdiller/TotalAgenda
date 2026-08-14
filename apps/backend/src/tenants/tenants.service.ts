@@ -1,14 +1,17 @@
 import { join } from "path";
-import { mkdir, rm } from "fs/promises";
+import { mkdir, unlink } from "fs/promises";
+import { randomUUID } from "crypto";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import sharp from "sharp";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdateTenantProfileDto } from "./dto/update-tenant-profile.dto";
 import { UPLOADS_DIR, UPLOADS_URL_PREFIX } from "../common/constants/uploads";
 
-const ALLOWED_LOGO_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const LOGO_MAX_DIMENSION = 800;
+const GALLERY_MAX_DIMENSION = 1600;
+const MAX_GALLERY_IMAGES = 12;
 
 @Injectable()
 export class TenantsService {
@@ -30,6 +33,16 @@ export class TenantsService {
         businessHours: true,
         logoUrl: true,
         accentColor: true,
+        whatsappNumber: true,
+        instagramUrl: true,
+        showServices: true,
+        showTeam: true,
+        showGallery: true,
+        showContact: true,
+        galleryImages: {
+          select: { id: true, url: true },
+          orderBy: { position: "asc" },
+        },
       },
     });
 
@@ -44,16 +57,20 @@ export class TenantsService {
     return this.prisma.tenant.update({ where: { id: tenantId }, data: dto });
   }
 
-  async updateLogo(tenantId: string, file: Express.Multer.File) {
+  private assertValidImage(file: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException("Nenhum arquivo enviado.");
     }
-    if (!ALLOWED_LOGO_MIME_TYPES.includes(file.mimetype)) {
+    if (!ALLOWED_IMAGE_MIME_TYPES.includes(file.mimetype)) {
       throw new BadRequestException("Formato de imagem não suportado. Use JPEG, PNG ou WEBP.");
     }
-    if (file.size > MAX_LOGO_SIZE_BYTES) {
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
       throw new BadRequestException("Imagem muito grande (máximo 5MB).");
     }
+  }
+
+  async updateLogo(tenantId: string, file: Express.Multer.File) {
+    this.assertValidImage(file);
 
     const tenantDir = join(UPLOADS_DIR, "tenants", tenantId);
     await mkdir(tenantDir, { recursive: true });
@@ -77,8 +94,51 @@ export class TenantsService {
   }
 
   async removeLogo(tenantId: string) {
-    const tenantDir = join(UPLOADS_DIR, "tenants", tenantId);
-    await rm(tenantDir, { recursive: true, force: true });
+    // Só o arquivo do logo — não o diretório do tenant inteiro, que também guarda a galeria.
+    await unlink(join(UPLOADS_DIR, "tenants", tenantId, "logo.webp")).catch(() => {});
     return this.prisma.tenant.update({ where: { id: tenantId }, data: { logoUrl: null } });
+  }
+
+  async addGalleryImage(tenantId: string, file: Express.Multer.File) {
+    this.assertValidImage(file);
+
+    const existingCount = await this.prisma.tenantGalleryImage.count({ where: { tenantId } });
+    if (existingCount >= MAX_GALLERY_IMAGES) {
+      throw new BadRequestException(`Limite de ${MAX_GALLERY_IMAGES} fotos na galeria atingido.`);
+    }
+
+    const galleryDir = join(UPLOADS_DIR, "tenants", tenantId, "gallery");
+    await mkdir(galleryDir, { recursive: true });
+
+    const filename = `${randomUUID()}.webp`;
+    try {
+      await sharp(file.buffer)
+        .resize(GALLERY_MAX_DIMENSION, GALLERY_MAX_DIMENSION, {
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .webp({ quality: 82 })
+        .toFile(join(galleryDir, filename));
+    } catch {
+      throw new BadRequestException("Não foi possível processar a imagem enviada.");
+    }
+
+    const url = `${UPLOADS_URL_PREFIX}/tenants/${tenantId}/gallery/${filename}`;
+    return this.prisma.tenantGalleryImage.create({
+      data: { tenantId, url, position: existingCount },
+    });
+  }
+
+  async removeGalleryImage(tenantId: string, imageId: string) {
+    const image = await this.prisma.tenantGalleryImage.findFirst({
+      where: { id: imageId, tenantId },
+    });
+    if (!image) {
+      throw new NotFoundException("Foto não encontrada.");
+    }
+
+    const filename = image.url.split("/").pop()!;
+    await unlink(join(UPLOADS_DIR, "tenants", tenantId, "gallery", filename)).catch(() => {});
+    await this.prisma.tenantGalleryImage.delete({ where: { id: imageId } });
   }
 }

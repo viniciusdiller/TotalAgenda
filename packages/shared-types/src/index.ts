@@ -1,3 +1,8 @@
+export interface PublicGalleryImage {
+  id: string;
+  url: string;
+}
+
 export interface PublicTenant {
   id: string;
   name: string;
@@ -7,6 +12,13 @@ export interface PublicTenant {
   businessHours: string | null;
   logoUrl: string | null;
   accentColor: string | null;
+  whatsappNumber: string | null;
+  instagramUrl: string | null;
+  showServices: boolean;
+  showTeam: boolean;
+  showGallery: boolean;
+  showContact: boolean;
+  galleryImages: PublicGalleryImage[];
 }
 
 export interface UpdateTenantProfileInput {
@@ -14,6 +26,12 @@ export interface UpdateTenantProfileInput {
   address?: string;
   businessHours?: string;
   accentColor?: string;
+  whatsappNumber?: string;
+  instagramUrl?: string;
+  showServices?: boolean;
+  showTeam?: boolean;
+  showGallery?: boolean;
+  showContact?: boolean;
 }
 
 export interface PublicClient {

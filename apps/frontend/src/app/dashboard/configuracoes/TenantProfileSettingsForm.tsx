@@ -19,7 +19,20 @@ interface TenantProfile {
   businessHours: string | null;
   logoUrl: string | null;
   accentColor: string | null;
+  whatsappNumber: string | null;
+  instagramUrl: string | null;
+  showServices: boolean;
+  showTeam: boolean;
+  showGallery: boolean;
+  showContact: boolean;
 }
+
+const SECTION_TOGGLES = [
+  { name: "showServices", label: "Serviços" },
+  { name: "showTeam", label: "Equipe" },
+  { name: "showGallery", label: "Galeria" },
+  { name: "showContact", label: "Contato" },
+] as const;
 
 const profileInitialState: UpdateProfileState = {};
 const uploadInitialState: UploadLogoState = {};
@@ -107,6 +120,46 @@ export function TenantProfileSettingsForm({ tenant }: { tenant: TenantProfile })
           defaultValue={tenant.businessHours ?? ""}
           placeholder="Seg-Sex 9h-19h, Sáb 9h-13h"
         />
+        <Input
+          label="WhatsApp"
+          name="whatsappNumber"
+          type="tel"
+          defaultValue={tenant.whatsappNumber ?? ""}
+          placeholder="5511912345678"
+          hint="DDI + DDD + número, só dígitos."
+        />
+        <Input
+          label="Instagram"
+          name="instagramUrl"
+          type="url"
+          defaultValue={tenant.instagramUrl ?? ""}
+          placeholder="https://instagram.com/seu_negocio"
+        />
+
+        <div className="flex flex-col gap-1.5">
+          <p className="text-sm font-medium text-zinc-700 dark:text-stone-200">
+            Seções visíveis na página
+          </p>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            {SECTION_TOGGLES.map((section) => (
+              <label
+                key={section.name}
+                className="flex items-center gap-2 text-sm text-zinc-600 dark:text-stone-300"
+              >
+                <input
+                  type="checkbox"
+                  name={section.name}
+                  defaultChecked={tenant[section.name]}
+                  className="h-4 w-4 rounded border-zinc-300 text-accent-500 focus:ring-accent-500/20 dark:border-white/15"
+                />
+                {section.label}
+              </label>
+            ))}
+          </div>
+          <p className="text-xs text-zinc-400 dark:text-stone-500">
+            Uma seção só aparece se também tiver conteúdo cadastrado.
+          </p>
+        </div>
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="accentColor" className="text-sm font-medium text-zinc-700 dark:text-stone-200">

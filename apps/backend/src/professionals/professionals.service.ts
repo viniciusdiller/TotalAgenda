@@ -118,6 +118,21 @@ export class ProfessionalsService {
     });
   }
 
+  async findPublicTeamByTenantSlug(slug: string) {
+    const tenant = await this.prisma.tenant.findUnique({ where: { slug }, select: { id: true } });
+    if (!tenant) {
+      throw new NotFoundException("Negócio não encontrado.");
+    }
+
+    const professionals = await this.prisma.professional.findMany({
+      where: { tenantId: tenant.id, isActive: true },
+      include: { user: { select: { name: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return professionals.map((p) => ({ id: p.id, name: p.user.name, bio: p.bio }));
+  }
+
   async findPublicByTenantSlugAndService(slug: string, serviceId: string) {
     const tenant = await this.prisma.tenant.findUnique({ where: { slug }, select: { id: true } });
     if (!tenant) {

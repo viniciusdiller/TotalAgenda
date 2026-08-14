@@ -50,6 +50,8 @@ export const publicApi = {
       `/public/tenants/${slug}/professionals?serviceId=${encodeURIComponent(serviceId)}`,
     ),
 
+  getTeam: (slug: string) => request<PublicProfessional[]>(`/public/tenants/${slug}/professionals/team`),
+
   getAvailability: (slug: string, professionalId: string, serviceId: string, date: string) =>
     request<AvailableSlot[]>(
       `/public/tenants/${slug}/professionals/${professionalId}/availability?serviceId=${encodeURIComponent(

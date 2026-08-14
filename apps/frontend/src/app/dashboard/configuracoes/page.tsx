@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
 import { TenantProfileSettingsForm } from "./TenantProfileSettingsForm";
+import { GalleryManager } from "./GalleryManager";
 
 interface TenantMe {
   name: string;
@@ -10,6 +11,13 @@ interface TenantMe {
   businessHours: string | null;
   logoUrl: string | null;
   accentColor: string | null;
+  whatsappNumber: string | null;
+  instagramUrl: string | null;
+  showServices: boolean;
+  showTeam: boolean;
+  showGallery: boolean;
+  showContact: boolean;
+  galleryImages: { id: string; url: string }[];
 }
 
 export default async function ConfiguracoesPage() {
@@ -39,8 +47,9 @@ export default async function ConfiguracoesPage() {
         .
       </p>
 
-      <div className="mt-6">
+      <div className="mt-6 flex flex-col gap-8">
         <TenantProfileSettingsForm tenant={tenant} />
+        <GalleryManager images={tenant.galleryImages} />
       </div>
     </div>
   );

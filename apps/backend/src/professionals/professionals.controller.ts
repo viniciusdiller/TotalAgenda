@@ -74,4 +74,13 @@ export class PublicProfessionalsController {
   findPublic(@Param("slug") slug: string, @Query("serviceId") serviceId: string) {
     return this.professionalsService.findPublicByTenantSlugAndService(slug, serviceId);
   }
+
+  // Rota separada da acima: essa lista TODOS os profissionais ativos do tenant (pra
+  // vitrine "equipe" da página pública), a de cima é filtrada por serviceId (usada pelo
+  // wizard de agendamento) — propositalmente não misturadas na mesma rota.
+  @Public()
+  @Get("team")
+  findTeam(@Param("slug") slug: string) {
+    return this.professionalsService.findPublicTeamByTenantSlug(slug);
+  }
 }

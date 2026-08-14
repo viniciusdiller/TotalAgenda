@@ -70,11 +70,20 @@ model Tenant {
   externalCustomerId Int? @unique
 
   // Perfil público exibido em /[slug] — todos opcionais, editados pelo dono no dashboard.
-  description   String?
-  address       String?
-  businessHours String? // texto livre (ex: "Seg-Sex 9h-19h"), não agregado automaticamente
-  logoUrl       String? // caminho servido pelo backend, ex: /uploads/tenants/<id>/logo.webp
-  accentColor   String? // hex "#RRGGBB"; nulo usa o rosa padrão do TotalAgenda
+  description     String?
+  address         String?
+  businessHours   String? // texto livre (ex: "Seg-Sex 9h-19h"), não agregado automaticamente
+  logoUrl         String? // caminho servido pelo backend, ex: /uploads/tenants/<id>/logo.webp
+  accentColor     String? // hex "#RRGGBB"; nulo usa o rosa padrão do TotalAgenda
+  whatsappNumber  String? // só dígitos, com DDI (ex: 5511912345678) — vira link wa.me
+  instagramUrl    String?
+
+  // Cada seção aparece automaticamente se tiver conteúdo (serviços cadastrados, fotos na
+  // galeria, etc.) — esses toggles deixam o dono escondê-la mesmo assim.
+  showServices Boolean @default(true)
+  showTeam     Boolean @default(true)
+  showGallery  Boolean @default(true)
+  showContact  Boolean @default(true)
 
   users         User[]
   professionals Professional[]
@@ -84,8 +93,23 @@ model Tenant {
   waitlist      WaitlistEntry[]
   subscription  Subscription?
   clients       Client[]
+  galleryImages TenantGalleryImage[]
 
   @@index([slug])
+}
+
+// Fotos avulsas da página pública (espaço, trabalhos feitos) — separado de logoUrl porque
+// é 0..N por tenant, não 1.
+model TenantGalleryImage {
+  id        String   @id @default(uuid())
+  tenantId  String
+  url       String
+  position  Int      @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, position])
 }
 
 model User {

@@ -18,6 +18,11 @@ export async function updateTenantProfileAction(
     return { error: "Cor inválida. Use o formato #RRGGBB." };
   }
 
+  const whatsappNumber = String(formData.get("whatsappNumber") ?? "").replace(/\D/g, "");
+  if (whatsappNumber && (whatsappNumber.length < 10 || whatsappNumber.length > 15)) {
+    return { error: "Telefone do WhatsApp inválido. Use o DDI + DDD + número." };
+  }
+
   try {
     await authedFetch("/tenants/me", {
       method: "PATCH",
@@ -26,6 +31,15 @@ export async function updateTenantProfileAction(
         address: formData.get("address") || undefined,
         businessHours: formData.get("businessHours") || undefined,
         accentColor: accentColor || undefined,
+        whatsappNumber: whatsappNumber || undefined,
+        instagramUrl: formData.get("instagramUrl") || undefined,
+        // Checkbox: só aparece no FormData quando marcado — por isso o estado real é
+        // sempre calculado aqui e enviado explícito (nunca omitido), diferente dos campos
+        // de texto acima onde "não preenchido" vira undefined (não altera o valor salvo).
+        showServices: formData.get("showServices") === "on",
+        showTeam: formData.get("showTeam") === "on",
+        showGallery: formData.get("showGallery") === "on",
+        showContact: formData.get("showContact") === "on",
       }),
     });
   } catch (error) {
@@ -63,5 +77,35 @@ export async function uploadLogoAction(
 
 export async function removeLogoAction() {
   await authedFetch("/tenants/me/logo", { method: "DELETE" });
+  revalidatePath("/dashboard/configuracoes");
+}
+
+export interface UploadGalleryImageState {
+  error?: string;
+}
+
+export async function uploadGalleryImageAction(
+  _prevState: UploadGalleryImageState | undefined,
+  formData: FormData,
+): Promise<UploadGalleryImageState> {
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Selecione uma imagem." };
+  }
+
+  try {
+    const uploadData = new FormData();
+    uploadData.set("file", file);
+    await authedFetch("/tenants/me/gallery", { method: "POST", body: uploadData });
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Não foi possível enviar a imagem." };
+  }
+
+  revalidatePath("/dashboard/configuracoes");
+  return {};
+}
+
+export async function removeGalleryImageAction(imageId: string) {
+  await authedFetch(`/tenants/me/gallery/${imageId}`, { method: "DELETE" });
   revalidatePath("/dashboard/configuracoes");
 }

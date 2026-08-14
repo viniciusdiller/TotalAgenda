@@ -19,7 +19,7 @@ import { Roles } from "../common/decorators/roles.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { AuthenticatedUser } from "../auth/types/auth-user";
 
-const MAX_LOGO_UPLOAD_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGE_UPLOAD_BYTES = 5 * 1024 * 1024;
 
 @Controller()
 export class TenantsController {
@@ -40,7 +40,7 @@ export class TenantsController {
 
   @Roles(Role.OWNER)
   @SkipBillingCheck()
-  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: MAX_LOGO_UPLOAD_BYTES } }))
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: MAX_IMAGE_UPLOAD_BYTES } }))
   @Post("tenants/me/logo")
   uploadLogo(
     @CurrentUser() user: AuthenticatedUser,
@@ -54,6 +54,24 @@ export class TenantsController {
   @Delete("tenants/me/logo")
   removeLogo(@CurrentUser() user: AuthenticatedUser) {
     return this.tenantsService.removeLogo(user.tenantId);
+  }
+
+  @Roles(Role.OWNER)
+  @SkipBillingCheck()
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: MAX_IMAGE_UPLOAD_BYTES } }))
+  @Post("tenants/me/gallery")
+  uploadGalleryImage(
+    @CurrentUser() user: AuthenticatedUser,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.tenantsService.addGalleryImage(user.tenantId, file);
+  }
+
+  @Roles(Role.OWNER)
+  @SkipBillingCheck()
+  @Delete("tenants/me/gallery/:id")
+  removeGalleryImage(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+    return this.tenantsService.removeGalleryImage(user.tenantId, id);
   }
 
   @Public()
