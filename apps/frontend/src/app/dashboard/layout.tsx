@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { SignOut } from "@phosphor-icons/react/dist/ssr";
+import Link from "next/link";
+import { ArrowSquareOut, SignOut } from "@phosphor-icons/react/dist/ssr";
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
 import { SidebarNav } from "./SidebarNav";
@@ -25,7 +26,20 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
           TotalAgenda
         </p>
         {tenant ? (
-          <p className="mt-1 truncate text-sm text-zinc-500 dark:text-stone-400">{tenant.name}</p>
+          <>
+            <p className="mt-1 truncate text-sm text-zinc-500 dark:text-stone-400">
+              {tenant.name}
+            </p>
+            <Link
+              href={`/${tenant.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-accent-600 hover:text-accent-700 dark:text-accent-300 dark:hover:text-accent-200"
+            >
+              <ArrowSquareOut size={16} />
+              Ver página pública
+            </Link>
+          </>
         ) : null}
 
         <div className="mt-8">

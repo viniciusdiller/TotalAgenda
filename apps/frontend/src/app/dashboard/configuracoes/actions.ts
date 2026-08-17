@@ -76,7 +76,7 @@ export async function uploadLogoAction(
 }
 
 export async function removeLogoAction() {
-  await authedFetch("/tenants/me/logo", { method: "DELETE" });
+  await authedFetch("/tenants/me/logo", { method: "DELETE" }).catch(() => {});
   revalidatePath("/dashboard/configuracoes");
 }
 
@@ -106,6 +106,6 @@ export async function uploadGalleryImageAction(
 }
 
 export async function removeGalleryImageAction(imageId: string) {
-  await authedFetch(`/tenants/me/gallery/${imageId}`, { method: "DELETE" });
+  await authedFetch(`/tenants/me/gallery/${imageId}`, { method: "DELETE" }).catch(() => {});
   revalidatePath("/dashboard/configuracoes");
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { compressImageFile } from "@/lib/image-compression";
 import {
   updateTenantProfileAction,
   uploadLogoAction,
@@ -12,12 +13,16 @@ import {
 } from "./actions";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+// Mesma dimensão máxima usada pelo backend pro logo (LOGO_MAX_DIMENSION em
+// tenants.service.ts).
+const MAX_DIMENSION = 800;
 
 interface TenantProfile {
   description: string | null;
   address: string | null;
   businessHours: string | null;
   logoUrl: string | null;
+  updatedAt: string;
   accentColor: string | null;
   whatsappNumber: string | null;
   instagramUrl: string | null;
@@ -46,6 +51,18 @@ export function TenantProfileSettingsForm({ tenant }: { tenant: TenantProfile })
     uploadLogoAction,
     uploadInitialState,
   );
+  const [compressing, setCompressing] = useState(false);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCompressing(true);
+    const compressed = await compressImageFile(file, { maxDimension: MAX_DIMENSION });
+    setCompressing(false);
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(compressed);
+    e.target.files = dataTransfer.files;
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -57,9 +74,12 @@ export function TenantProfileSettingsForm({ tenant }: { tenant: TenantProfile })
 
         <div className="mt-4 flex items-center gap-4">
           {tenant.logoUrl ? (
+            // Nome de arquivo fixo por tenant (ver TenantsService.updateLogo) — sem o
+            // parametro de versao aqui, o navegador continuaria mostrando a logo antiga em
+            // cache depois de um reenvio, mesmo com o backend ja tendo trocado o arquivo.
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={`${API_URL}${tenant.logoUrl}`}
+              src={`${API_URL}${tenant.logoUrl}?v=${encodeURIComponent(tenant.updatedAt)}`}
               alt="Logo do negócio"
               className="h-16 w-16 rounded-xl object-cover ring-1 ring-zinc-900/5 dark:ring-white/10"
             />
@@ -72,10 +92,16 @@ export function TenantProfileSettingsForm({ tenant }: { tenant: TenantProfile })
               type="file"
               name="file"
               accept="image/jpeg,image/png,image/webp"
+              onChange={handleFileChange}
               className="text-sm text-zinc-600 dark:text-stone-300"
             />
-            <Button type="submit" variant="ghost" disabled={uploadPending} className="text-sm">
-              {uploadPending ? "Enviando..." : "Enviar"}
+            <Button
+              type="submit"
+              variant="ghost"
+              disabled={uploadPending || compressing}
+              className="text-sm"
+            >
+              {compressing ? "Comprimindo..." : uploadPending ? "Enviando..." : "Enviar"}
             </Button>
           </form>
 

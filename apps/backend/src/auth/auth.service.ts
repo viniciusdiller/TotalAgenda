@@ -1,10 +1,14 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
 import { Role } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
+import { hashPasswordSetToken } from "../common/utils/password-set-token.util";
 import { LoginDto } from "./dto/login.dto";
+import { SetPasswordDto } from "./dto/set-password.dto";
 import { JwtPayload } from "./types/auth-user";
+
+const BCRYPT_ROUNDS = 12;
 
 @Injectable()
 export class AuthService {
@@ -36,6 +40,44 @@ export class AuthService {
       user.name,
       user.professional?.id,
     );
+  }
+
+  // Usado pela tela de "definir senha" antes de mostrar o formulário — confirma que o
+  // convite ainda é válido sem gastar o token (que só é invalidado em setPassword).
+  async checkSetPasswordToken(token: string) {
+    const user = await this.findUserByValidSetPasswordToken(token);
+    return { name: user.name, email: user.email };
+  }
+
+  async setPassword(dto: SetPasswordDto) {
+    const user = await this.findUserByValidSetPasswordToken(dto.token);
+
+    const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, passwordSetTokenHash: null, passwordSetTokenExpiresAt: null },
+    });
+
+    return this.buildAuthResponse(
+      user.id,
+      user.tenantId,
+      user.role,
+      user.email,
+      user.name,
+    );
+  }
+
+  private async findUserByValidSetPasswordToken(token: string) {
+    const tokenHash = hashPasswordSetToken(token);
+    const user = await this.prisma.user.findUnique({
+      where: { passwordSetTokenHash: tokenHash },
+    });
+
+    if (!user || !user.passwordSetTokenExpiresAt || user.passwordSetTokenExpiresAt < new Date()) {
+      throw new BadRequestException("Link de definição de senha inválido ou expirado.");
+    }
+
+    return user;
   }
 
   private buildAuthResponse(

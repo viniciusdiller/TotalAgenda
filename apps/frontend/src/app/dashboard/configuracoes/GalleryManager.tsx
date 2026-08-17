@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { compressImageFile } from "@/lib/image-compression";
 import {
   uploadGalleryImageAction,
   removeGalleryImageAction,
@@ -10,12 +11,28 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 const uploadInitialState: UploadGalleryImageState = {};
+// Mesma dimensão máxima usada pelo backend pra galeria (GALLERY_MAX_DIMENSION em
+// tenants.service.ts) — comprimir pra um tamanho maior que isso no navegador seria
+// desperdício, o backend ia reduzir de novo do mesmo jeito.
+const MAX_DIMENSION = 1600;
 
 export function GalleryManager({ images }: { images: { id: string; url: string }[] }) {
   const [uploadState, uploadFormAction, uploadPending] = useActionState(
     uploadGalleryImageAction,
     uploadInitialState,
   );
+  const [compressing, setCompressing] = useState(false);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCompressing(true);
+    const compressed = await compressImageFile(file, { maxDimension: MAX_DIMENSION });
+    setCompressing(false);
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(compressed);
+    e.target.files = dataTransfer.files;
+  }
 
   return (
     <div className="rounded-2xl border border-zinc-200 p-5 dark:border-white/10">
@@ -52,10 +69,16 @@ export function GalleryManager({ images }: { images: { id: string; url: string }
           type="file"
           name="file"
           accept="image/jpeg,image/png,image/webp"
+          onChange={handleFileChange}
           className="text-sm text-zinc-600 dark:text-stone-300"
         />
-        <Button type="submit" variant="ghost" disabled={uploadPending} className="text-sm">
-          {uploadPending ? "Enviando..." : "Adicionar foto"}
+        <Button
+          type="submit"
+          variant="ghost"
+          disabled={uploadPending || compressing}
+          className="text-sm"
+        >
+          {compressing ? "Comprimindo..." : uploadPending ? "Enviando..." : "Adicionar foto"}
         </Button>
       </form>
 

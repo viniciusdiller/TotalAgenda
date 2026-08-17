@@ -10,6 +10,7 @@ interface TenantMe {
   address: string | null;
   businessHours: string | null;
   logoUrl: string | null;
+  updatedAt: string;
   accentColor: string | null;
   whatsappNumber: string | null;
   instagramUrl: string | null;

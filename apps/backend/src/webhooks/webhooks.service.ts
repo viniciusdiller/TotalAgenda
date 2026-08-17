@@ -4,9 +4,12 @@ import * as bcrypt from "bcrypt";
 import { PlanTier, Role, SubscriptionStatus } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
 import { generateUniqueSlug } from "../common/utils/slug.util";
+import { hashPasswordSetToken } from "../common/utils/password-set-token.util";
 import { SincronizacaoStatus, TotalSoftwareWebhookDto } from "./dto/totalsoftware-webhook.dto";
 
 const BCRYPT_ROUNDS = 12;
+const PASSWORD_SET_TOKEN_BYTES = 32;
+const PASSWORD_SET_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
 
 const SYNC_STATUS_MAP: Record<SincronizacaoStatus, SubscriptionStatus> = {
   ativa: SubscriptionStatus.ACTIVE,
@@ -43,6 +46,9 @@ export class WebhooksService {
 
     return this.prisma.$transaction(async (tx) => {
       let tenant = await tx.tenant.findUnique({ where: { externalCustomerId: dto.clienteId } });
+      // Só gerado para tenant novo: reaproveitar um tenant existente não deve resetar a
+      // senha de um dono que já está ativo (ver comentário da senha aleatória abaixo).
+      let setPasswordToken: string | undefined;
 
       if (!tenant) {
         const existingUser = await tx.user.findUnique({ where: { email: dto.responsavelEmail! } });
@@ -70,9 +76,12 @@ export class WebhooksService {
         });
 
         // Senha aleatória e descartada: quem provisiona o tenant é o Admin-TotalSoftware,
-        // não um formulário de cadastro local. O responsável ainda não tem como logar até
-        // existir um fluxo de "definir senha"/"esqueci minha senha" neste backend.
+        // não um formulário de cadastro local. O responsável define a senha de verdade em
+        // /auth/set-password, usando o token de convite gerado abaixo.
         const passwordHash = await bcrypt.hash(randomBytes(24).toString("hex"), BCRYPT_ROUNDS);
+        setPasswordToken = randomBytes(PASSWORD_SET_TOKEN_BYTES).toString("hex");
+        const passwordSetTokenHash = hashPasswordSetToken(setPasswordToken);
+
         await tx.user.create({
           data: {
             tenantId: tenant.id,
@@ -80,6 +89,8 @@ export class WebhooksService {
             passwordHash,
             name: dto.responsavelNome!,
             role: Role.OWNER,
+            passwordSetTokenHash,
+            passwordSetTokenExpiresAt: new Date(Date.now() + PASSWORD_SET_TOKEN_TTL_MS),
           },
         });
       }
@@ -102,7 +113,7 @@ export class WebhooksService {
         },
       });
 
-      return { tenantId: tenant.id, slug: tenant.slug };
+      return { tenantId: tenant.id, slug: tenant.slug, setPasswordToken };
     });
   }
 

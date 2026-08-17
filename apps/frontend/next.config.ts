@@ -6,6 +6,15 @@ const nextConfig: NextConfig = {
     // design-taste-frontend skill) até termos fotos reais de salões/barbearias clientes.
     remotePatterns: [{ protocol: "https", hostname: "picsum.photos" }],
   },
+  experimental: {
+    serverActions: {
+      // Upload de logo/galeria (ver dashboard/configuracoes) comprime a imagem no navegador
+      // antes de enviar, mas o limite padrão de 1MB do Server Action ainda pode ser
+      // insuficiente pra fotos muito grandes/detalhadas — mesmo teto do backend
+      // (MAX_IMAGE_SIZE_BYTES em tenants.service.ts), com folga pro overhead do multipart.
+      bodySizeLimit: "6mb",
+    },
+  },
 };
 
 export default nextConfig;

@@ -123,6 +123,13 @@ model User {
   createdAt    DateTime @default(now()) @db.Timestamptz(6)
   updatedAt    DateTime @updatedAt @db.Timestamptz(6)
 
+  // Convite de "definir senha" emitido quando o Admin-TotalSoftware provisiona este usuário
+  // via webhook (ver WebhooksService.provisionar) — ele nasce com uma senha aleatória
+  // descartada e só consegue logar depois de consumir este token. Guardamos o hash, nunca o
+  // token em claro (mesmo padrão do passwordHash).
+  passwordSetTokenHash      String?   @unique
+  passwordSetTokenExpiresAt DateTime? @db.Timestamptz(6)
+
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   professional Professional?
 

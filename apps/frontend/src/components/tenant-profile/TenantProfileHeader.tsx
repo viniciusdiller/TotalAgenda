@@ -18,7 +18,7 @@ export function TenantProfileHeader({ tenant }: { tenant: PublicTenant }) {
           // images.remotePatterns evita ter que sincronizar essa config por ambiente.
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={`${API_URL}${tenant.logoUrl}`}
+            src={`${API_URL}${tenant.logoUrl}?v=${encodeURIComponent(tenant.updatedAt)}`}
             alt={tenant.name}
             className="mx-auto h-24 w-24 rounded-2xl object-cover shadow-lg ring-1 ring-zinc-900/5 dark:ring-white/10"
           />

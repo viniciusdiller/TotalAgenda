@@ -18,7 +18,10 @@ export class TenantsService {
   constructor(private readonly prisma: PrismaService) {}
 
   findById(tenantId: string) {
-    return this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+    return this.prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      include: { galleryImages: { orderBy: { position: "asc" } } },
+    });
   }
 
   async findPublicBySlug(slug: string) {
@@ -32,6 +35,7 @@ export class TenantsService {
         address: true,
         businessHours: true,
         logoUrl: true,
+        updatedAt: true,
         accentColor: true,
         whatsappNumber: true,
         instagramUrl: true,

@@ -32,5 +32,8 @@ export async function authedFetch<T>(path: string, init?: RequestInit): Promise<
     throw new ApiError(message, response.status);
   }
 
-  return response.json() as Promise<T>;
+  // DELETE (ex.: remover logo/foto da galeria) responde 200 sem corpo — response.json()
+  // direto quebraria com "Unexpected end of JSON input".
+  const text = await response.text();
+  return (text ? JSON.parse(text) : undefined) as Promise<T>;
 }
