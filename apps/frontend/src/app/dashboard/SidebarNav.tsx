@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import {
   CalendarBlank,
+  ClipboardText,
   ClockCounterClockwise,
   Gear,
   IdentificationCard,
@@ -18,6 +19,7 @@ const links = [
   { href: "/dashboard/profissionais", label: "Profissionais", icon: Users },
   { href: "/dashboard/servicos", label: "Serviços", icon: Scissors },
   { href: "/dashboard/lista-espera", label: "Lista de espera", icon: ClockCounterClockwise },
+  { href: "/dashboard/fichas", label: "Fichas", icon: ClipboardText },
   { href: "/dashboard/configuracoes", label: "Configurações", icon: Gear },
 ];
 
