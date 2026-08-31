@@ -8,6 +8,19 @@ mas não processa transação; PSP fica para depois).
 Cada milestone é entregável sozinho: schema + migração + backend + frontend + testes
 unitários + seed atualizado, build (`turbo run build`) e `turbo run test` verdes.
 
+## Progresso
+
+- **M0 — concluída.** `Appointment`/`AppointmentItem`, migração com backfill, `RECEPTIONIST`,
+  transições de status, criação por staff, `/appointments/*`.
+- **M1 — concluída.** `GET /appointments/calendar` + tela `/dashboard/agenda` (grade dia
+  por profissional, criar por slot, painel lateral com status/remarcar/cancelar, filtro).
+  _Deferido:_ arrastar/redimensionar direto na grade (hoje remarca pelo painel) e visão
+  semana — não bloqueiam o uso.
+- **M2 — concluída.** `Client` rico + CRUD + timeline; `IntakeForm`/`IntakeResponse` +
+  telas `/dashboard/clientes` e `/dashboard/fichas`.
+  _Deferido:_ pacotes/assinaturas de serviço (`ServicePackage`/`ClientPackage`) e o
+  relatório de aniversariantes/sem-retorno — movidos para um "M2.1" ou para a M3.
+
 ## Estado inicial (antes da M0)
 
 Já existe: perfil público do tenant, wizard de agendamento público, lista de espera,

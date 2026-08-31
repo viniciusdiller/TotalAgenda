@@ -76,8 +76,13 @@ async function seedPlans() {
 }
 
 async function resetDemoTenant(slug: string) {
-  // Idempotente: apaga o tenant demo e tudo que cascateia dele antes de recriar.
-  await prisma.tenant.deleteMany({ where: { slug } });
+  // Idempotente. AppointmentItem.serviceId é onDelete: Restrict, então o cascade do
+  // tenant sozinho não consegue apagar Service enquanto houver itens — removemos os
+  // atendimentos (cascade nos itens) antes de dropar o tenant.
+  const existing = await prisma.tenant.findUnique({ where: { slug }, select: { id: true } });
+  if (!existing) return;
+  await prisma.appointment.deleteMany({ where: { tenantId: existing.id } });
+  await prisma.tenant.delete({ where: { id: existing.id } });
 }
 
 async function seedDemoTenant() {
@@ -186,8 +191,15 @@ async function seedDemoTenant() {
   }
 
   const clientsData = [
-    { name: "João Cliente", phone: "11988887777" },
-    { name: "Maria Cliente", phone: "11977776666" },
+    {
+      name: "João Cliente",
+      phone: "11988887777",
+      email: "joao@example.com",
+      tags: ["VIP"],
+      notes: "Prefere horário da manhã.",
+      birthDate: new Date("1990-05-12"),
+    },
+    { name: "Maria Cliente", phone: "11977776666", tags: ["coloração"] },
     { name: "Pedro Cliente", phone: "11966665555" },
   ];
   const clients = [] as Array<{ id: string; name: string; phone: string }>;
@@ -195,6 +207,32 @@ async function seedDemoTenant() {
     const client = await prisma.client.create({ data: { tenantId: tenant.id, ...c } });
     clients.push(client);
   }
+
+  const intakeForm = await prisma.intakeForm.create({
+    data: {
+      tenantId: tenant.id,
+      name: "Anamnese capilar",
+      fields: [
+        { key: "alergias", label: "Alergias conhecidas", type: "textarea", required: true },
+        { key: "quimica_recente", label: "Fez química nos últimos 30 dias?", type: "boolean" },
+        {
+          key: "tipo_cabelo",
+          label: "Tipo de cabelo",
+          type: "select",
+          options: ["Liso", "Ondulado", "Cacheado", "Crespo"],
+        },
+      ],
+    },
+  });
+
+  await prisma.intakeResponse.create({
+    data: {
+      tenantId: tenant.id,
+      formId: intakeForm.id,
+      clientId: clients[0].id,
+      answers: { alergias: "Nenhuma", quimica_recente: false, tipo_cabelo: "Ondulado" },
+    },
+  });
 
   // Atendimentos: alguns futuros (CONFIRMED), um pendente (SCHEDULED via recepção), um
   // concluído e um cancelado — cobre a variedade de status para testar telas.
