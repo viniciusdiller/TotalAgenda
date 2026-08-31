@@ -92,6 +92,8 @@ async function resetDemoTenant(slug: string) {
   await prisma.ticket.deleteMany({ where });
   await prisma.appointment.deleteMany({ where });
   await prisma.tenant.delete({ where: { id: existing.id } });
+  // Consumer é global (não cascateia do tenant) — remove o do seed pelo telefone fixo.
+  await prisma.consumer.deleteMany({ where: { phone: "11955554444" } });
 }
 
 async function seedDemoTenant() {
@@ -338,6 +340,7 @@ async function seedDemoTenant() {
     { dayOffset: -1, hour: 9, professionalIdx: 0, serviceIdx: 0, clientIdx: 1, status: AppointmentStatus.CANCELED, source: "PUBLIC" },
   ];
 
+  let completedAppointmentId: string | null = null;
   for (const item of plan) {
     const professional = professionals[item.professionalIdx];
     const service = services[item.serviceIdx];
@@ -345,7 +348,7 @@ async function seedDemoTenant() {
     const startAt = atHour(now, item.dayOffset, item.hour);
     const endAt = new Date(startAt.getTime() + service.durationMinutes * 60_000);
 
-    await prisma.appointment.create({
+    const appointment = await prisma.appointment.create({
       data: {
         tenantId: tenant.id,
         professionalId: professional.id,
@@ -366,6 +369,73 @@ async function seedDemoTenant() {
             priceCentsSnapshot: service.priceCents,
           },
         },
+      },
+    });
+    if (item.status === AppointmentStatus.COMPLETED) completedAppointmentId = appointment.id;
+  }
+
+  // Marketplace (M5): categorias globais, opt-in + geo do tenant demo, um consumidor
+  // global vinculado e uma avaliação no atendimento concluído.
+  const categorySeed = [
+    { slug: "barbearia", name: "Barbearia", position: 0 },
+    { slug: "salao-de-beleza", name: "Salão de beleza", position: 1 },
+    { slug: "manicure-pedicure", name: "Manicure e pedicure", position: 2 },
+    { slug: "estetica", name: "Estética", position: 3 },
+    { slug: "sobrancelha-cilios", name: "Sobrancelha e cílios", position: 4 },
+  ];
+  for (const c of categorySeed) {
+    await prisma.serviceCategory.upsert({
+      where: { slug: c.slug },
+      update: { name: c.name, position: c.position },
+      create: c,
+    });
+  }
+  const barbearia = await prisma.serviceCategory.findUniqueOrThrow({ where: { slug: "barbearia" } });
+  const salao = await prisma.serviceCategory.findUniqueOrThrow({
+    where: { slug: "salao-de-beleza" },
+  });
+
+  await prisma.tenant.update({
+    where: { id: tenant.id },
+    data: {
+      listedInMarketplace: true,
+      city: "São Paulo",
+      neighborhood: "Pinheiros",
+      latitude: -23.5629,
+      longitude: -46.6919,
+      priceRange: 2,
+      categories: {
+        create: [{ categoryId: barbearia.id }, { categoryId: salao.id }],
+      },
+    },
+  });
+
+  const consumer = await prisma.consumer.create({
+    data: {
+      phone: "11955554444",
+      name: "Consumidora Marketplace",
+      email: "consumidor@example.com",
+      consentedAt: now,
+    },
+  });
+  const marketplaceClient = await prisma.client.create({
+    data: { tenantId: tenant.id, phone: consumer.phone, name: consumer.name },
+  });
+  await prisma.consumerTenantLink.create({
+    data: {
+      consumerId: consumer.id,
+      tenantId: tenant.id,
+      clientId: marketplaceClient.id,
+    },
+  });
+  if (completedAppointmentId) {
+    await prisma.review.create({
+      data: {
+        tenantId: tenant.id,
+        consumerId: consumer.id,
+        appointmentId: completedAppointmentId,
+        rating: 5,
+        comment: "Atendimento excelente, saí super satisfeita!",
       },
     });
   }
