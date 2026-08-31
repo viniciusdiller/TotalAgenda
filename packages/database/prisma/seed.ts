@@ -85,6 +85,7 @@ async function resetDemoTenant(slug: string) {
   // Ordem importa: várias FKs são onDelete: Restrict (StockMovement->Product,
   // CommissionEntry->Professional, Ticket->User, AppointmentItem->Service), então o
   // cascade do tenant sozinho não resolve.
+  await prisma.financialEntry.deleteMany({ where }); // createdBy -> User (Restrict)
   await prisma.stockMovement.deleteMany({ where });
   await prisma.commissionEntry.deleteMany({ where });
   await prisma.payment.deleteMany({ where });
@@ -275,6 +276,47 @@ async function seedDemoTenant() {
       base: "SERVICE",
       kind: "PERCENT",
       value: 30,
+    },
+  });
+
+  // Financeiro (M4): categorias padrão + algumas despesas do mês.
+  await prisma.financialCategory.createMany({
+    data: [
+      { tenantId: tenant.id, name: "Vendas de serviços", direction: "INCOME" },
+      { tenantId: tenant.id, name: "Vendas de produtos", direction: "INCOME" },
+      { tenantId: tenant.id, name: "Comissões", direction: "EXPENSE" },
+      { tenantId: tenant.id, name: "Aluguel", direction: "EXPENSE" },
+      { tenantId: tenant.id, name: "Fornecedores / produtos", direction: "EXPENSE" },
+    ],
+  });
+  const aluguel = await prisma.financialCategory.findFirst({
+    where: { tenantId: tenant.id, name: "Aluguel" },
+  });
+  await prisma.financialEntry.create({
+    data: {
+      tenantId: tenant.id,
+      direction: "EXPENSE",
+      source: "MANUAL",
+      status: "PAID",
+      description: "Aluguel do salão",
+      amountCents: 250000,
+      categoryId: aluguel!.id,
+      counterparty: "Imobiliária Centro",
+      dueDate: atHour(now, -5, 0),
+      paidAt: atHour(now, -5, 10),
+      createdByUserId: owner.id,
+    },
+  });
+  await prisma.financialEntry.create({
+    data: {
+      tenantId: tenant.id,
+      direction: "EXPENSE",
+      source: "MANUAL",
+      description: "Reposição de produtos",
+      amountCents: 68000,
+      counterparty: "Distribuidora Bella",
+      dueDate: atHour(now, 7, 0),
+      createdByUserId: owner.id,
     },
   });
 
