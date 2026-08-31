@@ -4,6 +4,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { ProductsService } from "../products/products.service";
 import { CommissionsService } from "../commissions/commissions.service";
 import { CashRegisterService } from "../cash-register/cash-register.service";
+import { FinanceService } from "../finance/finance.service";
 
 function ticket(over: Record<string, unknown> = {}) {
   return {
@@ -55,7 +56,14 @@ function build(over: Record<string, unknown> = {}) {
   const products = { registerSale: jest.fn(), getOrThrow: jest.fn() } as unknown as ProductsService;
   const commissions = { computeForTicket: jest.fn() } as unknown as CommissionsService;
   const cash = { currentOpen: jest.fn().mockResolvedValue(null) } as unknown as CashRegisterService;
-  return { service: new TicketsService(prisma, products, commissions, cash), prisma, commissions, prismaTx };
+  const finance = { recordTicketIncome: jest.fn() } as unknown as FinanceService;
+  return {
+    service: new TicketsService(prisma, products, commissions, cash, finance),
+    prisma,
+    commissions,
+    finance,
+    prismaTx,
+  };
 }
 
 describe("TicketsService", () => {
@@ -80,7 +88,7 @@ describe("TicketsService", () => {
 
   it("close recusa quando pagamento é insuficiente", async () => {
     const { service } = build();
-    await expect(service.close("t-1", "tk-1")).rejects.toThrow(BadRequestException);
+    await expect(service.close("t-1", "u-1", "tk-1")).rejects.toThrow(BadRequestException);
   });
 
   it("close com pagamento completo gera comissão e fecha", async () => {
@@ -88,7 +96,7 @@ describe("TicketsService", () => {
     (prisma.ticket.findFirst as jest.Mock).mockResolvedValue(
       ticket({ payments: [{ id: "p1", method: "CASH", amountCents: 5000, createdAt: new Date() }] }),
     );
-    await service.close("t-1", "tk-1");
+    await service.close("t-1", "u-1", "tk-1");
     expect(commissions.computeForTicket).toHaveBeenCalledTimes(1);
   });
 

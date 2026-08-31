@@ -26,6 +26,7 @@ import { ProductsModule } from "./products/products.module";
 import { TicketsModule } from "./tickets/tickets.module";
 import { CommissionsModule } from "./commissions/commissions.module";
 import { CashRegisterModule } from "./cash-register/cash-register.module";
+import { FinanceModule } from "./finance/finance.module";
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { CashRegisterModule } from "./cash-register/cash-register.module";
     TicketsModule,
     CommissionsModule,
     CashRegisterModule,
+    FinanceModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
