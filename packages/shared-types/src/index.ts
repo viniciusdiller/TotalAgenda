@@ -121,6 +121,60 @@ export interface CreateStaffAppointmentInput {
   status?: "SCHEDULED" | "CONFIRMED";
 }
 
+export interface AdminClientListItem {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  tags: string[];
+  createdAt: string;
+  _count: { appointments: number };
+}
+
+export interface ClientIntakeResponse {
+  id: string;
+  formId: string;
+  answers: Record<string, string | boolean>;
+  updatedAt: string;
+  form: { id: string; name: string; fields: IntakeFieldDef[] };
+}
+
+export interface IntakeFieldDef {
+  key: string;
+  label: string;
+  type: "text" | "textarea" | "boolean" | "select";
+  options?: string[];
+  required?: boolean;
+}
+
+export interface AdminClientDetail {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  birthDate: string | null;
+  cpf: string | null;
+  notes: string | null;
+  tags: string[];
+  createdAt: string;
+  appointments: Array<{
+    id: string;
+    startAt: string;
+    endAt: string;
+    status: AppointmentStatus;
+    professional: { user: { name: string } };
+    items: Array<{ id: string; service: { name: string }; priceCentsSnapshot: number }>;
+  }>;
+  intakeResponses: ClientIntakeResponse[];
+}
+
+export interface IntakeFormSummary {
+  id: string;
+  name: string;
+  fields: IntakeFieldDef[];
+  isActive: boolean;
+}
+
 export type AppointmentStatus =
   | "SCHEDULED"
   | "CONFIRMED"
