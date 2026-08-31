@@ -69,6 +69,63 @@ para aplicar limites de plano (`PlanLimitService`) e liberar/bloquear acesso
 Arquivos de tenant (logo, galeria) em `apps/backend/uploads/` (gitignored), servidos por
 `ServeStaticModule`. Nome de arquivo fixo por tenant + cache-bust por `updatedAt` na URL.
 
+## Segurança (não-negociável)
+
+Segurança é o requisito nº 1 — validação e tratamento de erro em boundary (API/DB/auth)
+nunca são cortados por simplicidade. Ao escrever ou revisar código, varrer ativamente por:
+
+### IDOR / BOLA (Broken Object Level Authorization)
+- **Toda** query de recurso de tenant filtra por `tenantId` (do JWT) na cláusula `WHERE` —
+  `findFirst({ where: { id, tenantId } })`, nunca `findUnique({ where: { id } })` seguido de
+  comparação de dono em JS (isso abre janela de IDOR e vaza existência do recurso).
+- Recurso de cliente logado: filtrar por `clientId` na query (`where: { id, tenantId, clientId }`).
+- `PROFESSIONAL` só acessa a própria agenda: o service injeta `professionalId` no `WHERE`
+  quando `role === PROFESSIONAL` (ver `AppointmentsService.findOwnedByStaff`).
+- Nunca aceitar `tenantId` / `professionalId` "de dono" vindo do body/query como fonte de
+  autorização — só como filtro adicional, sempre cruzado com o JWT.
+- `manageToken` (nanoid 24) é capability aleatória e não-enumerável para o fluxo público
+  sem login — não substituível por `id` sequencial/uuid exposto.
+
+### Injeção SQL / NoSQL
+- Acesso a dados **só** via Prisma Client (parametrizado). `$queryRaw` / `$executeRaw`
+  apenas com template tag (`$executeRaw\`... ${x}\``), nunca `$queryRawUnsafe` com
+  concatenação de input. O único raw hoje é `pg_advisory_xact_lock(hashtext(${id}))` —
+  interpolação por parâmetro, não string.
+- `ValidationPipe` global com `whitelist: true` + `forbidNonWhitelisted: true`: campo não
+  declarado no DTO → 400. Todo input de fronteira passa por DTO com class-validator.
+
+### DoS / abuso
+- `ThrottlerModule` global (100 req/min por IP). Rotas públicas sensíveis a spam têm
+  `@Throttle` mais estrito (ex.: criação de agendamento público: 10/min).
+- Constraint `EXCLUDE` + advisory lock evitam corrida de double-booking sob carga.
+- Uploads: limite de tamanho e content-type no Multer; imagens reprocessadas com `sharp`
+  (descarta payload malicioso embutido). Sem upload de SVG (XSS via `<script>` em SVG).
+- Paginação/limite em toda listagem que possa crescer sem teto (adicionar ao criar
+  endpoints de histórico/relatório).
+
+### Auth / sessão
+- Senhas com bcrypt (rounds 12). Nunca logar senha, token, hash ou `Authorization`.
+- JWT: validar assinatura + expiração (`passport-jwt`); `JWT_SECRET` obrigatório no
+  `env.validation` (fail closed). Não confiar em claim sem revalidar o recurso no banco.
+- Webhooks do Admin-TotalSoftware: `WebhookSecretGuard` com segredo compartilhado,
+  comparação em tempo constante; sem segredo configurado → rejeita tudo.
+- Token de "definir senha": só o **hash** é persistido, com expiração; consumido uma vez.
+
+### Exposição de dados sensíveis
+- Mensagem de erro ao usuário é genérica em pt-BR; stack trace e detalhe de Prisma nunca
+  vazam (`PrismaExceptionFilter` normaliza). Recurso inexistente e recurso de outro tenant
+  retornam o **mesmo** 404 (não confirmar existência).
+- `select` explícito ao devolver `User` / `Client` — nunca serializar `passwordHash`,
+  `passwordSetTokenHash`, tokens.
+- **Nunca** commitar `.env*` / segredos (regra absoluta — ver
+  `Vscode/CLAUDE.md`). `.env.example` versionado sem valores reais.
+
+### SSRF / deserialização / dependências
+- Sem fetch de URL controlada por usuário no servidor (se surgir — ex.: importar imagem
+  por URL — validar host contra allowlist, bloquear IP privado/metadata).
+- Sem `eval` / deserialização de payload arbitrário. JSON via parser padrão.
+- `pnpm audit` no CI; dependência com CVE conhecido bloqueia merge.
+
 ## Convenções
 
 ### Backend
