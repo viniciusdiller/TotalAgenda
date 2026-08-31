@@ -153,6 +153,15 @@ model Tenant {
   showGallery  Boolean @default(true)
   showContact  Boolean @default(true)
 
+  // Marketplace de descoberta (M5). listedInMarketplace = opt-in explícito do dono.
+  // latitude/longitude alimentam a ordenação por distância (bounding box, sem PostGIS).
+  listedInMarketplace Boolean @default(false)
+  city                String?
+  neighborhood        String?
+  latitude            Float?
+  longitude           Float?
+  priceRange          Int?   // 1..4 ($ a $$$$)
+
   users         User[]
   professionals Professional[]
   services      Service[]
@@ -173,8 +182,12 @@ model Tenant {
   cashRegisters   CashRegister[]
   financialCategories FinancialCategory[]
   financialEntries    FinancialEntry[]
+  categories          TenantCategory[]
+  reviews             Review[]
+  consumerLinks       ConsumerTenantLink[]
 
   @@index([slug])
+  @@index([listedInMarketplace, city])
 }
 
 // Fotos avulsas da página pública (espaço, trabalhos feitos) — separado de logoUrl porque
@@ -355,6 +368,7 @@ model Appointment {
   items        AppointmentItem[]
   intakeResponses IntakeResponse[]
   ticket       Ticket?
+  review       Review?
 
   @@index([tenantId, startAt])
   @@index([professionalId, startAt])
@@ -429,6 +443,7 @@ model Client {
   waitlistEntries WaitlistEntry[]
   intakeResponses IntakeResponse[]
   tickets         Ticket[]
+  consumerLink    ConsumerTenantLink?
 
   @@unique([tenantId, phone])
   @@index([tenantId])
@@ -730,6 +745,92 @@ model FinancialEntry {
   @@index([tenantId, dueDate])
   @@index([tenantId, status, direction])
   @@index([tenantId, paidAt])
+}
+
+// ─────────────────────────────────────────────
+// Marketplace de descoberta (M5)
+// ─────────────────────────────────────────────
+// Consumidor GLOBAL, não escopado por tenant — um login que agenda em vários
+// estabelecimentos e avalia. O Client por tenant vira um vínculo (ConsumerTenantLink).
+// v1 sem OTP (mesmo racional do ClientAuth) — ponto de extensão antes do go-live real.
+// LGPD: consentimento explícito no cadastro, export/exclusão via ConsumerService.
+
+enum ReviewStatus {
+  VISIBLE
+  HIDDEN // ocultada por moderação
+  PENDING_REPORT // denunciada, aguardando revisão
+}
+
+model Consumer {
+  id            String   @id @default(uuid())
+  phone         String   @unique // normalizado, sem DDI 55
+  name          String
+  email         String?
+  consentedAt   DateTime @db.Timestamptz(6) // aceite dos termos/privacidade
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(6)
+
+  tenantLinks ConsumerTenantLink[]
+  reviews     Review[]
+
+  @@index([phone])
+}
+
+// Liga o consumidor global ao Client daquele tenant (identidade "viva" no negócio).
+model ConsumerTenantLink {
+  id         String   @id @default(uuid())
+  consumerId String
+  tenantId   String
+  clientId   String   @unique
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  consumer Consumer @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([consumerId, tenantId])
+  @@index([tenantId])
+}
+
+// Taxonomia global de categorias de estabelecimento (semeada). slug estável para URL.
+model ServiceCategory {
+  id       String  @id @default(uuid())
+  slug     String  @unique
+  name     String
+  position Int     @default(0)
+
+  tenants TenantCategory[]
+}
+
+model TenantCategory {
+  tenantId   String
+  categoryId String
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, categoryId])
+  @@index([categoryId])
+}
+
+// Avaliação atrelada a UM atendimento concluído (1:1), feita pelo consumidor dono.
+model Review {
+  id            String       @id @default(uuid())
+  tenantId      String
+  consumerId    String
+  appointmentId String       @unique
+  rating        Int // 1..5
+  comment       String?
+  status        ReviewStatus @default(VISIBLE)
+  reportReason  String?
+  createdAt     DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime     @updatedAt @db.Timestamptz(6)
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  consumer    Consumer    @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, createdAt])
 }
 
 // ─────────────────────────────────────────────
