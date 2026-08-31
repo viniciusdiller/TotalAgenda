@@ -171,6 +171,8 @@ model Tenant {
   commissionRules CommissionRule[]
   commissionEntries CommissionEntry[]
   cashRegisters   CashRegister[]
+  financialCategories FinancialCategory[]
+  financialEntries    FinancialEntry[]
 
   @@index([slug])
 }
@@ -211,6 +213,7 @@ model User {
   professional Professional?
   openedTickets Ticket[]
   cashRegisters CashRegister[]
+  financialEntries FinancialEntry[]
 
   @@index([tenantId])
 }
@@ -539,6 +542,7 @@ model Ticket {
   items        TicketItem[]
   payments     Payment[]
   commissionEntries CommissionEntry[]
+  financialEntry    FinancialEntry?
 
   @@index([tenantId, status])
   @@index([tenantId, openedAt])
@@ -655,6 +659,77 @@ model CashMovement {
   cashRegister CashRegister @relation(fields: [cashRegisterId], references: [id], onDelete: Cascade)
 
   @@index([cashRegisterId, createdAt])
+}
+
+// ─────────────────────────────────────────────
+// Financeiro (M4) — camada gerencial acima do PDV/caixa. Regime de caixa; o par
+// dueDate/paidAt dá o "previsto x realizado". Sem PSP/conta bancária/conciliação:
+// toda entrada e baixa é feita pela gestão.
+// ─────────────────────────────────────────────
+
+enum FinancialDirection {
+  INCOME
+  EXPENSE
+}
+
+enum FinancialEntryStatus {
+  PENDING
+  PAID
+  CANCELED
+}
+
+enum FinancialEntrySource {
+  TICKET // receita gerada ao fechar comanda
+  COMMISSION // despesa gerada ao fechar comissões do período
+  MANUAL // lançado à mão (aluguel, fornecedor, etc.)
+}
+
+model FinancialCategory {
+  id         String             @id @default(uuid())
+  tenantId   String
+  name       String
+  direction  FinancialDirection
+  parentId   String?
+  isArchived Boolean            @default(false)
+  createdAt  DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime           @updatedAt @db.Timestamptz(6)
+
+  tenant   Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent   FinancialCategory?  @relation("FinancialCategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children FinancialCategory[] @relation("FinancialCategoryTree")
+  entries  FinancialEntry[]
+
+  @@unique([tenantId, name, direction])
+  @@index([tenantId, direction, isArchived])
+}
+
+model FinancialEntry {
+  id            String               @id @default(uuid())
+  tenantId      String
+  direction     FinancialDirection
+  status        FinancialEntryStatus @default(PENDING)
+  source        FinancialEntrySource @default(MANUAL)
+  description   String
+  amountCents   Int
+  categoryId    String?
+  counterparty  String? // fornecedor / cliente / profissional (texto livre na v1)
+  ticketId      String?              @unique // quando source = TICKET
+  dueDate       DateTime             @db.Date
+  paidAt        DateTime?            @db.Timestamptz(6)
+  paymentMethod PaymentMethod?
+  notes         String?
+  createdByUserId String
+  createdAt     DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime             @updatedAt @db.Timestamptz(6)
+
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category  FinancialCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  ticket    Ticket?            @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  createdBy User               @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, dueDate])
+  @@index([tenantId, status, direction])
+  @@index([tenantId, paidAt])
 }
 
 // ─────────────────────────────────────────────
