@@ -81,7 +81,15 @@ async function resetDemoTenant(slug: string) {
   // atendimentos (cascade nos itens) antes de dropar o tenant.
   const existing = await prisma.tenant.findUnique({ where: { slug }, select: { id: true } });
   if (!existing) return;
-  await prisma.appointment.deleteMany({ where: { tenantId: existing.id } });
+  const where = { tenantId: existing.id };
+  // Ordem importa: várias FKs são onDelete: Restrict (StockMovement->Product,
+  // CommissionEntry->Professional, Ticket->User, AppointmentItem->Service), então o
+  // cascade do tenant sozinho não resolve.
+  await prisma.stockMovement.deleteMany({ where });
+  await prisma.commissionEntry.deleteMany({ where });
+  await prisma.payment.deleteMany({ where });
+  await prisma.ticket.deleteMany({ where });
+  await prisma.appointment.deleteMany({ where });
   await prisma.tenant.delete({ where: { id: existing.id } });
 }
 
@@ -231,6 +239,42 @@ async function seedDemoTenant() {
       formId: intakeForm.id,
       clientId: clients[0].id,
       answers: { alergias: "Nenhuma", quimica_recente: false, tipo_cabelo: "Ondulado" },
+    },
+  });
+
+  // Produtos + estoque inicial (M3).
+  const productsData = [
+    { name: "Pomada modeladora", priceCents: 4500, costCents: 2000, stock: 20 },
+    { name: "Shampoo profissional 300ml", priceCents: 6900, costCents: 3500, stock: 12 },
+  ];
+  for (const p of productsData) {
+    const product = await prisma.product.create({
+      data: {
+        tenantId: tenant.id,
+        name: p.name,
+        priceCents: p.priceCents,
+        costCents: p.costCents,
+      },
+    });
+    await prisma.stockMovement.create({
+      data: {
+        tenantId: tenant.id,
+        productId: product.id,
+        kind: "IN",
+        quantity: p.stock,
+        note: "Estoque inicial",
+      },
+    });
+  }
+
+  // Regra de comissão: 30% em qualquer serviço para o primeiro profissional.
+  await prisma.commissionRule.create({
+    data: {
+      tenantId: tenant.id,
+      professionalId: professionals[0].id,
+      base: "SERVICE",
+      kind: "PERCENT",
+      value: 30,
     },
   });
 
