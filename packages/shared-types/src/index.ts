@@ -121,6 +121,94 @@ export interface CreateStaffAppointmentInput {
   status?: "SCHEDULED" | "CONFIRMED";
 }
 
+// ── M5: marketplace de descoberta ──
+
+export interface MarketplaceCategory {
+  id: string;
+  slug: string;
+  name: string;
+  position: number;
+}
+
+export interface MarketplaceRating {
+  average: number | null;
+  count: number;
+}
+
+export interface MarketplaceResult {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  city: string | null;
+  neighborhood: string | null;
+  priceRange: number | null;
+  logoUrl: string | null;
+  categories: Array<{ name: string; slug: string }>;
+  rating: MarketplaceRating;
+  distanceKm: number | null;
+}
+
+export interface MarketplaceEstablishment {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  address: string | null;
+  city: string | null;
+  neighborhood: string | null;
+  businessHours: string | null;
+  priceRange: number | null;
+  logoUrl: string | null;
+  whatsappNumber: string | null;
+  instagramUrl: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  categories: Array<{ name: string; slug: string }>;
+  galleryImages: Array<{ id: string; url: string }>;
+  services: Array<{ id: string; name: string; durationMinutes: number; priceCents: number }>;
+  rating: MarketplaceRating;
+  reviews: Array<{
+    id: string;
+    rating: number;
+    comment: string | null;
+    createdAt: string;
+    authorName: string;
+  }>;
+}
+
+export interface MarketplaceSettings {
+  listedInMarketplace: boolean;
+  city: string | null;
+  neighborhood: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  priceRange: number | null;
+  categorySlugs: string[];
+  availableCategories: MarketplaceCategory[];
+}
+
+export interface ConsumerSession {
+  accessToken: string;
+  consumer: { id: string; name: string; phone: string; email: string | null };
+}
+
+export interface OwnerReview {
+  id: string;
+  rating: number;
+  comment: string | null;
+  status: "VISIBLE" | "HIDDEN" | "PENDING_REPORT";
+  createdAt: string;
+  consumer: { name: string };
+}
+
+export interface ReviewablePastAppointment {
+  id: string;
+  startAt: string;
+  tenant: { name: string; slug: string };
+  items: Array<{ service: { name: string } }>;
+}
+
 // ── M4: financeiro ──
 
 export type FinancialDirection = "INCOME" | "EXPENSE";
