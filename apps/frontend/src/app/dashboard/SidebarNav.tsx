@@ -12,7 +12,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 
 const links = [
-  { href: "/dashboard", label: "Agenda", icon: CalendarBlank },
+  { href: "/dashboard/agenda", label: "Agenda", icon: CalendarBlank },
   { href: "/dashboard/profissionais", label: "Profissionais", icon: Users },
   { href: "/dashboard/servicos", label: "Serviços", icon: Scissors },
   { href: "/dashboard/lista-espera", label: "Lista de espera", icon: ClockCounterClockwise },
