@@ -26,6 +26,14 @@ unitários + seed atualizado, build (`turbo run build`) e `turbo run test` verde
   transação. Telas `/dashboard/comandas`, `/produtos`, `/caixa`, `/comissoes`.
   _Deferido:_ devolução/estorno de pagamento, transferência de item entre comandas,
   relatório de margem por produto, exportação CSV.
+- **M4 — concluída.** `FinancialCategory` (árvore, padrões auto) + `FinancialEntry` (regime
+  de caixa, previsto×realizado). Fechar comanda → receita `PAID` automática. "Fechar
+  comissões do período" → contas a pagar por profissional. Relatórios: fluxo de caixa por
+  categoria, DRE simples (receita − CMV via `Product.costCents` − despesas), a pagar/receber
+  com aging, overview do mês. Sem PSP/conta bancária/conciliação — tudo pela gestão. Tela
+  `/dashboard/financeiro`.
+  _Deferido:_ conciliação bancária, múltiplas contas, centro de custo, projeção de fluxo,
+  nota fiscal, exportação contábil (SPED).
 
 ## Estado inicial (antes da M0)
 
