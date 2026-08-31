@@ -22,6 +22,10 @@ import { WebhooksModule } from "./webhooks/webhooks.module";
 import { ClientsModule } from "./clients/clients.module";
 import { ClientAuthModule } from "./client-auth/client-auth.module";
 import { IntakeModule } from "./intake/intake.module";
+import { ProductsModule } from "./products/products.module";
+import { TicketsModule } from "./tickets/tickets.module";
+import { CommissionsModule } from "./commissions/commissions.module";
+import { CashRegisterModule } from "./cash-register/cash-register.module";
 
 @Module({
   imports: [
@@ -42,6 +46,10 @@ import { IntakeModule } from "./intake/intake.module";
     ClientsModule,
     ClientAuthModule,
     IntakeModule,
+    ProductsModule,
+    TicketsModule,
+    CommissionsModule,
+    CashRegisterModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
