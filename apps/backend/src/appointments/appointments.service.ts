@@ -206,6 +206,74 @@ export class AppointmentsService {
     return appointments.map((appointment) => this.serialize(appointment));
   }
 
+  // Payload único da tela de agenda: colunas de profissional (com horário de trabalho),
+  // atendimentos e bloqueios no intervalo. Reaproveita as mesmas regras de visibilidade
+  // por role de findForAdmin.
+  async getCalendar(user: AuthenticatedUser, from: string, to: string, professionalId?: string) {
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+      throw new BadRequestException("Intervalo de datas inválido.");
+    }
+    if (toDate.getTime() - fromDate.getTime() > 45 * 24 * 60 * 60 * 1000) {
+      throw new BadRequestException("Intervalo máximo da agenda é de 45 dias.");
+    }
+
+    const scopedProfessionalId =
+      user.role === Role.PROFESSIONAL ? user.professionalId : professionalId;
+
+    const professionalWhere: Prisma.ProfessionalWhereInput = {
+      tenantId: user.tenantId,
+      isActive: true,
+      ...(scopedProfessionalId ? { id: scopedProfessionalId } : {}),
+    };
+    const overlapWhere = { startAt: { lt: toDate }, endAt: { gt: fromDate } };
+
+    const [professionals, appointments, timeBlocks] = await Promise.all([
+      this.prisma.professional.findMany({
+        where: professionalWhere,
+        select: {
+          id: true,
+          slotGranularityMinutes: true,
+          user: { select: { name: true } },
+          workingHours: {
+            select: { weekday: true, startMinute: true, endMinute: true },
+            orderBy: { startMinute: "asc" },
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      }),
+      this.prisma.appointment.findMany({
+        where: {
+          tenantId: user.tenantId,
+          ...(scopedProfessionalId ? { professionalId: scopedProfessionalId } : {}),
+          ...overlapWhere,
+        },
+        include: APPOINTMENT_INCLUDE,
+        orderBy: { startAt: "asc" },
+      }),
+      this.prisma.timeBlock.findMany({
+        where: {
+          tenantId: user.tenantId,
+          ...(scopedProfessionalId ? { professionalId: scopedProfessionalId } : {}),
+          ...overlapWhere,
+        },
+        select: { id: true, professionalId: true, startAt: true, endAt: true, reason: true },
+      }),
+    ]);
+
+    return {
+      professionals: professionals.map((professional) => ({
+        id: professional.id,
+        name: professional.user.name,
+        slotGranularityMinutes: professional.slotGranularityMinutes,
+        workingHours: professional.workingHours,
+      })),
+      appointments: appointments.map((appointment) => this.serialize(appointment)),
+      timeBlocks,
+    };
+  }
+
   // ─────────────────────────────────────────────
   // Ações por token (link enviado ao cliente)
   // ─────────────────────────────────────────────
