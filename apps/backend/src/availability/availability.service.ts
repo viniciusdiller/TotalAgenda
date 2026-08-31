@@ -73,10 +73,11 @@ export class AvailabilityService {
       this.prisma.workingHours.findMany({
         where: { professionalId, weekday },
       }),
-      this.prisma.booking.findMany({
+      this.prisma.appointment.findMany({
         where: {
           professionalId,
-          status: "CONFIRMED",
+          // Estados que ocupam a agenda (mesmo conjunto do WHERE da constraint EXCLUDE).
+          status: { in: ["SCHEDULED", "CONFIRMED", "IN_SERVICE"] },
           startAt: { lt: dayEnd.toJSDate() },
           endAt: { gt: dayStart.toJSDate() },
         },

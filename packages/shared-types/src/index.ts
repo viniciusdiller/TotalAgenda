@@ -78,18 +78,41 @@ export interface CreateBookingInput {
   clientPhone: string;
 }
 
+export type AppointmentStatus =
+  | "SCHEDULED"
+  | "CONFIRMED"
+  | "IN_SERVICE"
+  | "COMPLETED"
+  | "NO_SHOW"
+  | "CANCELED";
+
+export interface AppointmentItem {
+  id: string;
+  serviceId: string;
+  serviceName: string;
+  position: number;
+  durationMinutes: number;
+  priceCentsSnapshot: number;
+}
+
+// Nome mantido (`PublicBooking`) por compatibilidade com o front atual. `priceCentsSnapshot`
+// = soma dos itens; `service` = primeiro item (atalho legado). O agregado real são os `items`.
 export interface PublicBooking {
   id: string;
   professionalId: string;
+  // Atalho legado = serviço do primeiro item. Sempre presente (todo atendimento tem 1+ item).
   serviceId: string;
   clientName: string;
   clientPhone: string;
   startAt: string;
   endAt: string;
   priceCentsSnapshot: number;
-  status: "CONFIRMED" | "CANCELED" | "COMPLETED";
+  status: AppointmentStatus;
+  source?: "PUBLIC" | "STAFF";
+  notes?: string | null;
   manageToken: string;
   rescheduledCount: number;
+  items?: AppointmentItem[];
   service?: { name: string };
   professional?: { id: string; user: { name: string } };
   tenant?: { slug: string };

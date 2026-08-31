@@ -15,7 +15,7 @@ import { ProfessionalsModule } from "./professionals/professionals.module";
 import { ServicesModule } from "./services/services.module";
 import { AvailabilityModule } from "./availability/availability.module";
 import { TimeBlocksModule } from "./time-blocks/time-blocks.module";
-import { BookingsModule } from "./bookings/bookings.module";
+import { AppointmentsModule } from "./appointments/appointments.module";
 import { WaitlistModule } from "./waitlist/waitlist.module";
 import { BillingModule } from "./billing/billing.module";
 import { WebhooksModule } from "./webhooks/webhooks.module";
@@ -34,7 +34,7 @@ import { ClientAuthModule } from "./client-auth/client-auth.module";
     ServicesModule,
     AvailabilityModule,
     TimeBlocksModule,
-    BookingsModule,
+    AppointmentsModule,
     WaitlistModule,
     BillingModule,
     WebhooksModule,

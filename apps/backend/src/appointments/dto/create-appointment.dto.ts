@@ -1,6 +1,8 @@
 import { IsDateString, IsString, MinLength } from "class-validator";
 
-export class CreateBookingDto {
+// Agendamento pelo link público do tenant: sempre 1 serviço, cliente identificado por
+// nome + telefone (a conta é criada/atualizada no upsert).
+export class CreateAppointmentDto {
   @IsString()
   professionalId!: string;
 

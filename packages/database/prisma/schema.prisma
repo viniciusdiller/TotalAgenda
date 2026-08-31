@@ -13,6 +13,7 @@ datasource db {
 
 enum Role {
   OWNER
+  RECEPTIONIST
   PROFESSIONAL
 }
 
@@ -26,10 +27,22 @@ enum Weekday {
   SATURDAY
 }
 
-enum BookingStatus {
+// Ciclo de vida do atendimento. SCHEDULED = criado pela recepção e ainda não confirmado;
+// CONFIRMED = firme na agenda (default do agendamento público); IN_SERVICE = cliente em
+// atendimento; COMPLETED = finalizado; NO_SHOW = cliente faltou; CANCELED = cancelado.
+enum AppointmentStatus {
+  SCHEDULED
   CONFIRMED
-  CANCELED
+  IN_SERVICE
   COMPLETED
+  NO_SHOW
+  CANCELED
+}
+
+// Origem do agendamento: link público do tenant vs. criado por staff (recepção/dono).
+enum AppointmentSource {
+  PUBLIC
+  STAFF
 }
 
 enum WaitlistStatus {
@@ -88,7 +101,7 @@ model Tenant {
   users         User[]
   professionals Professional[]
   services      Service[]
-  bookings      Booking[]
+  appointments  Appointment[]
   timeBlocks    TimeBlock[]
   waitlist      WaitlistEntry[]
   subscription  Subscription?
@@ -154,7 +167,7 @@ model Professional {
   user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   workingHours         WorkingHours[]
   timeBlocks           TimeBlock[]
-  bookings             Booking[]
+  appointments         Appointment[]
   professionalServices ProfessionalService[]
   waitlistEntries      WaitlistEntry[]
 
@@ -210,7 +223,7 @@ model Service {
 
   tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   professionalServices ProfessionalService[]
-  bookings             Booking[]
+  appointmentItems     AppointmentItem[]
   waitlistEntries      WaitlistEntry[]
 
   @@index([tenantId, isActive])
@@ -236,35 +249,61 @@ model ProfessionalService {
 // Agendamentos
 // ─────────────────────────────────────────────
 
-model Booking {
-  id                 String        @id @default(uuid())
-  tenantId           String
-  professionalId     String
-  serviceId          String
-  // Snapshot do momento do agendamento (auditoria, mesmo padrão de priceCentsSnapshot) —
-  // não editado depois. A identidade "viva" do cliente é a relação clientId abaixo.
-  clientName         String
-  clientPhone        String
-  clientId           String?
-  startAt            DateTime      @db.Timestamptz(6)
-  endAt              DateTime      @db.Timestamptz(6)
-  priceCentsSnapshot Int
-  status             BookingStatus @default(CONFIRMED)
-  manageToken        String        @unique
-  canceledAt         DateTime?     @db.Timestamptz(6)
-  rescheduledCount   Int           @default(0)
-  createdAt          DateTime      @default(now()) @db.Timestamptz(6)
-  updatedAt          DateTime      @updatedAt @db.Timestamptz(6)
+// Agregado do atendimento (a "comanda" no vocabulário do salão). Um Appointment tem 1+
+// AppointmentItem — na M0 os itens são só serviços; produtos entram na M3.
+// [startAt, endAt] é o intervalo total (span dos itens) e é o que a constraint EXCLUDE
+// usa para impedir sobreposição do mesmo profissional.
+model Appointment {
+  id       String @id @default(uuid())
+  tenantId String
+  // Profissional responsável pelo atendimento. Na M0 todos os itens são desse profissional;
+  // comanda multiprofissional fica para a M3.
+  professionalId String
+  // Snapshot do momento da marcação (auditoria) — não editado depois. A identidade "viva"
+  // do cliente é a relação clientId.
+  clientName String
+  clientPhone String
+  clientId    String?
+  startAt     DateTime          @db.Timestamptz(6)
+  endAt       DateTime          @db.Timestamptz(6)
+  status      AppointmentStatus @default(CONFIRMED)
+  source      AppointmentSource @default(PUBLIC)
+  notes       String?
+  manageToken String            @unique
+  canceledAt  DateTime?         @db.Timestamptz(6)
+  noShowAt    DateTime?         @db.Timestamptz(6)
+  rescheduledCount Int          @default(0)
+  createdAt   DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime          @updatedAt @db.Timestamptz(6)
 
-  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Restrict)
-  service      Service      @relation(fields: [serviceId], references: [id], onDelete: Restrict)
-  client       Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  professional Professional      @relation(fields: [professionalId], references: [id], onDelete: Restrict)
+  client       Client?           @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  items        AppointmentItem[]
 
   @@index([tenantId, startAt])
   @@index([professionalId, startAt])
   @@index([clientId])
-  // Constraint EXCLUDE anti-overlap é adicionada manualmente na migration SQL (ver migration.sql)
+  // Constraint EXCLUDE anti-overlap (professionalId + tstzrange) adicionada manualmente na
+  // migration SQL, parcial em status IN (SCHEDULED, CONFIRMED, IN_SERVICE).
+}
+
+model AppointmentItem {
+  id            String @id @default(uuid())
+  appointmentId String
+  serviceId     String
+  // Ordem do item dentro do atendimento (define a sequência dos serviços).
+  position Int @default(0)
+  // Snapshots do catálogo no momento da marcação (ProfessionalService override > Service).
+  durationMinutes    Int
+  priceCentsSnapshot Int
+  createdAt          DateTime @default(now()) @db.Timestamptz(6)
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  service     Service     @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@index([appointmentId, position])
+  @@index([serviceId])
 }
 
 model WaitlistEntry {
@@ -305,7 +344,7 @@ model Client {
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  bookings        Booking[]
+  appointments    Appointment[]
   waitlistEntries WaitlistEntry[]
 
   @@unique([tenantId, phone])

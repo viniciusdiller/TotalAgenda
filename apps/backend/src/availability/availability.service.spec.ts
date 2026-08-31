@@ -11,7 +11,7 @@ function buildPrismaMock() {
     professional: { findFirst: jest.fn() },
     professionalService: { findUnique: jest.fn() },
     workingHours: { findMany: jest.fn() },
-    booking: { findMany: jest.fn() },
+    appointment: { findMany: jest.fn() },
     timeBlock: { findMany: jest.fn() },
   } as unknown as PrismaService;
 }
@@ -34,7 +34,7 @@ describe("AvailabilityService", () => {
       isActive: true,
       service: { id: "svc-1", tenantId: "tenant-1", durationMinutes: 60, isActive: true },
     });
-    (prisma.booking.findMany as jest.Mock).mockResolvedValue([]);
+    (prisma.appointment.findMany as jest.Mock).mockResolvedValue([]);
     (prisma.timeBlock.findMany as jest.Mock).mockResolvedValue([]);
   });
 
@@ -67,7 +67,7 @@ describe("AvailabilityService", () => {
     (prisma.workingHours.findMany as jest.Mock).mockResolvedValue([
       { startMinute: 540, endMinute: 660 }, // 09:00–11:00
     ]);
-    (prisma.booking.findMany as jest.Mock).mockResolvedValue([
+    (prisma.appointment.findMany as jest.Mock).mockResolvedValue([
       {
         startAt: new Date("2024-01-01T12:00:00.000Z"), // 09:00 America/Sao_Paulo (UTC-3)
         endAt: new Date("2024-01-01T13:00:00.000Z"), // 10:00 America/Sao_Paulo
