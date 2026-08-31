@@ -12,7 +12,9 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "db:generate": "turbo run db:generate",
-    "db:migrate": "turbo run db:migrate"
+    "db:migrate": "turbo run db:migrate",
+    "db:studio": "pnpm --filter @totalagenda/database db:studio",
+    "db:seed": "pnpm --filter @totalagenda/database db:seed"
   },
   "devDependencies": {
     "turbo": "^2.3.3",
