@@ -69,7 +69,7 @@ export class TicketsController {
 
   @Post(":id/close")
   close(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
-    return this.tickets.close(user.tenantId, id);
+    return this.tickets.close(user.tenantId, user.userId, id);
   }
 
   @Post(":id/cancel")

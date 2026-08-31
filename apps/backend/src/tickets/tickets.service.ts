@@ -9,6 +9,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { ProductsService } from "../products/products.service";
 import { CommissionsService } from "../commissions/commissions.service";
 import { CashRegisterService } from "../cash-register/cash-register.service";
+import { FinanceService } from "../finance/finance.service";
 import {
   AddPaymentDto,
   AddTicketItemDto,
@@ -32,6 +33,7 @@ export class TicketsService {
     private readonly products: ProductsService,
     private readonly commissions: CommissionsService,
     private readonly cashRegister: CashRegisterService,
+    private readonly finance: FinanceService,
   ) {}
 
   async open(tenantId: string, userId: string, dto: OpenTicketDto) {
@@ -198,7 +200,7 @@ export class TicketsService {
     return this.serialize(await this.getOpenOrAny(tenantId, id));
   }
 
-  async close(tenantId: string, id: string) {
+  async close(tenantId: string, userId: string, id: string) {
     const ticket = await this.requireOpen(tenantId, id);
     if (ticket.items.length === 0) {
       throw new BadRequestException("Comanda sem itens.");
@@ -238,6 +240,12 @@ export class TicketsService {
           unitPriceCents: item.unitPriceCents,
         })),
       );
+
+      // Receita no financeiro (regime de caixa: já quitada, pois close exige pago >= total).
+      await this.finance.recordTicketIncome(tx, tenantId, userId, {
+        id,
+        totalCents: this.totalCents(closed),
+      });
 
       return this.serialize(closed);
     });
