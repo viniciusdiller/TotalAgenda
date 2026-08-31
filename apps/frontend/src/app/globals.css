@@ -4,13 +4,13 @@
   --font-display: var(--font-display);
   --font-body: var(--font-body);
 
-  /* Accent: raspberry, deliberately not purple/blue-SaaS/brass-craft. Locked across the whole page. */
-  --color-accent-50: #fdf2f6;
-  --color-accent-100: #fce7ef;
-  --color-accent-300: #f4a0c0;
-  --color-accent-500: #c2255c;
-  --color-accent-600: #a91d4e;
-  --color-accent-700: #8a1740;
+  /* Accent: violet/roxo, deliberately not blue-SaaS/brass-craft. Locked across the whole page. */
+  --color-accent-50: #f5f3ff;
+  --color-accent-100: #ede9fe;
+  --color-accent-300: #c4b5fd;
+  --color-accent-500: #7c3aed;
+  --color-accent-600: #6d28d9;
+  --color-accent-700: #5b21b6;
 }
 
 @media (prefers-reduced-motion: reduce) {
