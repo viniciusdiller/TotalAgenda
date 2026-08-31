@@ -32,7 +32,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           user: {
             id: string;
             tenantId: string;
-            role: "OWNER" | "PROFESSIONAL";
+            role: "OWNER" | "RECEPTIONIST" | "PROFESSIONAL";
             email: string;
             name: string;
             professionalId?: string;

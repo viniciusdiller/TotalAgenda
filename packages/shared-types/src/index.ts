@@ -78,6 +78,49 @@ export interface CreateBookingInput {
   clientPhone: string;
 }
 
+export type StaffRole = "OWNER" | "RECEPTIONIST" | "PROFESSIONAL";
+
+export type Weekday =
+  | "SUNDAY"
+  | "MONDAY"
+  | "TUESDAY"
+  | "WEDNESDAY"
+  | "THURSDAY"
+  | "FRIDAY"
+  | "SATURDAY";
+
+export interface CalendarProfessional {
+  id: string;
+  name: string;
+  slotGranularityMinutes: number;
+  workingHours: Array<{ weekday: Weekday; startMinute: number; endMinute: number }>;
+}
+
+export interface CalendarTimeBlock {
+  id: string;
+  professionalId: string;
+  startAt: string;
+  endAt: string;
+  reason: string | null;
+}
+
+export interface CalendarResponse {
+  professionals: CalendarProfessional[];
+  appointments: PublicBooking[];
+  timeBlocks: CalendarTimeBlock[];
+}
+
+export interface CreateStaffAppointmentInput {
+  professionalId: string;
+  startAt: string;
+  items: Array<{ serviceId: string }>;
+  clientId?: string;
+  clientName?: string;
+  clientPhone?: string;
+  notes?: string;
+  status?: "SCHEDULED" | "CONFIRMED";
+}
+
 export type AppointmentStatus =
   | "SCHEDULED"
   | "CONFIRMED"

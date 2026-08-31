@@ -54,7 +54,11 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
               {session.user?.name}
             </p>
             <p className="text-xs text-zinc-500 dark:text-stone-400">
-              {session.user.role === "OWNER" ? "Dono do negócio" : "Profissional"}
+              {session.user.role === "OWNER"
+                ? "Dono do negócio"
+                : session.user.role === "RECEPTIONIST"
+                  ? "Recepção"
+                  : "Profissional"}
             </p>
           </div>
           <form action={signOutAction}>

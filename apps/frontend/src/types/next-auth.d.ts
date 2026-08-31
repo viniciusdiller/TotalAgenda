@@ -4,7 +4,7 @@ declare module "next-auth" {
   interface User {
     accessToken: string;
     tenantId: string;
-    role: "OWNER" | "PROFESSIONAL";
+    role: "OWNER" | "RECEPTIONIST" | "PROFESSIONAL";
     professionalId?: string;
   }
 
@@ -12,7 +12,7 @@ declare module "next-auth" {
     accessToken: string;
     user: {
       tenantId: string;
-      role: "OWNER" | "PROFESSIONAL";
+      role: "OWNER" | "RECEPTIONIST" | "PROFESSIONAL";
       professionalId?: string;
     } & DefaultSession["user"];
   }
@@ -22,7 +22,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     accessToken: string;
     tenantId: string;
-    role: "OWNER" | "PROFESSIONAL";
+    role: "OWNER" | "RECEPTIONIST" | "PROFESSIONAL";
     professionalId?: string;
   }
 }
