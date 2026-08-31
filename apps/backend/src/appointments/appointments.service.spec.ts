@@ -63,7 +63,13 @@ function buildTxMock(overrides: Partial<Record<string, unknown>> = {}) {
 function buildPrismaMock(tx: ReturnType<typeof buildTxMock>) {
   return {
     tenant: { findUnique: jest.fn().mockResolvedValue({ id: "tenant-1" }) },
-    professional: { findFirst: jest.fn().mockResolvedValue({ id: "prof-1" }) },
+    professional: {
+      findFirst: jest.fn().mockResolvedValue({ id: "prof-1" }),
+      findMany: jest.fn().mockResolvedValue([
+        { id: "prof-1", slotGranularityMinutes: 15, user: { name: "Alex" }, workingHours: [] },
+      ]),
+    },
+    timeBlock: { findMany: jest.fn().mockResolvedValue([]) },
     client: { findFirst: jest.fn().mockResolvedValue({ id: "client-1", name: "Cliente Teste", phone: "11999998888" }) },
     professionalService: {
       findUnique: jest.fn().mockResolvedValue({
@@ -270,6 +276,56 @@ describe("AppointmentsService", () => {
       await expect(service.rescheduleByToken("token-1", { startAt: FUTURE_DATE })).rejects.toThrow(
         BadRequestException,
       );
+    });
+  });
+
+  describe("getCalendar", () => {
+    const range = {
+      from: new Date().toISOString(),
+      to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    };
+
+    function calendarPrisma() {
+      const prisma = buildPrismaMock(buildTxMock());
+      (prisma.appointment.findMany as jest.Mock).mockResolvedValue([hydratedAppointment()]);
+      return prisma;
+    }
+
+    it("devolve profissionais, atendimentos e bloqueios do intervalo", async () => {
+      const service = new AppointmentsService(calendarPrisma(), clientsService);
+
+      const result = await service.getCalendar(owner, range.from, range.to);
+
+      expect(result.professionals).toHaveLength(1);
+      expect(result.appointments).toHaveLength(1);
+      expect(result.appointments[0].items).toBeDefined();
+    });
+
+    it("PROFESSIONAL só enxerga a própria coluna", async () => {
+      const prisma = calendarPrisma();
+      const service = new AppointmentsService(prisma, clientsService);
+      const pro: AuthenticatedUser = {
+        userId: "u-2",
+        tenantId: "tenant-1",
+        role: Role.PROFESSIONAL,
+        professionalId: "prof-2",
+      };
+
+      await service.getCalendar(pro, range.from, range.to, "prof-999");
+
+      const where = (prisma.professional.findMany as jest.Mock).mock.calls[0][0].where;
+      expect(where.id).toBe("prof-2");
+    });
+
+    it("recusa intervalo maior que 45 dias", async () => {
+      const service = new AppointmentsService(calendarPrisma(), clientsService);
+      await expect(
+        service.getCalendar(
+          owner,
+          range.from,
+          new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

@@ -67,6 +67,16 @@ export class AppointmentsController {
     return this.appointments.findForAdmin(user, from, to);
   }
 
+  @Get("calendar")
+  calendar(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query("from") from: string,
+    @Query("to") to: string,
+    @Query("professionalId") professionalId?: string,
+  ) {
+    return this.appointments.getCalendar(user, from, to, professionalId);
+  }
+
   @Roles(Role.OWNER, Role.RECEPTIONIST, Role.PROFESSIONAL)
   @Post()
   createByStaff(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateStaffAppointmentDto) {
