@@ -107,6 +107,8 @@ model Tenant {
   subscription  Subscription?
   clients       Client[]
   galleryImages TenantGalleryImage[]
+  intakeForms     IntakeForm[]
+  intakeResponses IntakeResponse[]
 
   @@index([slug])
 }
@@ -280,6 +282,7 @@ model Appointment {
   professional Professional      @relation(fields: [professionalId], references: [id], onDelete: Restrict)
   client       Client?           @relation(fields: [clientId], references: [id], onDelete: SetNull)
   items        AppointmentItem[]
+  intakeResponses IntakeResponse[]
 
   @@index([tenantId, startAt])
   @@index([professionalId, startAt])
@@ -340,15 +343,64 @@ model Client {
   tenantId  String
   phone     String // normalizado: só dígitos, sem DDI 55
   name      String
+  // Cadastro rico (M2) — todos opcionais, preenchidos pela recepção/dono.
+  email     String?
+  birthDate DateTime? @db.Date
+  cpf       String? // só dígitos
+  notes     String? // observações livres da equipe (preferências, alergias, histórico)
+  tags      String[]  @default([]) // rótulos livres para segmentação (ex.: "VIP", "coloração")
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
-  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   appointments    Appointment[]
   waitlistEntries WaitlistEntry[]
+  intakeResponses IntakeResponse[]
 
   @@unique([tenantId, phone])
   @@index([tenantId])
+}
+
+// ─────────────────────────────────────────────
+// Anamnese / ficha (M2)
+// ─────────────────────────────────────────────
+
+// Modelo de ficha definido pelo tenant. `fields` é um array JSON de definições:
+// [{ key, label, type: "text"|"textarea"|"boolean"|"select", options?: string[], required?: boolean }]
+model IntakeForm {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  fields    Json
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  responses IntakeResponse[]
+
+  @@index([tenantId, isActive])
+}
+
+// Resposta de um cliente a uma ficha. `answers` é um objeto JSON { [fieldKey]: valor }.
+// Permite histórico (várias respostas por form/cliente); a UI mostra a mais recente.
+model IntakeResponse {
+  id            String   @id @default(uuid())
+  tenantId      String
+  formId        String
+  clientId      String
+  appointmentId String?
+  answers       Json
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(6)
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  form        IntakeForm   @relation(fields: [formId], references: [id], onDelete: Cascade)
+  client      Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, clientId])
+  @@index([formId, clientId])
 }
 
 // ─────────────────────────────────────────────

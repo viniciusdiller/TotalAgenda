@@ -21,6 +21,7 @@ import { BillingModule } from "./billing/billing.module";
 import { WebhooksModule } from "./webhooks/webhooks.module";
 import { ClientsModule } from "./clients/clients.module";
 import { ClientAuthModule } from "./client-auth/client-auth.module";
+import { IntakeModule } from "./intake/intake.module";
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { ClientAuthModule } from "./client-auth/client-auth.module";
     WebhooksModule,
     ClientsModule,
     ClientAuthModule,
+    IntakeModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
