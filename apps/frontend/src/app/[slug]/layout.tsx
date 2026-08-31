@@ -4,7 +4,7 @@ import { publicApi, ApiError } from "@/lib/api";
 
 // Mesmo valor de --color-accent-500 em app/globals.css — usado quando o tenant não
 // escolheu uma cor de destaque própria.
-export const DEFAULT_TENANT_ACCENT = "#c2255c";
+export const DEFAULT_TENANT_ACCENT = "#7c3aed";
 
 // cache() dedupa chamadas repetidas dentro da mesma requisição: layout + page (e
 // agendar/entrar/conta) podem cada um chamar getTenant(slug) sem gerar fetches extras.

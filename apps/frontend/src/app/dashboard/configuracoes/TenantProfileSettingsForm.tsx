@@ -196,7 +196,7 @@ export function TenantProfileSettingsForm({ tenant }: { tenant: TenantProfile })
               type="color"
               id="accentColor"
               name="accentColor"
-              defaultValue={tenant.accentColor ?? "#c2255c"}
+              defaultValue={tenant.accentColor ?? "#7c3aed"}
               className="h-10 w-14 cursor-pointer rounded-lg border border-zinc-300 dark:border-white/15"
             />
             <p className="text-sm text-zinc-500 dark:text-stone-400">
