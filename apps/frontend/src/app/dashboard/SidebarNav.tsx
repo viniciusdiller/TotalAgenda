@@ -15,6 +15,7 @@ import {
   Percent,
   Receipt,
   Scissors,
+  Storefront,
   Users,
 } from "@phosphor-icons/react/dist/ssr";
 
@@ -26,6 +27,7 @@ const links = [
   { href: "/dashboard/caixa", label: "Caixa", icon: CashRegister },
   { href: "/dashboard/financeiro", label: "Financeiro", icon: ChartLineUp },
   { href: "/dashboard/comissoes", label: "Comissões", icon: Percent },
+  { href: "/dashboard/marketplace", label: "Marketplace", icon: Storefront },
   { href: "/dashboard/profissionais", label: "Profissionais", icon: Users },
   { href: "/dashboard/servicos", label: "Serviços", icon: Scissors },
   { href: "/dashboard/lista-espera", label: "Lista de espera", icon: ClockCounterClockwise },
