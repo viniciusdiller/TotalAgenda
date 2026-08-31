@@ -9,6 +9,7 @@ import {
   rescheduleAppointmentAction,
   setAppointmentStatusAction,
 } from "./actions";
+import { openTicketAction } from "../comandas/actions";
 
 const TIMEZONE = "America/Sao_Paulo";
 
@@ -180,6 +181,22 @@ export function AppointmentPanel({
                   Mover
                 </button>
               </div>
+            ) : null}
+
+            {["CONFIRMED", "IN_SERVICE", "COMPLETED"].includes(appointment.status) ? (
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() =>
+                  run(async () => {
+                    await openTicketAction({ appointmentId: appointment.id });
+                    return { ok: true };
+                  })
+                }
+                className="w-full rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 disabled:opacity-50 dark:border-white/15 dark:text-stone-200"
+              >
+                Abrir comanda
+              </button>
             ) : null}
 
             {canCancel ? (

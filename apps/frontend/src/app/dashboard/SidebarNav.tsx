@@ -5,17 +5,25 @@ import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import {
   CalendarBlank,
+  CashRegister,
   ClipboardText,
   ClockCounterClockwise,
   Gear,
   IdentificationCard,
+  Package,
+  Percent,
+  Receipt,
   Scissors,
   Users,
 } from "@phosphor-icons/react/dist/ssr";
 
 const links = [
   { href: "/dashboard/agenda", label: "Agenda", icon: CalendarBlank },
+  { href: "/dashboard/comandas", label: "Comandas", icon: Receipt },
   { href: "/dashboard/clientes", label: "Clientes", icon: IdentificationCard },
+  { href: "/dashboard/produtos", label: "Produtos", icon: Package },
+  { href: "/dashboard/caixa", label: "Caixa", icon: CashRegister },
+  { href: "/dashboard/comissoes", label: "Comissões", icon: Percent },
   { href: "/dashboard/profissionais", label: "Profissionais", icon: Users },
   { href: "/dashboard/servicos", label: "Serviços", icon: Scissors },
   { href: "/dashboard/lista-espera", label: "Lista de espera", icon: ClockCounterClockwise },
