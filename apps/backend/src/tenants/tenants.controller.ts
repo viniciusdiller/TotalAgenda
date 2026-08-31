@@ -13,6 +13,7 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { Role } from "@totalagenda/database";
 import { TenantsService } from "./tenants.service";
 import { UpdateTenantProfileDto } from "./dto/update-tenant-profile.dto";
+import { UpdateMarketplaceDto } from "./dto/update-marketplace.dto";
 import { Public } from "../common/decorators/public.decorator";
 import { SkipBillingCheck } from "../common/decorators/skip-billing-check.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
@@ -36,6 +37,22 @@ export class TenantsController {
   @Patch("tenants/me")
   updateMe(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateTenantProfileDto) {
     return this.tenantsService.updateProfile(user.tenantId, dto);
+  }
+
+  @SkipBillingCheck()
+  @Get("tenants/me/marketplace")
+  getMarketplace(@CurrentUser() user: AuthenticatedUser) {
+    return this.tenantsService.getMarketplaceSettings(user.tenantId);
+  }
+
+  @Roles(Role.OWNER)
+  @SkipBillingCheck()
+  @Patch("tenants/me/marketplace")
+  updateMarketplace(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateMarketplaceDto,
+  ) {
+    return this.tenantsService.updateMarketplace(user.tenantId, dto);
   }
 
   @Roles(Role.OWNER)

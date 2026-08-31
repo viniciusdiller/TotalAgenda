@@ -5,6 +5,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import sharp from "sharp";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdateTenantProfileDto } from "./dto/update-tenant-profile.dto";
+import { UpdateMarketplaceDto } from "./dto/update-marketplace.dto";
 import { UPLOADS_DIR, UPLOADS_URL_PREFIX } from "../common/constants/uploads";
 
 const ALLOWED_IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -59,6 +60,65 @@ export class TenantsService {
 
   updateProfile(tenantId: string, dto: UpdateTenantProfileDto) {
     return this.prisma.tenant.update({ where: { id: tenantId }, data: dto });
+  }
+
+  async getMarketplaceSettings(tenantId: string) {
+    const [tenant, categories] = await Promise.all([
+      this.prisma.tenant.findUniqueOrThrow({
+        where: { id: tenantId },
+        select: {
+          listedInMarketplace: true,
+          city: true,
+          neighborhood: true,
+          latitude: true,
+          longitude: true,
+          priceRange: true,
+          categories: { select: { category: { select: { slug: true } } } },
+        },
+      }),
+      this.prisma.serviceCategory.findMany({ orderBy: { position: "asc" } }),
+    ]);
+    return {
+      ...tenant,
+      categorySlugs: tenant.categories.map((c) => c.category.slug),
+      availableCategories: categories,
+    };
+  }
+
+  async updateMarketplace(tenantId: string, dto: UpdateMarketplaceDto) {
+    const { categorySlugs, ...scalar } = dto;
+
+    return this.prisma.$transaction(async (tx) => {
+      if (categorySlugs) {
+        const categories = await tx.serviceCategory.findMany({
+          where: { slug: { in: categorySlugs } },
+          select: { id: true },
+        });
+        await tx.tenantCategory.deleteMany({ where: { tenantId } });
+        await tx.tenantCategory.createMany({
+          data: categories.map((c) => ({ tenantId, categoryId: c.id })),
+        });
+      }
+
+      const updated = await tx.tenant.update({
+        where: { id: tenantId },
+        data: scalar,
+        select: { id: true },
+      });
+
+      // Não deixa listar sem cidade e sem pelo menos uma categoria — vitrine vazia é ruído.
+      const tenant = await tx.tenant.findUniqueOrThrow({
+        where: { id: updated.id },
+        select: { listedInMarketplace: true, city: true, _count: { select: { categories: true } } },
+      });
+      if (tenant.listedInMarketplace && (!tenant.city || tenant._count.categories === 0)) {
+        throw new BadRequestException(
+          "Para aparecer no marketplace, informe a cidade e ao menos uma categoria.",
+        );
+      }
+
+      return this.getMarketplaceSettings(tenantId);
+    });
   }
 
   private assertValidImage(file: Express.Multer.File) {
