@@ -20,6 +20,12 @@ unitários + seed atualizado, build (`turbo run build`) e `turbo run test` verde
   telas `/dashboard/clientes` e `/dashboard/fichas`.
   _Deferido:_ pacotes/assinaturas de serviço (`ServicePackage`/`ClientPackage`) e o
   relatório de aniversariantes/sem-retorno — movidos para um "M2.1" ou para a M3.
+- **M3 — concluída.** `Product`/`StockMovement` (saldo derivado), `Ticket`/`TicketItem`
+  (serviço/produto/avulso), `Payment` (só registro, sem PSP), `CommissionRule`/`CommissionEntry`,
+  `CashRegister`/`CashMovement`. Fechar comanda gera baixa de estoque + comissão na mesma
+  transação. Telas `/dashboard/comandas`, `/produtos`, `/caixa`, `/comissoes`.
+  _Deferido:_ devolução/estorno de pagamento, transferência de item entre comandas,
+  relatório de margem por produto, exportação CSV.
 
 ## Estado inicial (antes da M0)
 
