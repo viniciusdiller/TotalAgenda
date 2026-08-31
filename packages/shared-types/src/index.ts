@@ -121,6 +121,112 @@ export interface CreateStaffAppointmentInput {
   status?: "SCHEDULED" | "CONFIRMED";
 }
 
+// ── M3: comanda / PDV / estoque / comissão ──
+
+export type TicketStatus = "OPEN" | "CLOSED" | "CANCELED";
+export type PaymentMethod = "CASH" | "DEBIT" | "CREDIT" | "PIX" | "OTHER";
+export type TicketItemKind = "SERVICE" | "PRODUCT" | "CUSTOM";
+
+export interface AdminProduct {
+  id: string;
+  name: string;
+  sku: string | null;
+  priceCents: number;
+  costCents: number | null;
+  isActive: boolean;
+  stock: number;
+}
+
+export interface StockMovement {
+  id: string;
+  kind: "IN" | "OUT" | "ADJUSTMENT" | "SALE";
+  quantity: number;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface TicketItem {
+  id: string;
+  kind: TicketItemKind;
+  serviceId: string | null;
+  productId: string | null;
+  description: string;
+  quantity: number;
+  unitPriceCents: number;
+  totalCents: number;
+  professional: { id: string | null; name: string } | null;
+}
+
+export interface TicketPayment {
+  id: string;
+  method: PaymentMethod;
+  amountCents: number;
+  createdAt: string;
+}
+
+export interface Ticket {
+  id: string;
+  status: TicketStatus;
+  appointmentId: string | null;
+  client: { id: string; name: string; phone: string } | null;
+  note: string | null;
+  openedAt: string;
+  closedAt: string | null;
+  discountCents: number;
+  subtotalCents: number;
+  totalCents: number;
+  paidCents: number;
+  dueCents: number;
+  items: TicketItem[];
+  payments: TicketPayment[];
+}
+
+export interface CommissionRule {
+  id: string;
+  professionalId: string;
+  base: "SERVICE" | "PRODUCT" | "ALL";
+  targetId: string | null;
+  kind: "PERCENT" | "FIXED";
+  value: number;
+  isActive: boolean;
+}
+
+export interface CommissionReport {
+  totalCents: number;
+  byProfessional: Array<{
+    professionalId: string;
+    name: string;
+    totalCents: number;
+    count: number;
+  }>;
+  entries: Array<{
+    id: string;
+    professionalName: string;
+    description: string;
+    baseCents: number;
+    amountCents: number;
+    createdAt: string;
+  }>;
+}
+
+export interface CashRegisterSummary {
+  open: boolean;
+  register?: {
+    id: string;
+    openingFloatCents: number;
+    openedAt: string;
+  };
+  movements?: Array<{
+    id: string;
+    kind: "OPENING" | "SALE" | "WITHDRAWAL" | "DEPOSIT";
+    amountCents: number;
+    note: string | null;
+    createdAt: string;
+  }>;
+  paymentsByMethod?: Array<{ method: PaymentMethod; totalCents: number }>;
+  expectedCashCents?: number;
+}
+
 export interface AdminClientListItem {
   id: string;
   name: string;
