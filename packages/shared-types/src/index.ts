@@ -121,6 +121,78 @@ export interface CreateStaffAppointmentInput {
   status?: "SCHEDULED" | "CONFIRMED";
 }
 
+// ── M4: financeiro ──
+
+export type FinancialDirection = "INCOME" | "EXPENSE";
+export type FinancialEntryStatus = "PENDING" | "PAID" | "CANCELED";
+export type FinancialEntrySource = "TICKET" | "COMMISSION" | "MANUAL";
+
+export interface FinancialCategory {
+  id: string;
+  name: string;
+  direction: FinancialDirection;
+  parentId: string | null;
+  isArchived: boolean;
+}
+
+export interface FinancialEntry {
+  id: string;
+  direction: FinancialDirection;
+  status: FinancialEntryStatus;
+  source: FinancialEntrySource;
+  description: string;
+  amountCents: number;
+  categoryId: string | null;
+  category?: { name: string } | null;
+  counterparty: string | null;
+  ticketId: string | null;
+  dueDate: string;
+  paidAt: string | null;
+  paymentMethod: PaymentMethod | null;
+  notes: string | null;
+}
+
+export interface FinanceOverview {
+  receivableCents: number;
+  receivableOverdueCents: number;
+  payableCents: number;
+  payableOverdueCents: number;
+  monthIncomeCents: number;
+  monthExpenseCents: number;
+  monthNetCents: number;
+}
+
+export interface CashFlowReport {
+  basis: "due" | "paid";
+  incomeCents: number;
+  expenseCents: number;
+  netCents: number;
+  byCategory: Array<{ name: string; direction: FinancialDirection; totalCents: number }>;
+}
+
+export interface DreReport {
+  revenueCents: number;
+  cogsCents: number;
+  grossProfitCents: number;
+  expensesCents: number;
+  expensesByCategory: Array<{ name: string; totalCents: number }>;
+  resultCents: number;
+}
+
+export interface OpenItemsReport {
+  totalCents: number;
+  overdueCents: number;
+  entries: Array<{
+    id: string;
+    description: string;
+    counterparty: string | null;
+    categoryName: string | null;
+    amountCents: number;
+    dueDate: string;
+    overdueDays: number;
+  }>;
+}
+
 // ── M3: comanda / PDV / estoque / comissão ──
 
 export type TicketStatus = "OPEN" | "CLOSED" | "CANCELED";

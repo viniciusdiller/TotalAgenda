@@ -6,6 +6,7 @@ import clsx from "clsx";
 import {
   CalendarBlank,
   CashRegister,
+  ChartLineUp,
   ClipboardText,
   ClockCounterClockwise,
   Gear,
@@ -23,6 +24,7 @@ const links = [
   { href: "/dashboard/clientes", label: "Clientes", icon: IdentificationCard },
   { href: "/dashboard/produtos", label: "Produtos", icon: Package },
   { href: "/dashboard/caixa", label: "Caixa", icon: CashRegister },
+  { href: "/dashboard/financeiro", label: "Financeiro", icon: ChartLineUp },
   { href: "/dashboard/comissoes", label: "Comissões", icon: Percent },
   { href: "/dashboard/profissionais", label: "Profissionais", icon: Users },
   { href: "/dashboard/servicos", label: "Serviços", icon: Scissors },
