@@ -34,6 +34,20 @@ unitários + seed atualizado, build (`turbo run build`) e `turbo run test` verde
   `/dashboard/financeiro`.
   _Deferido:_ conciliação bancária, múltiplas contas, centro de custo, projeção de fluxo,
   nota fiscal, exportação contábil (SPED).
+- **M5 — concluída.** `Consumer` (identidade global, login próprio, v1 sem OTP) +
+  `ConsumerTenantLink`; `ServiceCategory`/`TenantCategory`; `Review` 1:1 com atendimento
+  concluído + moderação (ocultar/denunciar). Busca pública por cidade/categoria/texto com
+  ordenação por distância (bounding box) ou nota; perfil público `/descobrir/[slug]` com
+  SSR + JSON-LD; portal `/descobrir/avaliar` para o consumidor avaliar; `/dashboard/marketplace`
+  (opt-in, geo, categorias, moderação); `sitemap.ts`.
+  _Deferido:_ OTP no login do consumidor (obrigatório antes do go-live real), agendamento
+  ponta-a-ponta pelo portal com identidade `Consumer` (hoje o botão leva ao wizard público
+  do tenant), app nativo, resposta pública do dono à avaliação, denúncia pelo consumidor.
+
+## Transversal — ainda pendente
+Infra de notificação (WhatsApp/SMS/e-mail com fila e templates), pass de identidade visual
+própria, refino de RBAC, exportação CSV de relatórios. E o `backend#lint` quebrado por
+config ESLint 9 desatualizada (pré-existente na `main`).
 
 ## Estado inicial (antes da M0)
 
