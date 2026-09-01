@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { getTenant } from "../layout";
 import { ClientLoginForm } from "./ClientLoginForm";
 
@@ -14,7 +15,12 @@ export async function generateMetadata({
 
 export default async function ClientLoginPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const tenant = (await getTenant(slug))!;
+  // O layout já chama notFound() se o tenant não existisse, mas isso não impede este
+  // componente de renderizar no mesmo passe — precisa da própria checagem.
+  const tenant = await getTenant(slug);
+  if (!tenant) {
+    notFound();
+  }
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-stone-50 px-6 py-16 dark:bg-zinc-950">

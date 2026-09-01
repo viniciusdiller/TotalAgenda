@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import type { MyBookingsResponse } from "@totalagenda/shared-types";
 import { getTenant } from "../layout";
@@ -17,7 +17,12 @@ export async function generateMetadata({
 
 export default async function ContaPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  await getTenant(slug); // garante o 404 do layout antes de seguir
+  // O layout já chama notFound() se o tenant não existisse, mas isso não impede este
+  // componente de renderizar no mesmo passe — precisa da própria checagem.
+  const tenant = await getTenant(slug);
+  if (!tenant) {
+    notFound();
+  }
 
   const data = await clientAuthedFetch<MyBookingsResponse>(
     slug,
