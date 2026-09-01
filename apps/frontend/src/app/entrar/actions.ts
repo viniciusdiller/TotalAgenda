@@ -34,5 +34,10 @@ export async function loginAction(
     throw error;
   }
 
-  redirect("/dashboard");
+  // Redireciona direto pro destino final (não pra "/dashboard", que por sua vez redireciona
+  // de novo pra cá em dashboard/page.tsx) — dois redirect() encadeados, um deles disparado
+  // de dentro de uma Server Action, faz o RedirectBoundary do App Router entrar num loop de
+  // router.replace() nessa versão do Next.js (vercel/next.js#48438), travando a navegação e
+  // disparando o aviso "Throttling navigation to prevent the browser from hanging" do Chrome.
+  redirect("/dashboard/agenda");
 }
