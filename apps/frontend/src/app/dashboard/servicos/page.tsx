@@ -1,5 +1,7 @@
+import { Scissors } from "@phosphor-icons/react/dist/ssr";
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { CreateServiceForm } from "./CreateServiceForm";
 import { ServiceRow } from "./ServiceRow";
 
@@ -31,9 +33,17 @@ export default async function ServicesPage() {
       ) : null}
 
       {services.length === 0 ? (
-        <p className="mt-8 text-sm text-zinc-500 dark:text-stone-400">
-          Nenhum serviço cadastrado ainda.
-        </p>
+        <div className="mt-8">
+          <EmptyState
+            icon={Scissors}
+            title="Nenhum serviço cadastrado ainda"
+            description={
+              isOwner
+                ? "Use o formulário acima pra cadastrar o primeiro."
+                : "Peça pro dono do negócio cadastrar os serviços."
+            }
+          />
+        </div>
       ) : (
         <ul className="mt-8 flex flex-col divide-y divide-zinc-200 dark:divide-white/10">
           {services.map((service) => (

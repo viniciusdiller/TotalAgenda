@@ -1,9 +1,10 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { Plus } from "@phosphor-icons/react/dist/ssr";
+import { Package, Plus } from "@phosphor-icons/react/dist/ssr";
 import type { AdminProduct } from "@totalagenda/shared-types";
 import { Input } from "@/components/ui/Input";
+import { EmptyState } from "@/components/ui/EmptyState";
 import {
   adjustStockAction,
   createProductAction,
@@ -104,7 +105,11 @@ export function ProductsManager({ products }: { products: AdminProduct[] }) {
       )}
 
       {products.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-stone-400">Nenhum produto cadastrado.</p>
+        <EmptyState
+          icon={Package}
+          title="Nenhum produto cadastrado"
+          description="Use o botão acima pra cadastrar o primeiro."
+        />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { DateTime } from "luxon";
-import { MagnifyingGlass, Plus } from "@phosphor-icons/react/dist/ssr";
+import { IdentificationCard, MagnifyingGlass, Plus } from "@phosphor-icons/react/dist/ssr";
 import type { AdminClientListItem } from "@totalagenda/shared-types";
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function ClientsPage({
   searchParams,
@@ -49,9 +50,28 @@ export default async function ClientsPage({
       </form>
 
       {clients.length === 0 ? (
-        <p className="mt-8 text-sm text-zinc-500 dark:text-stone-400">
-          {query ? "Nenhum cliente encontrado." : "Nenhum cliente cadastrado ainda."}
-        </p>
+        <div className="mt-8">
+          <EmptyState
+            icon={IdentificationCard}
+            title={query ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado ainda"}
+            description={
+              query
+                ? "Tente buscar por outro nome ou telefone."
+                : "Clientes aparecem aqui assim que forem cadastrados ou fizerem o primeiro agendamento."
+            }
+            action={
+              !query ? (
+                <Link
+                  href="/dashboard/clientes/novo"
+                  className="mt-1 inline-flex items-center gap-2 rounded-full bg-accent-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-600"
+                >
+                  <Plus size={16} weight="bold" />
+                  Novo cliente
+                </Link>
+              ) : undefined
+            }
+          />
+        </div>
       ) : (
         <ul className="mt-6 flex flex-col divide-y divide-zinc-200 dark:divide-white/10">
           {clients.map((client) => (

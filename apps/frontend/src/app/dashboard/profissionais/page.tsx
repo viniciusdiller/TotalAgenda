@@ -1,5 +1,7 @@
+import { Users } from "@phosphor-icons/react/dist/ssr";
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { CreateProfessionalForm } from "./CreateProfessionalForm";
 import { ProfessionalRow } from "./ProfessionalRow";
 
@@ -31,9 +33,17 @@ export default async function ProfessionalsPage() {
       ) : null}
 
       {professionals.length === 0 ? (
-        <p className="mt-8 text-sm text-zinc-500 dark:text-stone-400">
-          Nenhum profissional cadastrado ainda.
-        </p>
+        <div className="mt-8">
+          <EmptyState
+            icon={Users}
+            title="Nenhum profissional cadastrado ainda"
+            description={
+              isOwner
+                ? "Use o formulário acima pra cadastrar o primeiro."
+                : "Peça pro dono do negócio cadastrar a equipe."
+            }
+          />
+        </div>
       ) : (
         <ul className="mt-8 flex flex-col divide-y divide-zinc-200 dark:divide-white/10">
           {professionals.map((professional) => (
