@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import type { AdminClientDetail } from "@totalagenda/shared-types";
 import { Input } from "@/components/ui/Input";
+import { MaskedInput } from "@/components/ui/MaskedInput";
 import { type ClientFormState } from "./actions";
 
 const initial: ClientFormState = {};
@@ -22,7 +23,14 @@ export function ClientForm({
     <form action={formAction} className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Nome" name="name" defaultValue={client?.name ?? ""} required />
-        <Input label="Telefone" name="phone" defaultValue={client?.phone ?? ""} required />
+        <MaskedInput
+          mask="phone"
+          label="Telefone"
+          name="phone"
+          type="tel"
+          defaultValue={client?.phone ?? ""}
+          required
+        />
         <Input label="E-mail" name="email" type="email" defaultValue={client?.email ?? ""} />
         <Input
           label="Nascimento"
@@ -30,7 +38,7 @@ export function ClientForm({
           type="date"
           defaultValue={client?.birthDate?.slice(0, 10) ?? ""}
         />
-        <Input label="CPF" name="cpf" defaultValue={client?.cpf ?? ""} />
+        <MaskedInput mask="cpf" label="CPF" name="cpf" defaultValue={client?.cpf ?? ""} />
         <Input
           label="Tags (separadas por vírgula)"
           name="tags"
