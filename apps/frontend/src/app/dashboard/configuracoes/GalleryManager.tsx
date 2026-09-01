@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/Button";
 import { compressImageFile } from "@/lib/image-compression";
 import {
@@ -15,6 +16,19 @@ const uploadInitialState: UploadGalleryImageState = {};
 // tenants.service.ts) — comprimir pra um tamanho maior que isso no navegador seria
 // desperdício, o backend ia reduzir de novo do mesmo jeito.
 const MAX_DIMENSION = 1600;
+
+function RemoveImageButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="absolute inset-0 flex items-center justify-center bg-black/50 text-sm font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 disabled:cursor-wait"
+    >
+      {pending ? "Removendo..." : "Remover"}
+    </button>
+  );
+}
 
 export function GalleryManager({ images }: { images: { id: string; url: string }[] }) {
   const [uploadState, uploadFormAction, uploadPending] = useActionState(
@@ -52,12 +66,7 @@ export function GalleryManager({ images }: { images: { id: string; url: string }
                 className="h-full w-full object-cover"
               />
               <form action={removeGalleryImageAction.bind(null, image.id)}>
-                <button
-                  type="submit"
-                  className="absolute inset-0 flex items-center justify-center bg-black/50 text-sm font-medium text-white opacity-0 transition-opacity group-hover:opacity-100"
-                >
-                  Remover
-                </button>
+                <RemoveImageButton />
               </form>
             </div>
           ))}
