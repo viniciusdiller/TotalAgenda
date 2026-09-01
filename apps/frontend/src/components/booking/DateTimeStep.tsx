@@ -45,7 +45,7 @@ export function DateTimeStep({
                 type="button"
                 onClick={() => onSelectDate(iso)}
                 className={clsx(
-                  "flex w-16 shrink-0 flex-col items-center gap-0.5 rounded-2xl border py-3 transition-colors",
+                  "flex w-16 shrink-0 flex-col items-center gap-0.5 rounded-2xl border py-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-(--tenant-accent)/40",
                   isSelected
                     ? "border-(--tenant-accent) bg-(--tenant-accent)/10 text-(--tenant-accent)"
                     : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 dark:border-white/10 dark:bg-zinc-900 dark:text-stone-300",
@@ -83,7 +83,7 @@ export function DateTimeStep({
             <button
               type="button"
               onClick={onJoinWaitlist}
-              className="mt-3 text-sm font-semibold text-(--tenant-accent) hover:opacity-80"
+              className="mt-3 rounded-md text-sm font-semibold text-(--tenant-accent) hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--tenant-accent)/40"
             >
               Entrar na lista de espera
             </button>
@@ -98,7 +98,7 @@ export function DateTimeStep({
                   type="button"
                   onClick={() => onSelectSlot(slot)}
                   className={clsx(
-                    "rounded-xl border py-2.5 text-sm font-semibold transition-colors",
+                    "rounded-xl border py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-(--tenant-accent)/40",
                     isSelected
                       ? "border-(--tenant-accent) bg-(--tenant-accent) text-white"
                       : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 dark:border-white/10 dark:bg-zinc-900 dark:text-stone-200",
