@@ -3,6 +3,7 @@
 import { DateTime } from "luxon";
 import type { PublicProfessional, PublicService } from "@totalagenda/shared-types";
 import { Input } from "../ui/Input";
+import { MaskedInput } from "../ui/MaskedInput";
 
 const TIMEZONE = "America/Sao_Paulo";
 
@@ -65,13 +66,14 @@ export function ClientInfoStep({
             autoComplete="name"
             accentScoped
           />
-          <Input
+          <MaskedInput
+            mask="phone"
             label="Seu telefone"
             name="clientPhone"
             type="tel"
             placeholder="(11) 91234-5678"
             value={clientPhone}
-            onChange={(e) => onChangePhone(e.target.value)}
+            onChange={onChangePhone}
             error={errors.clientPhone}
             autoComplete="tel"
             hint="Usamos para o profissional entrar em contato se precisar."

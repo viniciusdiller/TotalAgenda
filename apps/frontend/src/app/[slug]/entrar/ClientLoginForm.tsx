@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { Input } from "@/components/ui/Input";
+import { MaskedInput } from "@/components/ui/MaskedInput";
 import { Button } from "@/components/ui/Button";
 import { clientLoginAction, type ClientLoginState } from "./actions";
 
@@ -28,7 +28,8 @@ export function ClientLoginForm({ slug }: { slug: string }) {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      <Input
+      <MaskedInput
+        mask="phone"
         label="Seu telefone"
         name="phone"
         type="tel"

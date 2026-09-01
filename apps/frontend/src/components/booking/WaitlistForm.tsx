@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CheckCircle } from "@phosphor-icons/react/dist/ssr";
 import { Input } from "../ui/Input";
+import { MaskedInput } from "../ui/MaskedInput";
 import { Button } from "../ui/Button";
 
 export function WaitlistForm({
@@ -61,12 +62,14 @@ export function WaitlistForm({
           onChange={(e) => setClientName(e.target.value)}
           accentScoped
         />
-        <Input
+        <MaskedInput
+          mask="phone"
           label="Seu telefone"
           name="waitlistPhone"
           type="tel"
+          placeholder="(11) 91234-5678"
           value={clientPhone}
-          onChange={(e) => setClientPhone(e.target.value)}
+          onChange={setClientPhone}
           accentScoped
         />
         {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
