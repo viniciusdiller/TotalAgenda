@@ -165,7 +165,7 @@ export function BookingWizard({
       </h1>
 
       <div className="mt-6">
-        <StepIndicator currentStep={step} />
+        <StepIndicator currentStep={step} onStepClick={(s) => setStep(s as Step)} />
       </div>
 
       <div className="mt-8">
