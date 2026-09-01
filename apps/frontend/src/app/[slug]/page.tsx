@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { getTenant } from "./layout";
 import { publicApi } from "@/lib/api";
 import { TenantProfileHeader } from "@/components/tenant-profile/TenantProfileHeader";
@@ -23,9 +24,13 @@ export default async function TenantProfilePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  // O layout (app/[slug]/layout.tsx) já chamou notFound() se o tenant não existisse — aqui
-  // é seguro assumir que existe (getTenant é cache()d, então isso não gera outro fetch).
-  const tenant = (await getTenant(slug))!;
+  // O layout (app/[slug]/layout.tsx) chama notFound() se o tenant não existisse, mas isso
+  // não impede este componente de renderizar no mesmo passe — precisa da própria checagem
+  // (getTenant é cache()d, então isso não gera outro fetch).
+  const tenant = await getTenant(slug);
+  if (!tenant) {
+    notFound();
+  }
 
   const [services, team] = await Promise.all([
     tenant.showServices ? publicApi.getServices(slug) : Promise.resolve([]),

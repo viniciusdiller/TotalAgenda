@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { getTenant } from "../layout";
 import { getClientToken, clientAuthedFetch } from "@/lib/client-session";
 import { BookingWizard } from "@/components/booking/BookingWizard";
@@ -15,7 +16,12 @@ export async function generateMetadata({
 
 export default async function AgendarPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const tenant = (await getTenant(slug))!;
+  // O layout já chama notFound() se o tenant não existisse, mas isso não impede este
+  // componente de renderizar no mesmo passe — precisa da própria checagem.
+  const tenant = await getTenant(slug);
+  if (!tenant) {
+    notFound();
+  }
 
   const token = await getClientToken(slug);
   const initialClient = token
