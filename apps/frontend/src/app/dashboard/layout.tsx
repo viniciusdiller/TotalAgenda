@@ -13,7 +13,7 @@ interface TenantMe {
 
 export default async function DashboardLayout({ children }: LayoutProps<"/dashboard">) {
   const session = await auth();
-  if (!session) {
+  if (!session || session.error) {
     redirect("/entrar");
   }
 
