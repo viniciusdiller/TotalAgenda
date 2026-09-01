@@ -2,21 +2,32 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import clsx from "clsx";
 import { DateTime } from "luxon";
 import { CaretLeft, Star } from "@phosphor-icons/react/dist/ssr";
 import type { ReviewablePastAppointment } from "@totalagenda/shared-types";
 import { ApiError } from "@/lib/api";
+import { formatPhoneBR } from "@/lib/masks";
 import {
   consumerApi,
   getConsumerToken,
   setConsumerToken,
 } from "@/lib/marketplace-api";
 
+const FOCUS_RING =
+  "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/40 focus-visible:border-accent-500 rounded-md";
+
 function Stars({ value, onChange }: { value: number; onChange: (n: number) => void }) {
   return (
     <div className="flex gap-1">
       {[1, 2, 3, 4, 5].map((n) => (
-        <button key={n} type="button" onClick={() => onChange(n)} aria-label={`${n} estrelas`}>
+        <button
+          key={n}
+          type="button"
+          onClick={() => onChange(n)}
+          aria-label={`${n} estrelas`}
+          className={FOCUS_RING}
+        >
           <Star size={24} weight={n <= value ? "fill" : "regular"} className="text-amber-500" />
         </button>
       ))}
@@ -38,6 +49,8 @@ export default function AvaliarPage() {
   const [rating, setRating] = useState<Record<string, number>>({});
   const [comment, setComment] = useState<Record<string, string>>({});
   const [done, setDone] = useState<Record<string, boolean>>({});
+  const [sending, setSending] = useState<Record<string, boolean>>({});
+  const [authPending, setAuthPending] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,6 +71,7 @@ export default function AvaliarPage() {
   async function submitAuth(e: React.FormEvent) {
     e.preventDefault();
     setAuthError(null);
+    setAuthPending(true);
     try {
       const session =
         mode === "login"
@@ -68,11 +82,14 @@ export default function AvaliarPage() {
       setPending(await consumerApi.pendingReviews());
     } catch (err) {
       setAuthError(err instanceof ApiError ? err.message : "Erro.");
+    } finally {
+      setAuthPending(false);
     }
   }
 
   async function submitReview(appointmentId: string) {
     setMsg(null);
+    setSending((s) => ({ ...s, [appointmentId]: true }));
     try {
       await consumerApi.submitReview({
         appointmentId,
@@ -82,6 +99,8 @@ export default function AvaliarPage() {
       setDone((d) => ({ ...d, [appointmentId]: true }));
     } catch (err) {
       setMsg(err instanceof ApiError ? err.message : "Erro ao enviar.");
+    } finally {
+      setSending((s) => ({ ...s, [appointmentId]: false }));
     }
   }
 
@@ -106,14 +125,20 @@ export default function AvaliarPage() {
             <button
               type="button"
               onClick={() => setMode("login")}
-              className={mode === "login" ? "font-semibold text-accent-600" : "text-zinc-400"}
+              className={clsx(
+                mode === "login" ? "font-semibold text-accent-600" : "text-zinc-400",
+                FOCUS_RING,
+              )}
             >
               Entrar
             </button>
             <button
               type="button"
               onClick={() => setMode("register")}
-              className={mode === "register" ? "font-semibold text-accent-600" : "text-zinc-400"}
+              className={clsx(
+                mode === "register" ? "font-semibold text-accent-600" : "text-zinc-400",
+                FOCUS_RING,
+              )}
             >
               Criar conta
             </button>
@@ -125,16 +150,23 @@ export default function AvaliarPage() {
               onChange={(e) => setName(e.target.value)}
               placeholder="Seu nome"
               required
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white"
+              className={clsx(
+                "w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white",
+                FOCUS_RING,
+              )}
             />
           ) : null}
           <input
-            value={phone}
+            value={formatPhoneBR(phone)}
             onChange={(e) => setPhone(e.target.value)}
-            placeholder="Telefone (DDD + número)"
+            placeholder="(11) 91234-5678"
             inputMode="tel"
+            type="tel"
             required
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white"
+            className={clsx(
+              "w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white",
+              FOCUS_RING,
+            )}
           />
           {mode === "register" ? (
             <label className="flex items-start gap-2 text-xs text-zinc-500 dark:text-stone-400">
@@ -143,6 +175,7 @@ export default function AvaliarPage() {
                 checked={consent}
                 onChange={(e) => setConsent(e.target.checked)}
                 required
+                className={clsx("mt-0.5", FOCUS_RING)}
               />
               Aceito os termos de uso e a política de privacidade. Meus dados serão usados só
               para identificar minhas visitas e avaliações.
@@ -151,9 +184,13 @@ export default function AvaliarPage() {
           {authError ? <p className="text-sm text-red-600">{authError}</p> : null}
           <button
             type="submit"
-            className="rounded-full bg-accent-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-accent-600"
+            disabled={authPending}
+            className={clsx(
+              "rounded-full bg-accent-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-accent-600 disabled:opacity-60",
+              FOCUS_RING,
+            )}
           >
-            {mode === "login" ? "Entrar" : "Criar conta"}
+            {authPending ? "Enviando..." : mode === "login" ? "Entrar" : "Criar conta"}
           </button>
         </form>
       ) : pending.length === 0 ? (
@@ -184,14 +221,21 @@ export default function AvaliarPage() {
                     onChange={(e) => setComment((c) => ({ ...c, [a.id]: e.target.value }))}
                     placeholder="Comentário (opcional)"
                     rows={2}
-                    className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white"
+                    className={clsx(
+                      "w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white",
+                      FOCUS_RING,
+                    )}
                   />
                   <button
                     type="button"
                     onClick={() => submitReview(a.id)}
-                    className="rounded-full bg-accent-500 px-5 py-2 text-sm font-semibold text-white hover:bg-accent-600"
+                    disabled={sending[a.id]}
+                    className={clsx(
+                      "rounded-full bg-accent-500 px-5 py-2 text-sm font-semibold text-white hover:bg-accent-600 disabled:opacity-60",
+                      FOCUS_RING,
+                    )}
                   >
-                    Enviar avaliação
+                    {sending[a.id] ? "Enviando..." : "Enviar avaliação"}
                   </button>
                 </div>
               )}
