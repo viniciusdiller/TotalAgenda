@@ -6,10 +6,16 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 // Sem verificar assinatura — só pra saber quando parar de usar o access token e chamar
 // /auth/refresh. A validade de verdade é sempre checada pelo backend (JwtStrategy).
+//
+// atob() em vez de Buffer: este callback também roda dentro do proxy.ts (Edge Runtime), que
+// não tem Buffer — usar Buffer aqui faz o jwt() estourar só no proxy (não nas páginas, que
+// rodam em Node.js), derrubando a sessão de forma intermitente ali e causando um loop de
+// redirect 307/200 entre /dashboard/* e /entrar.
 function decodeJwtExpiryMs(token: string): number {
-  const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8")) as {
-    exp: number;
-  };
+  const base64Url = token.split(".")[1];
+  const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+  const payload = JSON.parse(atob(padded)) as { exp: number };
   return payload.exp * 1000;
 }
 
