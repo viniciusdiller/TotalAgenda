@@ -6,7 +6,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 export async function authedFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const session = await auth();
-  if (!session?.accessToken) {
+  if (!session?.accessToken || session.error) {
     throw new ApiError("Não autenticado.", 401);
   }
 

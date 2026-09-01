@@ -1,8 +1,59 @@
-import NextAuth, { type Session } from "next-auth";
+import NextAuth, { type Session, type User } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import type { JWT } from "next-auth/jwt";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+
+// Sem verificar assinatura — só pra saber quando parar de usar o access token e chamar
+// /auth/refresh. A validade de verdade é sempre checada pelo backend (JwtStrategy).
+function decodeJwtExpiryMs(token: string): number {
+  const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8")) as {
+    exp: number;
+  };
+  return payload.exp * 1000;
+}
+
+// Renova o access token perto do vencimento (12h no backend) usando o refresh token (30d).
+// Revalida o usuário no banco a cada troca (ver AuthService.refresh) — não é só reassinar
+// as claims antigas.
+async function refreshAccessToken(token: JWT): Promise<JWT> {
+  try {
+    const response = await fetch(`${API_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken: token.refreshToken }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Falha ao renovar o access token.");
+    }
+
+    const data = (await response.json()) as {
+      accessToken: string;
+      refreshToken: string;
+      user: {
+        tenantId: string;
+        role: "OWNER" | "RECEPTIONIST" | "PROFESSIONAL";
+        professionalId?: string;
+      };
+    };
+
+    return {
+      ...token,
+      accessToken: data.accessToken,
+      accessTokenExpires: decodeJwtExpiryMs(data.accessToken),
+      refreshToken: data.refreshToken,
+      tenantId: data.user.tenantId,
+      role: data.user.role,
+      professionalId: data.user.professionalId,
+      error: undefined,
+    };
+  } catch {
+    // Access token velho fica no token, mas authedFetch trata `error` derrubando a sessão
+    // em vez de mandar um Bearer morto pro backend.
+    return { ...token, error: "RefreshAccessTokenError" };
+  }
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
@@ -29,6 +80,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const data = (await response.json()) as {
           accessToken: string;
+          refreshToken: string;
           user: {
             id: string;
             tenantId: string;
@@ -44,25 +96,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: data.user.email,
           name: data.user.name,
           accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
           tenantId: data.user.tenantId,
           role: data.user.role,
           professionalId: data.user.professionalId,
-        };
+        } satisfies User;
       },
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
         token.accessToken = user.accessToken;
+        token.refreshToken = user.refreshToken;
+        token.accessTokenExpires = decodeJwtExpiryMs(user.accessToken);
         token.tenantId = user.tenantId;
         token.role = user.role;
         token.professionalId = user.professionalId;
+        token.error = undefined;
+        return token;
       }
-      return token;
+
+      // Folga de 30s pra cobrir a duração da própria requisição em andamento.
+      if (Date.now() < token.accessTokenExpires - 30_000) {
+        return token;
+      }
+
+      return refreshAccessToken(token);
     },
     session({ session, token }: { session: Session; token: JWT }) {
       session.accessToken = token.accessToken;
+      session.error = token.error;
       session.user.tenantId = token.tenantId;
       session.user.role = token.role;
       session.user.professionalId = token.professionalId;
