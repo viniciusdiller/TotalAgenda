@@ -126,7 +126,7 @@ export function ComissoesView({
             disabled={pending}
             className="rounded-full bg-accent-500 px-4 py-2 text-sm font-semibold text-white hover:bg-accent-600 disabled:opacity-50"
           >
-            Adicionar
+            {pending ? "Adicionando..." : "Adicionar"}
           </button>
         </form>
         {state.error ? (

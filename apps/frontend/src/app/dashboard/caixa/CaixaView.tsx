@@ -100,9 +100,9 @@ export function CaixaView({ summary }: { summary: CashRegisterSummary }) {
           <button
             type="submit"
             disabled={movePending}
-            className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-white/15 dark:text-stone-200"
+            className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium disabled:opacity-60 dark:border-white/15 dark:text-stone-200"
           >
-            Lançar
+            {movePending ? "Lançando..." : "Lançar"}
           </button>
         </form>
         {moveState.error ? (

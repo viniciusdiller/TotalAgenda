@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { compressImageFile } from "@/lib/image-compression";
@@ -41,6 +42,19 @@ const SECTION_TOGGLES = [
 
 const profileInitialState: UpdateProfileState = {};
 const uploadInitialState: UploadLogoState = {};
+
+function RemoveLogoButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="rounded-md text-sm font-medium text-red-600 hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40 disabled:cursor-wait disabled:opacity-60 dark:text-red-400"
+    >
+      {pending ? "Removendo..." : "Remover"}
+    </button>
+  );
+}
 
 export function TenantProfileSettingsForm({ tenant }: { tenant: TenantProfile }) {
   const [profileState, profileAction, profilePending] = useActionState(
@@ -107,12 +121,7 @@ export function TenantProfileSettingsForm({ tenant }: { tenant: TenantProfile })
 
           {tenant.logoUrl ? (
             <form action={removeLogoAction}>
-              <button
-                type="submit"
-                className="text-sm font-medium text-red-600 hover:text-red-700 dark:text-red-400"
-              >
-                Remover
-              </button>
+              <RemoveLogoButton />
             </form>
           ) : null}
         </div>
