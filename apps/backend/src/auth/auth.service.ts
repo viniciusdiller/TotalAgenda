@@ -5,8 +5,11 @@ import { Role } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
 import { hashPasswordSetToken } from "../common/utils/password-set-token.util";
 import { LoginDto } from "./dto/login.dto";
+import { RefreshDto } from "./dto/refresh.dto";
 import { SetPasswordDto } from "./dto/set-password.dto";
-import { JwtPayload } from "./types/auth-user";
+import { JwtPayload, RefreshTokenPayload } from "./types/auth-user";
+
+const REFRESH_TOKEN_EXPIRES_IN = "30d";
 
 const BCRYPT_ROUNDS = 12;
 
@@ -30,6 +33,41 @@ export class AuthService {
     const passwordMatches = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordMatches) {
       throw new UnauthorizedException("Credenciais inválidas.");
+    }
+
+    return this.buildAuthResponse(
+      user.id,
+      user.tenantId,
+      user.role,
+      user.email,
+      user.name,
+      user.professional?.id,
+    );
+  }
+
+  // O access token dura pouco (12h, ver JWT_EXPIRES_IN) de propósito — o refresh token
+  // (30d) é quem sustenta a sessão longa. Sempre revalida o usuário no banco (role,
+  // isActive, tenantId) em vez de confiar nas claims antigas do refresh token, seguindo a
+  // mesma regra de nunca confiar em claim sem revalidar o recurso.
+  async refresh(dto: RefreshDto) {
+    let payload: RefreshTokenPayload;
+    try {
+      payload = this.jwtService.verify<RefreshTokenPayload>(dto.refreshToken);
+    } catch {
+      throw new UnauthorizedException("Sessão expirada. Faça login novamente.");
+    }
+
+    if (payload.type !== "refresh") {
+      throw new UnauthorizedException("Sessão expirada. Faça login novamente.");
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      include: { professional: true },
+    });
+
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException("Sessão expirada. Faça login novamente.");
     }
 
     return this.buildAuthResponse(
@@ -91,8 +129,14 @@ export class AuthService {
     const payload: JwtPayload = { sub: userId, tenantId, role, professionalId };
     const accessToken = this.jwtService.sign(payload);
 
+    const refreshPayload: RefreshTokenPayload = { sub: userId, type: "refresh" };
+    const refreshToken = this.jwtService.sign(refreshPayload, {
+      expiresIn: REFRESH_TOKEN_EXPIRES_IN,
+    });
+
     return {
       accessToken,
+      refreshToken,
       user: { id: userId, tenantId, role, email, name, professionalId },
     };
   }

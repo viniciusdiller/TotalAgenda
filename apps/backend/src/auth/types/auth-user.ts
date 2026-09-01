@@ -7,6 +7,13 @@ export interface JwtPayload {
   professionalId?: string;
 }
 
+// Sem `role` de propósito — é o que faz o JwtStrategy (STAFF_ROLES.has(payload.role))
+// rejeitar automaticamente um refresh token apresentado como access token.
+export interface RefreshTokenPayload {
+  sub: string; // userId
+  type: "refresh";
+}
+
 export interface AuthenticatedUser {
   userId: string;
   tenantId: string;
