@@ -40,8 +40,12 @@ export class AddTicketItemDto {
   @MinLength(2)
   description?: string;
 
-  // Obrigatório para CUSTOM; override opcional para SERVICE/PRODUCT (senão usa o catálogo).
-  @ValidateIf((o) => o.kind === "CUSTOM")
+  // Obrigatório para CUSTOM; override opcional para SERVICE/PRODUCT (senão usa o catálogo do
+  // momento). @ValidateIf tinha só o caso CUSTOM — pra SERVICE/PRODUCT o campo passava direto
+  // sem NENHUMA validação (nem tipo, nem sinal), porque os decorators abaixo são pulados
+  // quando ValidateIf retorna false. Agora valida sempre que o campo vier preenchido, não só
+  // no caso CUSTOM — fecha a porta pra um preço negativo/absurdo entrar via override.
+  @ValidateIf((o) => o.kind === "CUSTOM" || o.unitPriceCents !== undefined)
   @IsInt()
   @Min(0)
   unitPriceCents?: number;
