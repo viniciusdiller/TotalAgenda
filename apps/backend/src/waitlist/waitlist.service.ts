@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { WaitlistStatus } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
 import { ClientsService } from "../clients/clients.service";
@@ -18,6 +18,28 @@ export class WaitlistService {
     });
     if (!tenant) {
       throw new NotFoundException("Negócio não encontrado.");
+    }
+
+    // serviceId/professionalId vêm do body do link público sem nenhuma relação de FK que
+    // force os dois a serem do mesmo tenant — sem essa checagem, um cliente podia entrar na
+    // lista de espera do tenant A referenciando o serviço/profissional de outro tenant B, e
+    // esse nome de outro negócio vazaria pro dono do tenant A em findAllByTenant (include de
+    // service/professional).
+    const service = await this.prisma.service.findFirst({
+      where: { id: dto.serviceId, tenantId: tenant.id, isActive: true },
+      select: { id: true },
+    });
+    if (!service) {
+      throw new BadRequestException("Serviço não encontrado.");
+    }
+    if (dto.professionalId) {
+      const professional = await this.prisma.professional.findFirst({
+        where: { id: dto.professionalId, tenantId: tenant.id, isActive: true },
+        select: { id: true },
+      });
+      if (!professional) {
+        throw new BadRequestException("Profissional não encontrado.");
+      }
     }
 
     const client = await this.clientsService.upsertForBooking(
