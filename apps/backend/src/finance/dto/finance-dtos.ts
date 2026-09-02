@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsIn,
   IsInt,
   IsISO8601,
@@ -28,7 +29,7 @@ export class UpdateCategoryDto {
   name?: string;
 
   @IsOptional()
-  @IsString()
+  @IsBoolean()
   isArchived?: boolean;
 }
 
