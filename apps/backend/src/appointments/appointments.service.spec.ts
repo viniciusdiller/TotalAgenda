@@ -72,7 +72,7 @@ function buildPrismaMock(tx: ReturnType<typeof buildTxMock>) {
     timeBlock: { findMany: jest.fn().mockResolvedValue([]) },
     client: { findFirst: jest.fn().mockResolvedValue({ id: "client-1", name: "Cliente Teste", phone: "11999998888" }) },
     professionalService: {
-      findUnique: jest.fn().mockResolvedValue({
+      findFirst: jest.fn().mockResolvedValue({
         durationMinutes: null,
         priceCents: null,
         isActive: true,
@@ -146,10 +146,31 @@ describe("AppointmentsService", () => {
 
     it("lança NotFoundException quando o serviço não está disponível para o profissional", async () => {
       const prisma = buildPrismaMock(buildTxMock());
-      (prisma.professionalService.findUnique as jest.Mock).mockResolvedValue(null);
+      (prisma.professionalService.findFirst as jest.Mock).mockResolvedValue(null);
       const service = new AppointmentsService(prisma, clientsService);
 
       await expect(service.createFromPublicLink("slug", baseDto)).rejects.toThrow(NotFoundException);
+    });
+
+    // Regressão: resolveServiceForProfessional já usou findUnique(professionalId_serviceId) +
+    // checagem de tenantId em JS depois de buscar — janela de IDOR (busca o registro de
+    // outro tenant antes de rejeitar). O filtro de tenantId tem que estar dentro do WHERE.
+    it("busca o vínculo profissional↔serviço já filtrando pelo tenantId do link público", async () => {
+      const prisma = buildPrismaMock(buildTxMock());
+      const service = new AppointmentsService(prisma, clientsService);
+
+      await service.createFromPublicLink("slug", baseDto);
+
+      expect(prisma.professionalService.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            professionalId: "prof-1",
+            serviceId: "svc-1",
+            service: expect.objectContaining({ tenantId: "tenant-1" }),
+            professional: expect.objectContaining({ tenantId: "tenant-1" }),
+          }),
+        }),
+      );
     });
   });
 
@@ -276,6 +297,66 @@ describe("AppointmentsService", () => {
       await expect(service.rescheduleByToken("token-1", { startAt: FUTURE_DATE })).rejects.toThrow(
         BadRequestException,
       );
+    });
+
+    // Regressão: applyReschedule usava findUnique(professionalId_serviceId) sem NENHUMA
+    // checagem de tenant pro professionalId vindo do body (dto.professionalId) — nem em JS.
+    // O filtro de tenantId (o do PRÓPRIO agendamento, não o vindo do body) tem que estar no WHERE.
+    it("busca o vínculo profissional↔serviço de destino já filtrando pelo tenantId do agendamento", async () => {
+      const tx = buildTxMock();
+      const prisma = buildPrismaMock(tx);
+      (prisma.appointment.findUnique as jest.Mock).mockResolvedValue(hydratedAppointment());
+      const service = new AppointmentsService(prisma, clientsService);
+
+      await service.rescheduleByToken("token-1", {
+        startAt: FUTURE_DATE,
+        professionalId: "prof-2",
+      });
+
+      expect(prisma.professionalService.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            professionalId: "prof-2",
+            serviceId: "svc-1",
+            professional: expect.objectContaining({ tenantId: "tenant-1" }),
+            service: expect.objectContaining({ tenantId: "tenant-1" }),
+          }),
+        }),
+      );
+    });
+  });
+
+  describe("rescheduleByStaff", () => {
+    const professional: AuthenticatedUser = {
+      userId: "u-2",
+      tenantId: "tenant-1",
+      role: Role.PROFESSIONAL,
+      professionalId: "prof-2",
+    };
+
+    it("recusa PROFESSIONAL remarcando para a agenda de outro profissional", async () => {
+      const prisma = buildPrismaMock(buildTxMock());
+      const service = new AppointmentsService(prisma, clientsService);
+
+      await expect(
+        service.rescheduleByStaff(professional, "appt-1", {
+          startAt: FUTURE_DATE,
+          professionalId: "prof-1",
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it("permite PROFESSIONAL remarcar mantendo a própria agenda (professionalId omitido ou igual ao seu)", async () => {
+      const tx = buildTxMock();
+      const prisma = buildPrismaMock(tx);
+      (prisma.appointment.findFirst as jest.Mock).mockResolvedValue(
+        hydratedAppointment({ professionalId: "prof-2" }),
+      );
+      const service = new AppointmentsService(prisma, clientsService);
+
+      await expect(
+        service.rescheduleByStaff(professional, "appt-1", { startAt: FUTURE_DATE }),
+      ).resolves.toBeDefined();
     });
   });
 

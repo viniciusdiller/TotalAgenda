@@ -316,6 +316,16 @@ export class AppointmentsService {
   }
 
   async rescheduleByStaff(user: AuthenticatedUser, id: string, dto: RescheduleAppointmentDto) {
+    // Mesma regra do createByStaff: PROFESSIONAL não pode mover um atendimento pra agenda de
+    // outro profissional (findOwnedByStaff já garante que só mexe nos próprios atendimentos;
+    // falta garantir que o destino da remarcação também seja a própria agenda).
+    if (
+      user.role === Role.PROFESSIONAL &&
+      dto.professionalId &&
+      dto.professionalId !== user.professionalId
+    ) {
+      throw new ForbiddenException("Você só pode remarcar para a sua própria agenda.");
+    }
     return this.applyReschedule(await this.findOwnedByStaff(user, id), dto);
   }
 
@@ -437,19 +447,21 @@ export class AppointmentsService {
     professionalId: string,
     serviceId: string,
   ) {
-    const professionalService = await this.prisma.professionalService.findUnique({
-      where: { professionalId_serviceId: { professionalId, serviceId } },
+    // findFirst com o tenantId de serviço e profissional na própria cláusula WHERE (não
+    // findUnique + checagem em JS depois) — evita a janela de IDOR que a checagem posterior
+    // abriria.
+    const professionalService = await this.prisma.professionalService.findFirst({
+      where: {
+        professionalId,
+        serviceId,
+        isActive: true,
+        service: { tenantId, isActive: true },
+        professional: { tenantId, isActive: true },
+      },
       include: { service: true, professional: true },
     });
 
-    if (
-      !professionalService ||
-      !professionalService.isActive ||
-      !professionalService.service.isActive ||
-      !professionalService.professional.isActive ||
-      professionalService.service.tenantId !== tenantId ||
-      professionalService.professional.tenantId !== tenantId
-    ) {
+    if (!professionalService) {
       throw new NotFoundException("Serviço não disponível para este profissional.");
     }
 
@@ -511,16 +523,21 @@ export class AppointmentsService {
     // partir dos snapshots já gravados (o preço não muda em remarcação).
     const durations = await Promise.all(
       appointment.items.map(async (item) => {
-        const professionalService = await this.prisma.professionalService.findUnique({
+        // targetProfessionalId pode vir do body (dto.professionalId, ver
+        // RescheduleAppointmentDto) — nunca usar sem confirmar que pertence ao mesmo tenant
+        // do agendamento, senão um profissional de outro tenant que por acaso atenda o mesmo
+        // serviceId passaria despercebido.
+        const professionalService = await this.prisma.professionalService.findFirst({
           where: {
-            professionalId_serviceId: {
-              professionalId: targetProfessionalId,
-              serviceId: item.serviceId,
-            },
+            professionalId: targetProfessionalId,
+            serviceId: item.serviceId,
+            isActive: true,
+            professional: { tenantId: appointment.tenantId },
+            service: { tenantId: appointment.tenantId },
           },
           include: { service: true },
         });
-        if (!professionalService || !professionalService.isActive) {
+        if (!professionalService) {
           throw new BadRequestException(
             "Serviço não disponível para o profissional selecionado.",
           );
