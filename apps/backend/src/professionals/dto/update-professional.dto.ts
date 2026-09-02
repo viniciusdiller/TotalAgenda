@@ -1,8 +1,9 @@
-import { IsBoolean, IsOptional, IsString } from "class-validator";
+import { IsBoolean, IsOptional, IsString, MaxLength } from "class-validator";
 
 export class UpdateProfessionalDto {
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   bio?: string;
 
   @IsOptional()
