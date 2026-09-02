@@ -46,16 +46,18 @@ export class AvailabilityService {
       throw new NotFoundException("Profissional não encontrado.");
     }
 
-    const professionalService = await this.prisma.professionalService.findUnique({
-      where: { professionalId_serviceId: { professionalId, serviceId } },
+    // findFirst com o tenantId do serviço na própria cláusula WHERE (não findUnique + checagem
+    // em JS depois) — evita a janela de IDOR que a checagem posterior abriria.
+    const professionalService = await this.prisma.professionalService.findFirst({
+      where: {
+        professionalId,
+        serviceId,
+        isActive: true,
+        service: { tenantId: tenant.id, isActive: true },
+      },
       include: { service: true },
     });
-    if (
-      !professionalService ||
-      !professionalService.isActive ||
-      !professionalService.service.isActive ||
-      professionalService.service.tenantId !== tenant.id
-    ) {
+    if (!professionalService) {
       throw new NotFoundException("Serviço não disponível para este profissional.");
     }
 

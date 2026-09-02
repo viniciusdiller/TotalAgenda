@@ -9,7 +9,7 @@ function buildPrismaMock() {
   return {
     tenant: { findUnique: jest.fn() },
     professional: { findFirst: jest.fn() },
-    professionalService: { findUnique: jest.fn() },
+    professionalService: { findFirst: jest.fn() },
     workingHours: { findMany: jest.fn() },
     appointment: { findMany: jest.fn() },
     timeBlock: { findMany: jest.fn() },
@@ -29,7 +29,7 @@ describe("AvailabilityService", () => {
       id: "prof-1",
       slotGranularityMinutes: 15,
     });
-    (prisma.professionalService.findUnique as jest.Mock).mockResolvedValue({
+    (prisma.professionalService.findFirst as jest.Mock).mockResolvedValue({
       durationMinutes: null,
       isActive: true,
       service: { id: "svc-1", tenantId: "tenant-1", durationMinutes: 60, isActive: true },
@@ -100,7 +100,7 @@ describe("AvailabilityService", () => {
   });
 
   it("usa a duração override do ProfessionalService quando definida", async () => {
-    (prisma.professionalService.findUnique as jest.Mock).mockResolvedValue({
+    (prisma.professionalService.findFirst as jest.Mock).mockResolvedValue({
       durationMinutes: 30,
       isActive: true,
       service: { id: "svc-1", tenantId: "tenant-1", durationMinutes: 60, isActive: true },
@@ -124,10 +124,31 @@ describe("AvailabilityService", () => {
   });
 
   it("lança NotFoundException se o serviço não está vinculado/ativo para o profissional", async () => {
-    (prisma.professionalService.findUnique as jest.Mock).mockResolvedValue(null);
+    (prisma.professionalService.findFirst as jest.Mock).mockResolvedValue(null);
 
     await expect(service.getAvailableSlots("slug", "prof-1", "svc-1", MONDAY)).rejects.toThrow(
       NotFoundException,
+    );
+  });
+
+  // Regressão: essa busca já foi findUnique(professionalId_serviceId) + checagem de
+  // service.tenantId em JS depois de já ter buscado o registro — janela de IDOR. O filtro de
+  // tenantId tem que estar dentro do WHERE, não depois.
+  it("busca o vínculo profissional↔serviço já filtrando pelo tenantId do tenant resolvido", async () => {
+    (prisma.workingHours.findMany as jest.Mock).mockResolvedValue([
+      { startMinute: 540, endMinute: 600 },
+    ]);
+
+    await service.getAvailableSlots("slug", "prof-1", "svc-1", MONDAY);
+
+    expect(prisma.professionalService.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          professionalId: "prof-1",
+          serviceId: "svc-1",
+          service: expect.objectContaining({ tenantId: "tenant-1" }),
+        }),
+      }),
     );
   });
 });
