@@ -222,6 +222,12 @@ model User {
   passwordSetTokenHash      String?   @unique
   passwordSetTokenExpiresAt DateTime? @db.Timestamptz(6)
 
+  // Lockout progressivo por conta (além do rate limit por IP no ThrottlerGuard) — ver
+  // AuthService.login. Reseta em login bem-sucedido; nunca exposto em nenhuma resposta (a
+  // mensagem de erro é sempre a mesma genérica, logado ou não).
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime? @db.Timestamptz(6)
+
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   professional Professional?
   openedTickets Ticket[]
