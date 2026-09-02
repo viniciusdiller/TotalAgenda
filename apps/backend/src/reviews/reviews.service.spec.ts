@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { ReviewsService } from "./reviews.service";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -9,12 +9,11 @@ function build(over: Record<string, unknown> = {}) {
     consumerTenantLink: { findMany: jest.fn().mockResolvedValue([{ clientId: "cl-1" }]) },
     appointment: {
       findMany: jest.fn().mockResolvedValue([]),
-      findUnique: jest.fn().mockResolvedValue({
+      findFirst: jest.fn().mockResolvedValue({
         id: "a-1",
         tenantId: "t-1",
         status: "COMPLETED",
         review: null,
-        client: { consumerLink: { consumerId: "cons-1" } },
       }),
     },
     review: {
@@ -35,26 +34,38 @@ describe("ReviewsService", () => {
     expect(r.rating).toBe(5);
   });
 
-  it("recusa avaliar atendimento de outro consumidor", async () => {
+  it("busca o atendimento já filtrando pelo consumerId dono (não busca por id e compara depois)", async () => {
     const { service, prisma } = build();
-    (prisma.appointment.findUnique as jest.Mock).mockResolvedValue({
-      id: "a-1",
-      status: "COMPLETED",
-      review: null,
-      client: { consumerLink: { consumerId: "outro" } },
-    });
+    await service.create(consumer, { appointmentId: "a-1", rating: 5 });
+
+    expect(prisma.appointment.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: "a-1",
+          client: { consumerLink: { consumerId: "cons-1" } },
+        }),
+      }),
+    );
+  });
+
+  // Regressão: create() já buscava o atendimento só por id (findUnique) e comparava o dono
+  // depois em JS, lançando ForbiddenException — vazava se o id existia (403) vs. não existia
+  // (404). Com o filtro de consumerId no WHERE, um atendimento de outro consumidor
+  // simplesmente não aparece na query (mesmo comportamento de "não existe").
+  it("recusa avaliar atendimento de outro consumidor com o mesmo NotFoundException de 'não existe'", async () => {
+    const { service, prisma } = build();
+    (prisma.appointment.findFirst as jest.Mock).mockResolvedValue(null);
     await expect(
       service.create(consumer, { appointmentId: "a-1", rating: 4 }),
-    ).rejects.toThrow(ForbiddenException);
+    ).rejects.toThrow(NotFoundException);
   });
 
   it("recusa avaliar atendimento não concluído", async () => {
     const { service, prisma } = build();
-    (prisma.appointment.findUnique as jest.Mock).mockResolvedValue({
+    (prisma.appointment.findFirst as jest.Mock).mockResolvedValue({
       id: "a-1",
       status: "CONFIRMED",
       review: null,
-      client: { consumerLink: { consumerId: "cons-1" } },
     });
     await expect(
       service.create(consumer, { appointmentId: "a-1", rating: 4 }),
@@ -63,11 +74,10 @@ describe("ReviewsService", () => {
 
   it("recusa segunda avaliação do mesmo atendimento", async () => {
     const { service, prisma } = build();
-    (prisma.appointment.findUnique as jest.Mock).mockResolvedValue({
+    (prisma.appointment.findFirst as jest.Mock).mockResolvedValue({
       id: "a-1",
       status: "COMPLETED",
       review: { id: "existente" },
-      client: { consumerLink: { consumerId: "cons-1" } },
     });
     await expect(
       service.create(consumer, { appointmentId: "a-1", rating: 4 }),

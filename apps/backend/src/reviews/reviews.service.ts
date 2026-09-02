@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { AppointmentStatus, ReviewStatus } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateReviewDto, ReportReviewDto } from "./dto/review-dtos";
@@ -41,15 +36,19 @@ export class ReviewsService {
   }
 
   async create(consumer: AuthenticatedConsumer, dto: CreateReviewDto) {
-    const appointment = await this.prisma.appointment.findUnique({
-      where: { id: dto.appointmentId },
-      include: { review: true, client: { include: { consumerLink: true } } },
+    // Dono do atendimento (consumerId) já entra no WHERE via filtro de relação — não busca
+    // por id sozinho e compara depois em JS (isso além de ser a janela de IDOR que o projeto
+    // proíbe, também deixa vazar via 403 vs. 404 se o atendimento existe ou não; assim os
+    // dois casos caem no mesmo NotFoundException).
+    const appointment = await this.prisma.appointment.findFirst({
+      where: {
+        id: dto.appointmentId,
+        client: { consumerLink: { consumerId: consumer.consumerId } },
+      },
+      include: { review: true },
     });
     if (!appointment) {
       throw new NotFoundException("Atendimento não encontrado.");
-    }
-    if (appointment.client?.consumerLink?.consumerId !== consumer.consumerId) {
-      throw new ForbiddenException("Este atendimento não é seu.");
     }
     if (appointment.status !== AppointmentStatus.COMPLETED) {
       throw new BadRequestException("Só é possível avaliar um atendimento concluído.");
