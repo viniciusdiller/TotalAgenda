@@ -13,6 +13,25 @@ const REFRESH_TOKEN_EXPIRES_IN = "30d";
 
 const BCRYPT_ROUNDS = 12;
 
+// Hash fixo (calculado uma vez, no boot) só pra rodar bcrypt.compare contra ele quando não
+// há usuário/está bloqueado — mesmo custo de CPU de uma comparação real, senão o tempo de
+// resposta denuncia se o e-mail existe ou se a conta está travada (CLAUDE.md: "o tempo de
+// resposta não pode denunciar o que a mensagem esconde").
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync("timing-attack-mitigation", BCRYPT_ROUNDS);
+
+// Lockout progressivo por conta (email), além do rate limit por IP que já existe no
+// ThrottlerGuard (@Throttle no controller) — um cobre "muitas tentativas de qualquer IP",
+// o outro cobre "muitas tentativas contra esta conta específica", inclusive de IPs
+// diferentes (botnet). LOCKOUT_THRESHOLD tentativas erradas seguidas travam a conta; cada
+// tentativa extra durante esse número escalona pra um bloqueio mais longo, até o teto.
+const LOCKOUT_THRESHOLD = 5;
+const LOCKOUT_SCHEDULE_MINUTES = [1, 5, 15, 30, 60];
+
+function lockoutDurationMs(failedAttempts: number): number {
+  const step = Math.min(failedAttempts - LOCKOUT_THRESHOLD, LOCKOUT_SCHEDULE_MINUTES.length - 1);
+  return LOCKOUT_SCHEDULE_MINUTES[Math.max(step, 0)] * 60_000;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -27,12 +46,29 @@ export class AuthService {
     });
 
     if (!user || !user.isActive) {
+      await bcrypt.compare(dto.password, DUMMY_PASSWORD_HASH);
+      throw new UnauthorizedException("Credenciais inválidas.");
+    }
+
+    // Conta travada por tentativas seguidas erradas: nem compara a senha enviada — a
+    // resposta (mensagem, status, tempo) tem que ser idêntica ao caso "senha errada", senão
+    // dá pra inferir que a conta existe e está bloqueada só pelo comportamento da API.
+    if (user.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
+      await bcrypt.compare(dto.password, DUMMY_PASSWORD_HASH);
       throw new UnauthorizedException("Credenciais inválidas.");
     }
 
     const passwordMatches = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordMatches) {
+      await this.registerFailedLogin(user.id, user.failedLoginAttempts);
       throw new UnauthorizedException("Credenciais inválidas.");
+    }
+
+    if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginAttempts: 0, lockedUntil: null },
+      });
     }
 
     return this.buildAuthResponse(
@@ -43,6 +79,18 @@ export class AuthService {
       user.name,
       user.professional?.id,
     );
+  }
+
+  private async registerFailedLogin(userId: string, currentAttempts: number) {
+    const attempts = currentAttempts + 1;
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        failedLoginAttempts: attempts,
+        lockedUntil:
+          attempts >= LOCKOUT_THRESHOLD ? new Date(Date.now() + lockoutDurationMs(attempts)) : undefined,
+      },
+    });
   }
 
   // O access token dura pouco (12h, ver JWT_EXPIRES_IN) de propósito — o refresh token
