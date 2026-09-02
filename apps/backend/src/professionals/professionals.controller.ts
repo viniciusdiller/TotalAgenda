@@ -14,6 +14,7 @@ import { ProfessionalsService } from "./professionals.service";
 import { CreateProfessionalDto } from "./dto/create-professional.dto";
 import { UpdateProfessionalDto } from "./dto/update-professional.dto";
 import { SetWorkingHoursDto } from "./dto/set-working-hours.dto";
+import { FindPublicProfessionalsQueryDto } from "./dto/find-public-professionals-query.dto";
 import { Roles } from "../common/decorators/roles.decorator";
 import { Public } from "../common/decorators/public.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -71,8 +72,8 @@ export class PublicProfessionalsController {
 
   @Public()
   @Get()
-  findPublic(@Param("slug") slug: string, @Query("serviceId") serviceId: string) {
-    return this.professionalsService.findPublicByTenantSlugAndService(slug, serviceId);
+  findPublic(@Param("slug") slug: string, @Query() query: FindPublicProfessionalsQueryDto) {
+    return this.professionalsService.findPublicByTenantSlugAndService(slug, query.serviceId);
   }
 
   // Rota separada da acima: essa lista TODOS os profissionais ativos do tenant (pra

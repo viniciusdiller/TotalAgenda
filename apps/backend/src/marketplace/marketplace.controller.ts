@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Query } from "@nestjs/common";
 import { MarketplaceService } from "./marketplace.service";
 import { Public } from "../common/decorators/public.decorator";
+import { SearchMarketplaceQueryDto } from "./dto/search-marketplace-query.dto";
 
 @Public()
 @Controller("public/marketplace")
@@ -18,22 +19,8 @@ export class MarketplaceController {
   }
 
   @Get("search")
-  search(
-    @Query("q") q?: string,
-    @Query("city") city?: string,
-    @Query("category") category?: string,
-    @Query("lat") lat?: string,
-    @Query("lng") lng?: string,
-    @Query("radiusKm") radiusKm?: string,
-  ) {
-    return this.marketplace.search({
-      q,
-      city,
-      category,
-      lat: lat ? Number(lat) : undefined,
-      lng: lng ? Number(lng) : undefined,
-      radiusKm: radiusKm ? Number(radiusKm) : undefined,
-    });
+  search(@Query() query: SearchMarketplaceQueryDto) {
+    return this.marketplace.search(query);
   }
 
   @Get("establishments/:slug")
