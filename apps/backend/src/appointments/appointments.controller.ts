@@ -39,13 +39,17 @@ export class PublicAppointmentManageController {
     return this.appointments.findByToken(token);
   }
 
+  // manageToken (nanoid 24) já é a credencial em si, mas sem throttle nada impede tentar
+  // adivinhar/força-bruta em cima do espaço de tokens — mesmo limite usado na criação.
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Patch("cancel")
   cancel(@Param("token") token: string) {
     return this.appointments.cancelByToken(token);
   }
 
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Patch("reschedule")
   reschedule(@Param("token") token: string, @Body() dto: RescheduleAppointmentDto) {
     return this.appointments.rescheduleByToken(token, dto);
