@@ -43,6 +43,7 @@ export class ConsumerAuthController {
   // tenant). Chamado pelo portal após um agendamento pelo marketplace.
   @Public()
   @UseGuards(ConsumerJwtAuthGuard)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Post("link/:slug")
   async link(
     @CurrentConsumer() consumer: AuthenticatedConsumer,
