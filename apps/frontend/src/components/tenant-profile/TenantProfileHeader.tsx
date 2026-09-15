@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import type { PublicTenant } from "@totalagenda/shared-types";
 import { Container } from "../ui/Container";
 import { Button } from "../ui/Button";
@@ -11,7 +13,17 @@ export function TenantProfileHeader({ tenant }: { tenant: PublicTenant }) {
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-(--tenant-accent)/15 via-transparent to-transparent"
       />
-      <Container className="relative max-w-2xl py-20 text-center">
+      <Container className="relative pt-8">
+        <Link
+          href="/descobrir"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-800 dark:text-stone-400 dark:hover:text-stone-200"
+        >
+          <ArrowLeft size={16} />
+          Descobrir
+        </Link>
+      </Container>
+
+      <Container className="relative max-w-2xl pt-6 pb-20 text-center">
         {tenant.logoUrl ? (
           // <img> simples em vez de next/image: o domínio do backend varia por ambiente
           // (localhost em dev, domínio real em produção), então manter isso fora de
