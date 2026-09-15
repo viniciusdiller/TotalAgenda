@@ -76,9 +76,16 @@ export function BookingWizard({
       .catch(() => setServicesError(true));
   }, [slug]);
 
+  // A carga inicial não passa por loadServices: os dois setState de reset ali são
+  // redundantes no mount (o estado já nasce null/false) e chamar uma função que faz
+  // setState síncrono de dentro de um efeito é desencorajado — loadServices continua
+  // existindo só para o botão de "tentar novamente".
   useEffect(() => {
-    loadServices();
-  }, [loadServices]);
+    publicApi
+      .getServices(slug)
+      .then(setServices)
+      .catch(() => setServicesError(true));
+  }, [slug]);
 
   const loadProfessionals = useCallback(
     (service: PublicService) => {

@@ -75,9 +75,7 @@ export async function uploadLogoAction(
   return {};
 }
 
-export async function removeLogoAction(
-  _prevState?: { error?: string },
-): Promise<{ error?: string }> {
+export async function removeLogoAction(): Promise<{ error?: string }> {
   try {
     await authedFetch("/tenants/me/logo", { method: "DELETE" });
   } catch (error) {

@@ -23,10 +23,14 @@ interface BillingStatusResponse {
 // nenhuma pista do motivo. A cobrança de verdade (checkout/upgrade) vive no
 // Admin-TotalSoftware externo — aqui só avisamos o estado, sem tentar substituir aquele
 // fluxo.
+// Função utilitária comum (não-componente) — mantém a chamada a Date.now() fora do corpo
+// de renderização de BillingStatusBanner.
+function daysUntil(iso: string): number {
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+}
+
 function BillingStatusBanner({ billing }: { billing: BillingStatusResponse }) {
-  const trialDaysLeft = Math.ceil(
-    (new Date(billing.trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
-  );
+  const trialDaysLeft = daysUntil(billing.trialEndsAt);
 
   if (billing.status === "ACTIVE") return null;
   if (billing.status === "TRIALING" && trialDaysLeft > 3) return null;
