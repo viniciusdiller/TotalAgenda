@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import clsx from "clsx";
 import { ArrowSquareOut, SignOut } from "@phosphor-icons/react/dist/ssr";
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
@@ -11,13 +12,62 @@ interface TenantMe {
   slug: string;
 }
 
+interface BillingStatusResponse {
+  status: "TRIALING" | "TRIAL_EXPIRED" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "INCOMPLETE" | "UNPAID";
+  trialEndsAt: string;
+}
+
+// GET /billing/status já existe e funciona mesmo com trial vencido (rota
+// @SkipBillingCheck), mas nenhuma página do dashboard chamava — quando o acesso
+// expirava, todo `authedFetch(...).catch(() => [])` das páginas virava tela vazia sem
+// nenhuma pista do motivo. A cobrança de verdade (checkout/upgrade) vive no
+// Admin-TotalSoftware externo — aqui só avisamos o estado, sem tentar substituir aquele
+// fluxo.
+function BillingStatusBanner({ billing }: { billing: BillingStatusResponse }) {
+  const trialDaysLeft = Math.ceil(
+    (new Date(billing.trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+  );
+
+  if (billing.status === "ACTIVE") return null;
+  if (billing.status === "TRIALING" && trialDaysLeft > 3) return null;
+
+  const blocked = billing.status !== "TRIALING" && billing.status !== "PAST_DUE";
+
+  const message =
+    billing.status === "TRIALING"
+      ? trialDaysLeft <= 0
+        ? "Seu período de teste termina hoje."
+        : `Seu período de teste termina em ${trialDaysLeft} dia${trialDaysLeft === 1 ? "" : "s"}.`
+      : billing.status === "TRIAL_EXPIRED"
+        ? "Seu período de teste acabou. A página pública também parou de aceitar novos agendamentos até você assinar um plano."
+        : billing.status === "PAST_DUE"
+          ? "Há um problema com o pagamento da sua assinatura. Regularize para não perder o acesso."
+          : "Sua assinatura não está ativa. Fale com o suporte para reativar o acesso.";
+
+  return (
+    <div
+      className={clsx(
+        "border-b px-6 py-2.5 text-sm font-medium",
+        blocked
+          ? "border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300"
+          : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200",
+      )}
+    >
+      {message}
+    </div>
+  );
+}
+
 export default async function DashboardLayout({ children }: LayoutProps<"/dashboard">) {
   const session = await auth();
   if (!session || session.error) {
     redirect("/entrar");
   }
 
-  const tenant = await authedFetch<TenantMe>("/tenants/me").catch(() => null);
+  const [tenant, billing] = await Promise.all([
+    authedFetch<TenantMe>("/tenants/me").catch(() => null),
+    authedFetch<BillingStatusResponse>("/billing/status").catch(() => null),
+  ]);
 
   return (
     <div className="flex min-h-dvh bg-stone-50 dark:bg-zinc-950">
@@ -71,6 +121,8 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
             </button>
           </form>
         </header>
+
+        {billing ? <BillingStatusBanner billing={billing} /> : null}
 
         <main className="flex-1 p-6">{children}</main>
       </div>
