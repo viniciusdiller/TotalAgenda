@@ -10,8 +10,14 @@ const KM_PER_DEG_LAT = 111;
 export class MarketplaceService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Só categorias com pelo menos um negócio listado — a página de descoberta usava essa
+  // lista pra montar os chips de filtro, então uma categoria cadastrada no catálogo mas
+  // sem nenhum negócio real usando ela virava um filtro morto (clicável, sempre vazio).
   listCategories() {
-    return this.prisma.serviceCategory.findMany({ orderBy: { position: "asc" } });
+    return this.prisma.serviceCategory.findMany({
+      where: { tenants: { some: { tenant: { listedInMarketplace: true } } } },
+      orderBy: { position: "asc" },
+    });
   }
 
   async search(params: {

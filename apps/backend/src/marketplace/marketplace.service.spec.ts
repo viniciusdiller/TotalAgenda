@@ -27,6 +27,24 @@ const tenantRow = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+describe("MarketplaceService.listCategories", () => {
+  // Regressão: listCategories devolvia todo o catálogo de ServiceCategory, sem checar se
+  // algum negócio listado de fato usava a categoria — a busca mostrava chips de filtro que
+  // sempre voltavam vazio.
+  it("filtra só categorias com pelo menos um negócio listado", async () => {
+    const { service, prisma } = build();
+    await service.listCategories();
+
+    expect(prisma.serviceCategory.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          tenants: { some: { tenant: { listedInMarketplace: true } } },
+        },
+      }),
+    );
+  });
+});
+
 describe("MarketplaceService.search", () => {
   it("ordena por distância quando lat/lng são passados", async () => {
     const { service, prisma } = build();

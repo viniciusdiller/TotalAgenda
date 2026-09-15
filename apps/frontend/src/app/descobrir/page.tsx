@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CaretLeft } from "@phosphor-icons/react/dist/ssr";
 import type { MarketplaceCategory } from "@totalagenda/shared-types";
 import { DiscoverSearch } from "./DiscoverSearch";
 
@@ -33,7 +34,15 @@ export default async function DescobrirPage({
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
-      <div className="flex items-baseline justify-between gap-3">
+      <Link
+        href="/"
+        className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900 dark:text-stone-400 dark:hover:text-white"
+      >
+        <CaretLeft size={14} />
+        Voltar
+      </Link>
+
+      <div className="mt-3 flex items-baseline justify-between gap-3">
         <h1 className="font-display text-3xl font-bold text-zinc-900 dark:text-white">Descobrir</h1>
         <Link
           href="/descobrir/avaliar"
