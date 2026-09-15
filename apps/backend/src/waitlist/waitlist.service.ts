@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { WaitlistStatus } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
 import { ClientsService } from "../clients/clients.service";
+import { computeBillingStatus, hasBillingAccess } from "../billing/billing-status.util";
 import { CreateWaitlistEntryDto } from "./dto/create-waitlist-entry.dto";
 
 @Injectable()
@@ -19,6 +20,7 @@ export class WaitlistService {
     if (!tenant) {
       throw new NotFoundException("Negócio não encontrado.");
     }
+    await this.assertTenantAcceptsBookings(tenant.id);
 
     // serviceId/professionalId vêm do body do link público sem nenhuma relação de FK que
     // force os dois a serem do mesmo tenant — sem essa checagem, um cliente podia entrar na
@@ -77,5 +79,18 @@ export class WaitlistService {
       throw new NotFoundException("Registro da lista de espera não encontrado.");
     }
     return this.prisma.waitlistEntry.update({ where: { id }, data: { status } });
+  }
+
+  // Mesma regra de AppointmentsService.assertTenantAcceptsBookings — a rota pública
+  // (@Public()) não passa pelo TenantBillingGuard.
+  private async assertTenantAcceptsBookings(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      include: { subscription: true },
+    });
+    const status = computeBillingStatus(tenant, tenant.subscription);
+    if (!hasBillingAccess(status)) {
+      throw new ForbiddenException("Este negócio não está aceitando novos agendamentos no momento.");
+    }
   }
 }

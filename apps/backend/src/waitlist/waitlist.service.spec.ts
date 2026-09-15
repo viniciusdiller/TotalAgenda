@@ -1,11 +1,18 @@
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { WaitlistService } from "./waitlist.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { ClientsService } from "../clients/clients.service";
 
 function buildPrisma(overrides: Record<string, unknown> = {}) {
   return {
-    tenant: { findUnique: jest.fn().mockResolvedValue({ id: "tenant-1" }) },
+    tenant: {
+      findUnique: jest.fn().mockResolvedValue({ id: "tenant-1" }),
+      findUniqueOrThrow: jest.fn().mockResolvedValue({
+        id: "tenant-1",
+        trialEndsAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        subscription: null,
+      }),
+    },
     service: {
       findFirst: jest.fn().mockResolvedValue({ id: "svc-1" }),
     },
@@ -81,5 +88,23 @@ describe("WaitlistService.createFromPublicLink", () => {
     await expect(service.createFromPublicLink("slug-invalido", baseDto)).rejects.toThrow(
       NotFoundException,
     );
+  });
+
+  // Mesma regressão de AppointmentsService.createFromPublicLink: rota @Public() não passa
+  // pelo TenantBillingGuard, então trial vencido não impedia novas entradas na lista de espera.
+  it("lança ForbiddenException quando o tenant não tem acesso de billing (trial vencido)", async () => {
+    const prisma = buildPrisma({
+      tenant: {
+        findUnique: jest.fn().mockResolvedValue({ id: "tenant-1" }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          id: "tenant-1",
+          trialEndsAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+          subscription: null,
+        }),
+      },
+    });
+    const service = new WaitlistService(prisma, buildClientsService());
+
+    await expect(service.createFromPublicLink("slug", baseDto)).rejects.toThrow(ForbiddenException);
   });
 });
