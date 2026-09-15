@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { DateTime } from "luxon";
 import type { AvailableSlot, PublicBooking } from "@totalagenda/shared-types";
 import { publicApi } from "@/lib/api";
 import { Button } from "../ui/Button";
 import { DateTimeStep } from "../booking/DateTimeStep";
+import { WaitlistForm } from "../booking/WaitlistForm";
 import { cancelMyBookingAction, rescheduleMyBookingAction } from "@/app/[slug]/conta/actions";
 
 const TIMEZONE = "America/Sao_Paulo";
@@ -20,7 +21,10 @@ export function ClientBookingCard({ slug, booking }: { slug: string; booking: Pu
   );
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [slotsError, setSlotsError] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
+  const [showWaitlist, setShowWaitlist] = useState(false);
+  const slotsRequestRef = useRef(0);
 
   const formattedDate = DateTime.fromISO(booking.startAt)
     .setZone(TIMEZONE)
@@ -31,34 +35,54 @@ export function ClientBookingCard({ slug, booking }: { slug: string; booking: Pu
   const canManage = booking.status === "CONFIRMED" && !isPast;
 
   function loadSlots(date: string) {
+    const requestId = ++slotsRequestRef.current;
     setIsLoadingSlots(true);
+    setSlotsError(false);
     publicApi
       .getAvailability(slug, booking.professionalId, booking.serviceId, date)
-      .then(setSlots)
-      .catch(() => setSlots([]))
-      .finally(() => setIsLoadingSlots(false));
+      .then((result) => {
+        if (slotsRequestRef.current !== requestId) return;
+        setSlots(result);
+      })
+      .catch(() => {
+        if (slotsRequestRef.current !== requestId) return;
+        setSlotsError(true);
+      })
+      .finally(() => {
+        if (slotsRequestRef.current !== requestId) return;
+        setIsLoadingSlots(false);
+      });
   }
 
   function handleEnterReschedule() {
     setMode("reschedule");
     setSelectedSlot(null);
+    setShowWaitlist(false);
     loadSlots(selectedDate);
   }
 
   function handleSelectDate(date: string) {
     setSelectedDate(date);
     setSelectedSlot(null);
+    setShowWaitlist(false);
     loadSlots(date);
+  }
+
+  async function handleJoinWaitlist(input: { clientName: string; clientPhone: string }) {
+    await publicApi.joinWaitlist(slug, {
+      serviceId: booking.serviceId,
+      professionalId: booking.professionalId,
+      clientName: input.clientName,
+      clientPhone: input.clientPhone,
+      preferredDate: selectedDate,
+    });
   }
 
   function handleCancel() {
     setError(null);
     startTransition(async () => {
-      try {
-        await cancelMyBookingAction(slug, booking.id);
-      } catch {
-        setError("Não foi possível cancelar.");
-      }
+      const result = await cancelMyBookingAction(slug, booking.id);
+      if (result?.error) setError(result.error);
     });
   }
 
@@ -66,11 +90,11 @@ export function ClientBookingCard({ slug, booking }: { slug: string; booking: Pu
     if (!selectedSlot) return;
     setError(null);
     startTransition(async () => {
-      try {
-        await rescheduleMyBookingAction(slug, booking.id, selectedSlot.startAt);
+      const result = await rescheduleMyBookingAction(slug, booking.id, selectedSlot.startAt);
+      if (result?.error) {
+        setError(result.error);
+      } else {
         setMode("view");
-      } catch {
-        setError("Não foi possível remarcar.");
       }
     });
   }
@@ -126,7 +150,7 @@ export function ClientBookingCard({ slug, booking }: { slug: string; booking: Pu
             Escolher novo horário
           </p>
 
-          <div className="mt-4">
+          <div className="mt-4 flex flex-col gap-4">
             <DateTimeStep
               selectedDate={selectedDate}
               onSelectDate={handleSelectDate}
@@ -134,8 +158,14 @@ export function ClientBookingCard({ slug, booking }: { slug: string; booking: Pu
               isLoadingSlots={isLoadingSlots}
               selectedSlot={selectedSlot}
               onSelectSlot={setSelectedSlot}
-              onJoinWaitlist={() => {}}
+              onJoinWaitlist={() => setShowWaitlist(true)}
+              loadError={slotsError}
+              onRetry={() => loadSlots(selectedDate)}
             />
+
+            {showWaitlist ? (
+              <WaitlistForm onSubmit={handleJoinWaitlist} onCancel={() => setShowWaitlist(false)} />
+            ) : null}
           </div>
 
           {error ? <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p> : null}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { DateTime } from "luxon";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
@@ -37,9 +37,11 @@ export function BookingWizard({
   const [step, setStep] = useState<Step>(1);
 
   const [services, setServices] = useState<PublicService[] | null>(null);
+  const [servicesError, setServicesError] = useState(false);
   const [selectedService, setSelectedService] = useState<PublicService | null>(null);
 
   const [professionals, setProfessionals] = useState<PublicProfessional[] | null>(null);
+  const [professionalsError, setProfessionalsError] = useState(false);
   const [selectedProfessional, setSelectedProfessional] = useState<PublicProfessional | null>(
     null,
   );
@@ -49,8 +51,12 @@ export function BookingWizard({
   );
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [slotsError, setSlotsError] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
   const [showWaitlist, setShowWaitlist] = useState(false);
+  // Descarta respostas de disponibilidade que não são mais as mais recentes (ex.: usuário
+  // troca de data rápido e a resposta da data anterior chega depois da mais nova).
+  const slotsRequestRef = useRef(0);
 
   const [clientName, setClientName] = useState(initialClient?.name ?? "");
   const [clientPhone, setClientPhone] = useState(initialClient?.phone ?? "");
@@ -61,26 +67,57 @@ export function BookingWizard({
     null,
   );
 
-  useEffect(() => {
-    publicApi.getServices(slug).then(setServices).catch(() => setServices([]));
+  const loadServices = useCallback(() => {
+    setServices(null);
+    setServicesError(false);
+    publicApi
+      .getServices(slug)
+      .then(setServices)
+      .catch(() => setServicesError(true));
   }, [slug]);
 
   useEffect(() => {
-    if (!selectedService) return;
-    publicApi
-      .getProfessionals(slug, selectedService.id)
-      .then(setProfessionals)
-      .catch(() => setProfessionals([]));
-  }, [slug, selectedService]);
+    loadServices();
+  }, [loadServices]);
 
-  useEffect(() => {
-    if (!selectedProfessional || !selectedService) return;
-    publicApi
-      .getAvailability(slug, selectedProfessional.id, selectedService.id, selectedDate)
-      .then(setSlots)
-      .catch(() => setSlots([]))
-      .finally(() => setIsLoadingSlots(false));
-  }, [slug, selectedProfessional, selectedService, selectedDate]);
+  const loadProfessionals = useCallback(
+    (service: PublicService) => {
+      setProfessionals(null);
+      setProfessionalsError(false);
+      publicApi
+        .getProfessionals(slug, service.id)
+        .then(setProfessionals)
+        .catch(() => setProfessionalsError(true));
+    },
+    [slug],
+  );
+
+  // Busca disparada diretamente pelos handlers (não por useEffect chaveado em
+  // selectedProfessional/selectedDate) — re-selecionar o mesmo profissional/dia não muda a
+  // referência/valor, e um useEffect nessas dependências simplesmente não re-rodaria,
+  // deixando o skeleton de horários travado pra sempre.
+  const loadSlots = useCallback(
+    (professional: PublicProfessional, service: PublicService, date: string) => {
+      const requestId = ++slotsRequestRef.current;
+      setIsLoadingSlots(true);
+      setSlotsError(false);
+      publicApi
+        .getAvailability(slug, professional.id, service.id, date)
+        .then((result) => {
+          if (slotsRequestRef.current !== requestId) return;
+          setSlots(result);
+        })
+        .catch(() => {
+          if (slotsRequestRef.current !== requestId) return;
+          setSlotsError(true);
+        })
+        .finally(() => {
+          if (slotsRequestRef.current !== requestId) return;
+          setIsLoadingSlots(false);
+        });
+    },
+    [slug],
+  );
 
   function goBack() {
     if (step > 1) setStep((s) => (s - 1) as Step);
@@ -88,24 +125,26 @@ export function BookingWizard({
 
   function handleSelectService(service: PublicService) {
     setSelectedService(service);
-    setProfessionals(null);
     setSelectedProfessional(null);
     setStep(2);
+    loadProfessionals(service);
   }
 
   function handleSelectProfessional(professional: PublicProfessional) {
     setSelectedProfessional(professional);
     setSelectedSlot(null);
     setShowWaitlist(false);
-    setIsLoadingSlots(true);
     setStep(3);
+    if (selectedService) loadSlots(professional, selectedService, selectedDate);
   }
 
   function handleSelectDate(date: string) {
     setSelectedDate(date);
     setSelectedSlot(null);
     setShowWaitlist(false);
-    setIsLoadingSlots(true);
+    if (selectedProfessional && selectedService) {
+      loadSlots(selectedProfessional, selectedService, date);
+    }
   }
 
   async function handleJoinWaitlist(input: { clientName: string; clientPhone: string }) {
@@ -176,7 +215,9 @@ export function BookingWizard({
           transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
         >
           {step === 1 ? (
-              services === null ? (
+              servicesError ? (
+                <LoadErrorState onRetry={loadServices} />
+              ) : services === null ? (
                 <SkeletonList />
               ) : (
                 <ServiceStep
@@ -188,7 +229,9 @@ export function BookingWizard({
             ) : null}
 
             {step === 2 ? (
-              professionals === null ? (
+              professionalsError ? (
+                <LoadErrorState onRetry={() => selectedService && loadProfessionals(selectedService)} />
+              ) : professionals === null ? (
                 <SkeletonList />
               ) : (
                 <ProfessionalStep
@@ -209,6 +252,12 @@ export function BookingWizard({
                   selectedSlot={selectedSlot}
                   onSelectSlot={setSelectedSlot}
                   onJoinWaitlist={() => setShowWaitlist(true)}
+                  loadError={slotsError}
+                  onRetry={() =>
+                    selectedProfessional &&
+                    selectedService &&
+                    loadSlots(selectedProfessional, selectedService, selectedDate)
+                  }
                 />
 
                 {showWaitlist ? (
@@ -277,6 +326,23 @@ function SkeletonList() {
       {Array.from({ length: 3 }).map((_, i) => (
         <div key={i} className="h-20 animate-pulse rounded-2xl bg-zinc-100 dark:bg-white/5" />
       ))}
+    </div>
+  );
+}
+
+// Distingue uma falha real de carregamento de um catálogo genuinamente vazio — sem isso,
+// os dois pareciam a mesma coisa pro visitante (ver ServiceStep/ProfessionalStep).
+function LoadErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-red-300 p-6 text-center dark:border-red-500/30">
+      <p className="text-sm text-red-600 dark:text-red-400">Não foi possível carregar. Tente novamente.</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-3 rounded-md text-sm font-semibold text-(--tenant-accent) hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--tenant-accent)/40"
+      >
+        Tentar novamente
+      </button>
     </div>
   );
 }

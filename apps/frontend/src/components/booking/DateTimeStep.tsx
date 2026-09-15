@@ -20,6 +20,8 @@ export function DateTimeStep({
   selectedSlot,
   onSelectSlot,
   onJoinWaitlist,
+  loadError = false,
+  onRetry,
 }: {
   selectedDate: string;
   onSelectDate: (date: string) => void;
@@ -28,6 +30,10 @@ export function DateTimeStep({
   selectedSlot: AvailableSlot | null;
   onSelectSlot: (slot: AvailableSlot) => void;
   onJoinWaitlist: () => void;
+  // Sem isso, uma falha de rede ao buscar os horários virava "sem horários livres" —
+  // idêntico visualmente a um dia de verdade sem vaga, sem chance de tentar de novo.
+  loadError?: boolean;
+  onRetry?: () => void;
 }) {
   const dateOptions = buildDateOptions();
 
@@ -74,6 +80,21 @@ export function DateTimeStep({
                 className="h-11 animate-pulse rounded-xl bg-zinc-100 dark:bg-white/5"
               />
             ))}
+          </div>
+        ) : loadError ? (
+          <div className="rounded-2xl border border-dashed border-red-300 p-6 text-center dark:border-red-500/30">
+            <p className="text-sm text-red-600 dark:text-red-400">
+              Não foi possível carregar os horários.
+            </p>
+            {onRetry ? (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="mt-3 rounded-md text-sm font-semibold text-(--tenant-accent) hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--tenant-accent)/40"
+              >
+                Tentar novamente
+              </button>
+            ) : null}
           </div>
         ) : slots.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-zinc-300 p-6 text-center dark:border-white/15">
