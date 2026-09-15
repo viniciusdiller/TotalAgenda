@@ -40,6 +40,19 @@ export async function createServiceAction(
   return {};
 }
 
+export async function updateServiceAction(
+  id: string,
+  input: { name: string; description?: string; durationMinutes: number; priceCents: number },
+): Promise<{ error?: string }> {
+  try {
+    await authedFetch(`/services/${id}`, { method: "PATCH", body: JSON.stringify(input) });
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Não foi possível salvar." };
+  }
+  revalidatePath("/dashboard/servicos");
+  return {};
+}
+
 export async function toggleServiceActiveAction(
   id: string,
   isActive: boolean,

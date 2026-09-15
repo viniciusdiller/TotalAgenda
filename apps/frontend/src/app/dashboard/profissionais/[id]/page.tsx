@@ -5,6 +5,7 @@ import { authedFetch } from "@/lib/api-server";
 import { WorkingHoursEditor } from "./WorkingHoursEditor";
 import { ServiceLinks } from "./ServiceLinks";
 import { TimeBlocksManager } from "./TimeBlocksManager";
+import { ProfessionalProfileHeader } from "./ProfessionalProfileHeader";
 import type { WorkingHoursInterval } from "./actions";
 
 interface ProfessionalDetail {
@@ -80,10 +81,13 @@ export default async function ProfessionalDetailPage({
         Profissionais
       </Link>
 
-      <h1 className="mt-3 font-display text-2xl font-bold text-zinc-900 dark:text-white">
-        {professional.user.name}
-      </h1>
-      <p className="mt-1 text-sm text-zinc-500 dark:text-stone-400">{professional.user.email}</p>
+      <ProfessionalProfileHeader
+        professionalId={id}
+        name={professional.user.name}
+        email={professional.user.email}
+        bio={professional.bio}
+        canManage={canManage}
+      />
 
       <section className="mt-8">
         <h2 className="font-display text-lg font-semibold text-zinc-900 dark:text-white">

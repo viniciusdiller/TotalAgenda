@@ -8,6 +8,7 @@ import { ServiceRow } from "./ServiceRow";
 interface AdminService {
   id: string;
   name: string;
+  description: string | null;
   durationMinutes: number;
   priceCents: number;
   isActive: boolean;
@@ -51,6 +52,7 @@ export default async function ServicesPage() {
               key={service.id}
               id={service.id}
               name={service.name}
+              description={service.description}
               durationMinutes={service.durationMinutes}
               priceCents={service.priceCents}
               isActive={service.isActive}

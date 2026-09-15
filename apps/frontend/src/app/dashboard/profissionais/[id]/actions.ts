@@ -30,6 +30,23 @@ export async function updateWorkingHoursAction(
   return {};
 }
 
+export async function updateProfessionalProfileAction(
+  professionalId: string,
+  input: { name: string; email: string; bio?: string },
+): Promise<{ error?: string }> {
+  try {
+    await authedFetch(`/professionals/${professionalId}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Não foi possível salvar." };
+  }
+  revalidatePath(`/dashboard/profissionais/${professionalId}`);
+  revalidatePath("/dashboard/profissionais");
+  return {};
+}
+
 export async function toggleServiceLinkAction(
   professionalId: string,
   serviceId: string,
