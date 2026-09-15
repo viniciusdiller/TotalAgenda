@@ -5,6 +5,8 @@ import {
   IsISO8601,
   IsOptional,
   IsString,
+  Max,
+  MaxLength,
   Min,
   MinLength,
 } from "class-validator";
@@ -12,6 +14,7 @@ import {
 export class CreateCategoryDto {
   @IsString()
   @MinLength(2)
+  @MaxLength(120)
   name!: string;
 
   @IsIn(["INCOME", "EXPENSE"])
@@ -26,6 +29,7 @@ export class UpdateCategoryDto {
   @IsOptional()
   @IsString()
   @MinLength(2)
+  @MaxLength(120)
   name?: string;
 
   @IsOptional()
@@ -39,10 +43,12 @@ export class CreateEntryDto {
 
   @IsString()
   @MinLength(2)
+  @MaxLength(200)
   description!: string;
 
   @IsInt()
   @Min(1)
+  @Max(100_000_000)
   amountCents!: number;
 
   // Data de vencimento (YYYY-MM-DD).
@@ -55,10 +61,12 @@ export class CreateEntryDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   counterparty?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   notes?: string;
 
   // Se informado, o lançamento já nasce quitado nesta data.
@@ -75,11 +83,13 @@ export class UpdateEntryDto {
   @IsOptional()
   @IsString()
   @MinLength(2)
+  @MaxLength(200)
   description?: string;
 
   @IsOptional()
   @IsInt()
   @Min(1)
+  @Max(100_000_000)
   amountCents?: number;
 
   @IsOptional()
@@ -92,10 +102,12 @@ export class UpdateEntryDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   counterparty?: string | null;
 
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   notes?: string | null;
 }
 

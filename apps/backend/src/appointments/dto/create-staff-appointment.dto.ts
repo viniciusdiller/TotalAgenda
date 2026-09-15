@@ -1,11 +1,13 @@
 import { Type } from "class-transformer";
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsDateString,
   IsIn,
   IsOptional,
   IsString,
+  MaxLength,
   MinLength,
   ValidateNested,
 } from "class-validator";
@@ -27,6 +29,7 @@ export class CreateStaffAppointmentDto {
 
   @IsArray()
   @ArrayMinSize(1)
+  @ArrayMaxSize(20)
   @ValidateNested({ each: true })
   @Type(() => StaffAppointmentItemDto)
   items!: StaffAppointmentItemDto[];
@@ -38,15 +41,18 @@ export class CreateStaffAppointmentDto {
   @IsOptional()
   @IsString()
   @MinLength(2)
+  @MaxLength(120)
   clientName?: string;
 
   @IsOptional()
   @IsString()
   @MinLength(8)
+  @MaxLength(20)
   clientPhone?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   notes?: string;
 
   // SCHEDULED (default) = encaixe ainda não confirmado; CONFIRMED = já firme.

@@ -3,6 +3,8 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Max,
+  MaxLength,
   Min,
   MinLength,
   ValidateIf,
@@ -20,6 +22,7 @@ export class OpenTicketDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
   note?: string;
 }
 
@@ -38,6 +41,7 @@ export class AddTicketItemDto {
   @ValidateIf((o) => o.kind === "CUSTOM")
   @IsString()
   @MinLength(2)
+  @MaxLength(120)
   description?: string;
 
   // Obrigatório para CUSTOM; override opcional para SERVICE/PRODUCT (senão usa o catálogo do
@@ -48,11 +52,13 @@ export class AddTicketItemDto {
   @ValidateIf((o) => o.kind === "CUSTOM" || o.unitPriceCents !== undefined)
   @IsInt()
   @Min(0)
+  @Max(100_000_000)
   unitPriceCents?: number;
 
   @IsOptional()
   @IsInt()
   @Min(1)
+  @Max(10_000)
   quantity?: number;
 
   @IsOptional()
@@ -63,6 +69,7 @@ export class AddTicketItemDto {
 export class SetTicketDiscountDto {
   @IsInt()
   @Min(0)
+  @Max(100_000_000)
   discountCents!: number;
 }
 
@@ -72,5 +79,6 @@ export class AddPaymentDto {
 
   @IsInt()
   @Min(1)
+  @Max(100_000_000)
   amountCents!: number;
 }

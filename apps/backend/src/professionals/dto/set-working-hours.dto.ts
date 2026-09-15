@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { ArrayMinSize, IsEnum, IsInt, Max, Min, ValidateNested } from "class-validator";
+import { ArrayMaxSize, ArrayMinSize, IsEnum, IsInt, Max, Min, ValidateNested } from "class-validator";
 import { Weekday } from "@totalagenda/database";
 
 export class WorkingHoursIntervalDto {
@@ -21,5 +21,6 @@ export class SetWorkingHoursDto {
   @ValidateNested({ each: true })
   @Type(() => WorkingHoursIntervalDto)
   @ArrayMinSize(0)
+  @ArrayMaxSize(50)
   intervals!: WorkingHoursIntervalDto[];
 }

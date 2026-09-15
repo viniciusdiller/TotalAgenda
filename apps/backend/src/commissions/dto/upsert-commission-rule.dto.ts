@@ -1,4 +1,4 @@
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Min } from "class-validator";
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
 
 export class UpsertCommissionRuleDto {
   @IsString()
@@ -15,9 +15,11 @@ export class UpsertCommissionRuleDto {
   @IsIn(["PERCENT", "FIXED"])
   kind!: "PERCENT" | "FIXED";
 
-  // PERCENT: 0–100 (pontos percentuais). FIXED: centavos por item.
+  // PERCENT: 0–100 (pontos percentuais, checado no service). FIXED: centavos por item — sem
+  // teto natural de 100 como PERCENT, por isso o @Max aqui (o service só valida PERCENT).
   @IsInt()
   @Min(0)
+  @Max(100_000_000)
   value!: number;
 
   @IsOptional()

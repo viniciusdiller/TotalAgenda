@@ -58,4 +58,25 @@ describe("AddTicketItemDto — unitPriceCents", () => {
     });
     expect(errors.some((e) => e.property === "unitPriceCents")).toBe(true);
   });
+
+  // Regressão (auditoria de segurança): unitPriceCents/quantity não tinham teto nenhum —
+  // um valor absurdo (ex.: 999999999999) ia parar direto na aritmética de total da comanda
+  // antes de o Prisma rejeitar por estourar a coluna Int.
+  it("rejeita unitPriceCents acima do teto", async () => {
+    const errors = await validateDto({
+      kind: "CUSTOM",
+      description: "Item avulso",
+      unitPriceCents: 999_999_999_999,
+    });
+    expect(errors.some((e) => e.property === "unitPriceCents")).toBe(true);
+  });
+
+  it("rejeita quantity acima do teto", async () => {
+    const errors = await validateDto({
+      kind: "SERVICE",
+      serviceId: "svc-1",
+      quantity: 999_999_999,
+    });
+    expect(errors.some((e) => e.property === "quantity")).toBe(true);
+  });
 });

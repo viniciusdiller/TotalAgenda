@@ -11,6 +11,7 @@ export class CreateProfessionalDto {
 
   @IsString()
   @MinLength(8)
+  @MaxLength(200)
   initialPassword!: string;
 
   @IsOptional()

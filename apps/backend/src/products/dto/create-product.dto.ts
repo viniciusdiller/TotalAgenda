@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator";
+import { IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from "class-validator";
 
 export class CreateProductDto {
   @IsString()
@@ -13,16 +13,19 @@ export class CreateProductDto {
 
   @IsInt()
   @Min(0)
+  @Max(100_000_000)
   priceCents!: number;
 
   @IsOptional()
   @IsInt()
   @Min(0)
+  @Max(100_000_000)
   costCents?: number;
 
   // Estoque inicial opcional — vira um StockMovement kind IN.
   @IsOptional()
   @IsInt()
   @Min(0)
+  @Max(1_000_000)
   initialStock?: number;
 }

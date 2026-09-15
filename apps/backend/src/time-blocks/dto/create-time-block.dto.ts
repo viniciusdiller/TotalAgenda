@@ -1,4 +1,4 @@
-import { IsDateString, IsOptional, IsString } from "class-validator";
+import { IsDateString, IsOptional, IsString, MaxLength } from "class-validator";
 
 export class CreateTimeBlockDto {
   @IsString()
@@ -12,5 +12,6 @@ export class CreateTimeBlockDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   reason?: string;
 }

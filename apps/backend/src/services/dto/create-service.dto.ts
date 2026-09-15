@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator";
+import { IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from "class-validator";
 
 export class CreateServiceDto {
   @IsString()
@@ -13,9 +13,11 @@ export class CreateServiceDto {
 
   @IsInt()
   @Min(5)
+  @Max(1440)
   durationMinutes!: number;
 
   @IsInt()
   @Min(0)
+  @Max(100_000_000)
   priceCents!: number;
 }

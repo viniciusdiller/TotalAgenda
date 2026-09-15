@@ -6,6 +6,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  MaxLength,
   ValidateNested,
 } from "class-validator";
 
@@ -40,20 +41,25 @@ export class TotalSoftwareWebhookDto {
 
   @IsString()
   @IsNotEmpty()
+  @MaxLength(200)
   webhookSecret!: string;
 
   @IsInt()
   clienteId!: number;
 
-  // campos do evento "provisionamento"
+  // campos do evento "provisionamento" — escritos direto em Tenant.name/User.name
+  // (WebhooksService), então precisam do mesmo teto que UpdateTenantProfileDto já usa pra
+  // esses campos em qualquer outro fluxo de escrita.
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @MaxLength(120)
   nomeEmpresa?: string;
 
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @MaxLength(120)
   responsavelNome?: string;
 
   @IsOptional()
@@ -68,6 +74,7 @@ export class TotalSoftwareWebhookDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @MaxLength(200)
   stripeCustomerId?: string;
 
   // campos do evento "sincronizacao_status" (stripeSubscriptionId também é usado no
@@ -75,6 +82,7 @@ export class TotalSoftwareWebhookDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @MaxLength(200)
   stripeSubscriptionId?: string;
 
   @IsOptional()
