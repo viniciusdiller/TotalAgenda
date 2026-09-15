@@ -10,6 +10,7 @@ function buildPrisma(overrides: Record<string, unknown> = {}) {
       findUnique: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockImplementation(({ data }) => ({ id: "c-1", ...data })),
       update: jest.fn().mockImplementation(({ data }) => ({ id: "c-1", ...data })),
+      upsert: jest.fn().mockImplementation(({ create }) => ({ id: "c-1", ...create })),
     },
     ...overrides,
   } as unknown as PrismaService;
@@ -56,6 +57,21 @@ describe("ClientsService (M2)", () => {
     const service = new ClientsService(prisma);
 
     await expect(service.update("t-1", "c-9", { name: "Novo" })).rejects.toThrow(NotFoundException);
+  });
+
+  // Regressão: upsertForBooking sobrescrevia o nome do cliente em TODO novo agendamento
+  // (mesmo telefone), então um familiar agendando pelo mesmo número, ou um typo, apagava
+  // silenciosamente o nome já cadastrado. Corrigir nome agora é uma ação explícita
+  // (edição de cliente), não efeito colateral de marcar horário.
+  it("upsertForBooking não sobrescreve o nome de um cliente já cadastrado", async () => {
+    const prisma = buildPrisma();
+    const service = new ClientsService(prisma);
+
+    await service.upsertForBooking(prisma, "t-1", "Nome Diferente Digitado Agora", "11988887777");
+
+    const call = (prisma.client.upsert as jest.Mock).mock.calls[0][0];
+    expect(call.update).toEqual({});
+    expect(call.create.name).toBe("Nome Diferente Digitado Agora");
   });
 
   it("getDetail deduplica respostas de anamnese pela mais recente por form", async () => {

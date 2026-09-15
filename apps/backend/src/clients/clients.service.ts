@@ -150,9 +150,13 @@ export class ClientsService {
       throw new BadRequestException("Telefone inválido.");
     }
 
+    // Não sobrescreve o nome em cada novo agendamento: outra pessoa da família usando o
+    // mesmo telefone, ou um typo digitado às pressas, não deve apagar silenciosamente o
+    // nome já cadastrado. Corrigir nome é uma ação explícita (edição de cliente no
+    // dashboard), não efeito colateral de marcar um horário.
     return tx.client.upsert({
       where: { tenantId_phone: { tenantId, phone } },
-      update: { name: name.trim() },
+      update: {},
       create: { tenantId, phone, name: name.trim() },
     });
   }
