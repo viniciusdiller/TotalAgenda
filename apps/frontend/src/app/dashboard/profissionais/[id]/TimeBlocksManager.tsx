@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { DateTime } from "luxon";
 import { Trash } from "@phosphor-icons/react/dist/ssr";
 import { Input } from "@/components/ui/Input";
@@ -28,6 +28,7 @@ export function TimeBlocksManager({
   const boundAction = createTimeBlockAction.bind(null, professionalId);
   const [state, action, pending] = useActionState(boundAction, initialState);
   const [isDeleting, startDelete] = useTransition();
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   return (
     <div>
@@ -69,7 +70,13 @@ export function TimeBlocksManager({
               <button
                 type="button"
                 disabled={isDeleting}
-                onClick={() => startDelete(() => deleteTimeBlockAction(professionalId, block.id))}
+                onClick={() =>
+                  startDelete(async () => {
+                    setDeleteError(null);
+                    const result = await deleteTimeBlockAction(professionalId, block.id);
+                    if (result?.error) setDeleteError(result.error);
+                  })
+                }
                 className="p-1.5 text-zinc-400 hover:text-red-600 disabled:opacity-50"
                 aria-label="Remover bloqueio"
               >
@@ -79,6 +86,10 @@ export function TimeBlocksManager({
           ))}
         </ul>
       )}
+
+      {deleteError ? (
+        <p className="mt-2 text-sm text-red-600 dark:text-red-400">{deleteError}</p>
+      ) : null}
     </div>
   );
 }

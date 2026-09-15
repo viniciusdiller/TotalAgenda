@@ -29,10 +29,18 @@ export async function createProfessionalAction(
   return {};
 }
 
-export async function toggleProfessionalActiveAction(id: string, isActive: boolean) {
-  await authedFetch(`/professionals/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify({ isActive }),
-  });
+export async function toggleProfessionalActiveAction(
+  id: string,
+  isActive: boolean,
+): Promise<{ error?: string }> {
+  try {
+    await authedFetch(`/professionals/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ isActive }),
+    });
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Não foi possível atualizar." };
+  }
   revalidatePath("/dashboard/profissionais");
+  return {};
 }

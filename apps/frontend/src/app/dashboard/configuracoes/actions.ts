@@ -75,9 +75,16 @@ export async function uploadLogoAction(
   return {};
 }
 
-export async function removeLogoAction() {
-  await authedFetch("/tenants/me/logo", { method: "DELETE" }).catch(() => {});
+export async function removeLogoAction(
+  _prevState?: { error?: string },
+): Promise<{ error?: string }> {
+  try {
+    await authedFetch("/tenants/me/logo", { method: "DELETE" });
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Não foi possível remover a logo." };
+  }
   revalidatePath("/dashboard/configuracoes");
+  return {};
 }
 
 export interface UploadGalleryImageState {
@@ -105,7 +112,12 @@ export async function uploadGalleryImageAction(
   return {};
 }
 
-export async function removeGalleryImageAction(imageId: string) {
-  await authedFetch(`/tenants/me/gallery/${imageId}`, { method: "DELETE" }).catch(() => {});
+export async function removeGalleryImageAction(imageId: string): Promise<{ error?: string }> {
+  try {
+    await authedFetch(`/tenants/me/gallery/${imageId}`, { method: "DELETE" });
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Não foi possível remover a imagem." };
+  }
   revalidatePath("/dashboard/configuracoes");
+  return {};
 }

@@ -30,6 +30,24 @@ function RemoveImageButton() {
   );
 }
 
+function GalleryImage({ image }: { image: { id: string; url: string } }) {
+  const [state, action] = useActionState(removeGalleryImageAction.bind(null, image.id), {});
+  return (
+    <div className="group relative aspect-square overflow-hidden rounded-xl">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={`${API_URL}${image.url}`} alt="" className="h-full w-full object-cover" />
+      <form action={action}>
+        <RemoveImageButton />
+      </form>
+      {state?.error ? (
+        <p className="absolute inset-x-0 bottom-0 bg-red-600/90 px-2 py-1 text-center text-xs text-white">
+          {state.error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function GalleryManager({ images }: { images: { id: string; url: string }[] }) {
   const [uploadState, uploadFormAction, uploadPending] = useActionState(
     uploadGalleryImageAction,
@@ -58,17 +76,7 @@ export function GalleryManager({ images }: { images: { id: string; url: string }
       {images.length > 0 ? (
         <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
           {images.map((image) => (
-            <div key={image.id} className="group relative aspect-square overflow-hidden rounded-xl">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`${API_URL}${image.url}`}
-                alt=""
-                className="h-full w-full object-cover"
-              />
-              <form action={removeGalleryImageAction.bind(null, image.id)}>
-                <RemoveImageButton />
-              </form>
-            </div>
+            <GalleryImage key={image.id} image={image} />
           ))}
         </div>
       ) : null}

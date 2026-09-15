@@ -40,10 +40,18 @@ export async function createServiceAction(
   return {};
 }
 
-export async function toggleServiceActiveAction(id: string, isActive: boolean) {
-  await authedFetch(`/services/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify({ isActive }),
-  });
+export async function toggleServiceActiveAction(
+  id: string,
+  isActive: boolean,
+): Promise<{ error?: string }> {
+  try {
+    await authedFetch(`/services/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ isActive }),
+    });
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Não foi possível atualizar." };
+  }
   revalidatePath("/dashboard/servicos");
+  return {};
 }

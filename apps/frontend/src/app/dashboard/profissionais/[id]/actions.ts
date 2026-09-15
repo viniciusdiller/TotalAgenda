@@ -34,12 +34,17 @@ export async function toggleServiceLinkAction(
   professionalId: string,
   serviceId: string,
   isActive: boolean,
-) {
-  await authedFetch(`/professionals/${professionalId}/services`, {
-    method: "POST",
-    body: JSON.stringify({ serviceId, isActive }),
-  });
+): Promise<{ error?: string }> {
+  try {
+    await authedFetch(`/professionals/${professionalId}/services`, {
+      method: "POST",
+      body: JSON.stringify({ serviceId, isActive }),
+    });
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Não foi possível atualizar." };
+  }
   revalidatePath(`/dashboard/profissionais/${professionalId}`);
+  return {};
 }
 
 export interface CreateTimeBlockState {
@@ -84,7 +89,15 @@ export async function createTimeBlockAction(
   return {};
 }
 
-export async function deleteTimeBlockAction(professionalId: string, blockId: string) {
-  await authedFetch(`/time-blocks/${blockId}`, { method: "DELETE" });
+export async function deleteTimeBlockAction(
+  professionalId: string,
+  blockId: string,
+): Promise<{ error?: string }> {
+  try {
+    await authedFetch(`/time-blocks/${blockId}`, { method: "DELETE" });
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Não foi possível remover." };
+  }
   revalidatePath(`/dashboard/profissionais/${professionalId}`);
+  return {};
 }

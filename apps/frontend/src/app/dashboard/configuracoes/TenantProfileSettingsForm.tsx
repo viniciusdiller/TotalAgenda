@@ -65,6 +65,7 @@ export function TenantProfileSettingsForm({ tenant }: { tenant: TenantProfile })
     uploadLogoAction,
     uploadInitialState,
   );
+  const [removeLogoState, removeLogoFormAction] = useActionState(removeLogoAction, {});
   const [compressing, setCompressing] = useState(false);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -120,7 +121,7 @@ export function TenantProfileSettingsForm({ tenant }: { tenant: TenantProfile })
           </form>
 
           {tenant.logoUrl ? (
-            <form action={removeLogoAction}>
+            <form action={removeLogoFormAction}>
               <RemoveLogoButton />
             </form>
           ) : null}
@@ -128,6 +129,9 @@ export function TenantProfileSettingsForm({ tenant }: { tenant: TenantProfile })
 
         {uploadState?.error ? (
           <p className="mt-2 text-sm text-red-600 dark:text-red-400">{uploadState.error}</p>
+        ) : null}
+        {removeLogoState?.error ? (
+          <p className="mt-2 text-sm text-red-600 dark:text-red-400">{removeLogoState.error}</p>
         ) : null}
       </div>
 
