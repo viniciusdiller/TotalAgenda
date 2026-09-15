@@ -14,12 +14,16 @@ const priceLabel = (n: number | null) => (n ? "$".repeat(n) : "");
 export function DiscoverSearch({
   categories,
   cities,
+  initialQuery = "",
+  initialCity = "",
 }: {
   categories: MarketplaceCategory[];
   cities: string[];
+  initialQuery?: string;
+  initialCity?: string;
 }) {
-  const [q, setQ] = useState("");
-  const [city, setCity] = useState("");
+  const [q, setQ] = useState(initialQuery);
+  const [city, setCity] = useState(initialCity);
   const [category, setCategory] = useState("");
   const [results, setResults] = useState<MarketplaceResult[]>([]);
   const [loading, setLoading] = useState(true);

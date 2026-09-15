@@ -20,8 +20,13 @@ async function fetchJson<T>(path: string, fallback: T): Promise<T> {
   }
 }
 
-export default async function DescobrirPage() {
-  const [categories, cities] = await Promise.all([
+export default async function DescobrirPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; city?: string }>;
+}) {
+  const [{ q, city }, categories, cities] = await Promise.all([
+    searchParams,
     fetchJson<MarketplaceCategory[]>("/public/marketplace/categories", []),
     fetchJson<string[]>("/public/marketplace/cities", []),
   ]);
@@ -42,7 +47,12 @@ export default async function DescobrirPage() {
       </p>
 
       <div className="mt-6">
-        <DiscoverSearch categories={categories} cities={cities} />
+        <DiscoverSearch
+          categories={categories}
+          cities={cities}
+          initialQuery={q ?? ""}
+          initialCity={city ?? ""}
+        />
       </div>
     </main>
   );
