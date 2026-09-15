@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { DateTime } from "luxon";
+import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import type { PublicBooking, PublicClient } from "@totalagenda/shared-types";
 import { Button } from "../ui/Button";
 import { ClientBookingCard } from "./ClientBookingCard";
@@ -8,10 +10,12 @@ import { logoutClientAction } from "@/app/[slug]/conta/actions";
 
 export function ClientAccountView({
   slug,
+  tenantName,
   client,
   bookings,
 }: {
   slug: string;
+  tenantName: string;
   client: PublicClient;
   bookings: PublicBooking[];
 }) {
@@ -25,7 +29,15 @@ export function ClientAccountView({
 
   return (
     <div className="mx-auto w-full max-w-lg">
-      <div className="flex items-start justify-between gap-4">
+      <Link
+        href={`/${slug}`}
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-800 dark:text-stone-400 dark:hover:text-stone-200"
+      >
+        <ArrowLeft size={16} />
+        {tenantName}
+      </Link>
+
+      <div className="mt-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold text-zinc-900 dark:text-white">
             Olá, {client.name.split(" ")[0]}
