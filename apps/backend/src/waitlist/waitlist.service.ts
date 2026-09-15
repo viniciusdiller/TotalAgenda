@@ -70,6 +70,7 @@ export class WaitlistService {
       where: { tenantId, status },
       include: { service: { select: { name: true } }, professional: { include: { user: { select: { name: true } } } } },
       orderBy: { createdAt: "asc" },
+      take: 500,
     });
   }
 

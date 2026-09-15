@@ -460,6 +460,31 @@ describe("AppointmentsService", () => {
     });
   });
 
+  describe("findForAdmin", () => {
+    // Regressão: from/to vinham direto de @Query sem DTO — new Date("lixo") gerava um
+    // Invalid Date que ia parar no WHERE do Prisma sem checagem, virando 500 em vez de 400.
+    it("lança BadRequestException com from/to inválidos", async () => {
+      const service = new AppointmentsService(buildPrismaMock(buildTxMock()), clientsService);
+      await expect(service.findForAdmin(owner, "nao-e-uma-data")).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    // Regressão: sem from/to, findForAdmin buscava o histórico inteiro do tenant sem
+    // nenhum teto — uma chamada sem filtro de data (ou um tenant com muitos anos de dado)
+    // virava uma query pesada sem limite.
+    it("limita a busca com take mesmo sem filtro de data", async () => {
+      const prisma = buildPrismaMock(buildTxMock());
+      const service = new AppointmentsService(prisma, clientsService);
+
+      await service.findForAdmin(owner);
+
+      expect(prisma.appointment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 500 }),
+      );
+    });
+  });
+
   describe("getCalendar", () => {
     const range = {
       from: new Date().toISOString(),

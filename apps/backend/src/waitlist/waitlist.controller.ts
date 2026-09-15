@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { Role, WaitlistStatus } from "@totalagenda/database";
 import { WaitlistService } from "./waitlist.service";
 import { CreateWaitlistEntryDto } from "./dto/create-waitlist-entry.dto";
@@ -12,7 +13,11 @@ import { AuthenticatedUser } from "../auth/types/auth-user";
 export class PublicWaitlistController {
   constructor(private readonly waitlistService: WaitlistService) {}
 
+  // Rota pública de escrita sem autenticação — mesmo limite usado em toda outra rota
+  // pública de escrita (criação de agendamento, cancelar/remarcar por token) pra não deixar
+  // essa de fora e virar vetor de flood na tabela de espera (e no Client, via upsert).
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post()
   create(@Param("slug") slug: string, @Body() dto: CreateWaitlistEntryDto) {
     return this.waitlistService.createFromPublicLink(slug, dto);

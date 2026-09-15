@@ -10,13 +10,30 @@ const CORRECT_PASSWORD = "senha-correta-123";
 // esconderia justamente o que precisa ser testado.
 const PASSWORD_HASH = bcrypt.hashSync(CORRECT_PASSWORD, 4); // rounds baixo só nos testes, cost não importa aqui
 
-function buildPrisma(overrides: Record<string, unknown> = {}) {
+// Mantém um "estado de linha" mutável e compartilhado entre chamadas — precisa simular de
+// verdade a semântica de UPDATE ... SET x = x + 1 do Postgres (não só devolver o que foi
+// passado), senão o teste de corrida em "incrementa corretamente sob login concorrente"
+// não pega a regressão que motivou a correção (ver auth.service.ts:registerFailedLogin).
+function buildPrisma(initialUser: Record<string, unknown> | null = null) {
+  const state: Record<string, unknown> = initialUser ? { ...initialUser } : {};
   return {
     user: {
-      findUnique: jest.fn().mockResolvedValue(null),
-      update: jest.fn().mockImplementation(({ data }) => ({ id: "u-1", ...data })),
+      findUnique: jest.fn().mockImplementation(() =>
+        Promise.resolve(initialUser ? { ...state } : null),
+      ),
+      update: jest.fn().mockImplementation(({ data }) => {
+        const increment = data.failedLoginAttempts?.increment;
+        if (typeof increment === "number") {
+          state.failedLoginAttempts = ((state.failedLoginAttempts as number) ?? 0) + increment;
+        } else if ("failedLoginAttempts" in data) {
+          state.failedLoginAttempts = data.failedLoginAttempts;
+        }
+        if ("lockedUntil" in data) {
+          state.lockedUntil = data.lockedUntil;
+        }
+        return Promise.resolve({ id: "u-1", ...state });
+      }),
     },
-    ...overrides,
   } as unknown as PrismaService;
 }
 
@@ -43,7 +60,7 @@ const ACTIVE_USER = {
 
 describe("AuthService.login", () => {
   it("rejeita e-mail inexistente com a mesma UnauthorizedException genérica", async () => {
-    const prisma = buildPrisma();
+    const prisma = buildPrisma(null);
     const service = new AuthService(prisma, buildJwtService());
 
     await expect(
@@ -52,8 +69,7 @@ describe("AuthService.login", () => {
   });
 
   it("rejeita usuário desativado", async () => {
-    const prisma = buildPrisma();
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...ACTIVE_USER, isActive: false });
+    const prisma = buildPrisma({ ...ACTIVE_USER, isActive: false });
     const service = new AuthService(prisma, buildJwtService());
 
     await expect(
@@ -62,8 +78,7 @@ describe("AuthService.login", () => {
   });
 
   it("rejeita senha errada e incrementa failedLoginAttempts", async () => {
-    const prisma = buildPrisma();
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...ACTIVE_USER });
+    const prisma = buildPrisma({ ...ACTIVE_USER });
     const service = new AuthService(prisma, buildJwtService());
 
     await expect(
@@ -72,13 +87,15 @@ describe("AuthService.login", () => {
 
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: "u-1" },
-      data: { failedLoginAttempts: 1, lockedUntil: undefined },
+      data: { failedLoginAttempts: { increment: 1 } },
+      select: { failedLoginAttempts: true },
     });
+    const updated = await (prisma.user.update as jest.Mock).mock.results[0].value;
+    expect(updated.failedLoginAttempts).toBe(1);
   });
 
   it("trava a conta (lockedUntil no futuro) na 5ª tentativa errada seguida", async () => {
-    const prisma = buildPrisma();
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+    const prisma = buildPrisma({
       ...ACTIVE_USER,
       failedLoginAttempts: 4, // essa vai ser a 5ª
     });
@@ -88,15 +105,36 @@ describe("AuthService.login", () => {
       service.login({ email: ACTIVE_USER.email, password: "senha-errada" }),
     ).rejects.toThrow(UnauthorizedException);
 
-    const data = (prisma.user.update as jest.Mock).mock.calls[0][0].data;
-    expect(data.failedLoginAttempts).toBe(5);
-    expect(data.lockedUntil).toBeInstanceOf(Date);
-    expect(data.lockedUntil.getTime()).toBeGreaterThan(Date.now());
+    // Primeiro update: incremento atômico. Segundo update: trava, já sabendo o valor
+    // pós-incremento (não recalculado a partir de uma leitura antiga).
+    const calls = (prisma.user.update as jest.Mock).mock.calls;
+    expect(calls[0][0].data).toEqual({ failedLoginAttempts: { increment: 1 } });
+    expect(calls[1][0].data.lockedUntil).toBeInstanceOf(Date);
+    expect(calls[1][0].data.lockedUntil.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  // Regressão: registerFailedLogin calculava `currentAttempts + 1` a partir do valor lido
+  // no início de login() e escrevia esse valor absoluto de volta. Duas chamadas concorrentes
+  // (IPs diferentes, força bruta em paralelo — exatamente o que o lockout existe pra barrar)
+  // liam o mesmo valor antes de qualquer escrita confirmar, então o contador só avançava +1
+  // no total em vez de +2 — o lockout nunca disparava sob tentativa paralela. Com o
+  // incremento atômico (`{ increment: 1 }`), cada chamada soma corretamente independente de
+  // quando cada uma leu o estado.
+  it("incrementa corretamente sob duas tentativas de login concorrentes (mesma conta)", async () => {
+    const prisma = buildPrisma({ ...ACTIVE_USER, failedLoginAttempts: 0 });
+    const service = new AuthService(prisma, buildJwtService());
+
+    await Promise.all([
+      service.login({ email: ACTIVE_USER.email, password: "errada-1" }).catch(() => {}),
+      service.login({ email: ACTIVE_USER.email, password: "errada-2" }).catch(() => {}),
+    ]);
+
+    const finalState = await (prisma.user.findUnique as jest.Mock)();
+    expect(finalState.failedLoginAttempts).toBe(2);
   });
 
   it("rejeita login com a SENHA CORRETA enquanto a conta está travada, sem resetar o contador", async () => {
-    const prisma = buildPrisma();
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+    const prisma = buildPrisma({
       ...ACTIVE_USER,
       failedLoginAttempts: 6,
       lockedUntil: new Date(Date.now() + 5 * 60_000),
@@ -115,8 +153,7 @@ describe("AuthService.login", () => {
   });
 
   it("permite login normalmente depois que lockedUntil já passou", async () => {
-    const prisma = buildPrisma();
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+    const prisma = buildPrisma({
       ...ACTIVE_USER,
       failedLoginAttempts: 5,
       lockedUntil: new Date(Date.now() - 1000), // já expirou
@@ -134,8 +171,7 @@ describe("AuthService.login", () => {
   });
 
   it("login bem-sucedido reseta failedLoginAttempts pra 0", async () => {
-    const prisma = buildPrisma();
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+    const prisma = buildPrisma({
       ...ACTIVE_USER,
       failedLoginAttempts: 3,
     });
@@ -150,8 +186,7 @@ describe("AuthService.login", () => {
   });
 
   it("login bem-sucedido sem tentativas falhas anteriores não chama update à toa", async () => {
-    const prisma = buildPrisma();
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...ACTIVE_USER });
+    const prisma = buildPrisma({ ...ACTIVE_USER });
     const service = new AuthService(prisma, buildJwtService());
 
     await service.login({ email: ACTIVE_USER.email, password: CORRECT_PASSWORD });

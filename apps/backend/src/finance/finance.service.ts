@@ -99,9 +99,14 @@ export class FinanceService {
     }
     const field = filters.basis === "paid" ? "paidAt" : "dueDate";
     if (filters.from || filters.to) {
+      const fromDate = filters.from ? new Date(filters.from) : undefined;
+      const toDate = filters.to ? new Date(filters.to) : undefined;
+      if ((fromDate && Number.isNaN(fromDate.getTime())) || (toDate && Number.isNaN(toDate.getTime()))) {
+        throw new BadRequestException("Intervalo de datas inválido.");
+      }
       where[field] = {
-        ...(filters.from ? { gte: new Date(filters.from) } : {}),
-        ...(filters.to ? { lte: new Date(filters.to) } : {}),
+        ...(fromDate ? { gte: fromDate } : {}),
+        ...(toDate ? { lte: toDate } : {}),
       };
     }
     return this.prisma.financialEntry.findMany({
@@ -288,6 +293,7 @@ export class FinanceService {
     const entries = await this.prisma.financialEntry.findMany({
       where,
       include: { category: { select: { name: true } } },
+      take: 5000,
     });
 
     let incomeCents = 0;
@@ -328,11 +334,13 @@ export class FinanceService {
           paidAt: { gte: fromDate, lte: toDate },
         },
         include: { category: { select: { name: true } } },
+        take: 5000,
       }),
       // CMV aproximado: custo dos produtos com baixa SALE no período.
       this.prisma.stockMovement.findMany({
         where: { tenantId, kind: "SALE", createdAt: { gte: fromDate, lte: toDate } },
         include: { product: { select: { costCents: true } } },
+        take: 5000,
       }),
     ]);
 
@@ -418,6 +426,13 @@ export class FinanceService {
   private assertRange(from: Date, to: Date) {
     if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) {
       throw new BadRequestException("Intervalo inválido.");
+    }
+    // Sem teto de amplitude, from/to vêm direto de @Query sem DTO — um intervalo tipo
+    // 1970..2100 força materializar o ledger inteiro do tenant a cada chamada. 2 anos cobre
+    // qualquer relatório anual/trimestral legítimo.
+    const MAX_RANGE_DAYS = 731;
+    if (to.getTime() - from.getTime() > MAX_RANGE_DAYS * 24 * 60 * 60 * 1000) {
+      throw new BadRequestException(`Intervalo máximo do relatório é de ${MAX_RANGE_DAYS} dias.`);
     }
   }
 

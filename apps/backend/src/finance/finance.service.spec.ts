@@ -102,6 +102,37 @@ describe("FinanceService", () => {
     expect(result.resultCents).toBe(60000);
   });
 
+  // Regressão: cashFlow/dre recebem from/to direto de @Query sem DTO — só validavam
+  // from &lt;= to, não a AMPLITUDE do intervalo. Um intervalo tipo 1970..2100 forçava
+  // materializar o ledger inteiro do tenant a cada chamada, sem teto nenhum.
+  it("dre recusa intervalo maior que o teto de amplitude", async () => {
+    const { service } = build();
+    await expect(
+      service.dre("t-1", "1970-01-01T00:00:00Z", "2100-01-01T00:00:00Z"),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("cashFlow recusa intervalo maior que o teto de amplitude", async () => {
+    const { service } = build();
+    await expect(
+      service.cashFlow("t-1", "2020-01-01T00:00:00Z", "2026-01-01T00:00:00Z"),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("cashFlow aceita um intervalo anual normal", async () => {
+    const { service } = build();
+    await expect(
+      service.cashFlow("t-1", "2026-01-01T00:00:00Z", "2026-12-31T23:59:59Z"),
+    ).resolves.toBeDefined();
+  });
+
+  it("listEntries lança BadRequestException com from/to inválidos", async () => {
+    const { service } = build();
+    await expect(
+      service.listEntries("t-1", { from: "not-a-date" }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
   it("openItems marca vencidos e soma o atraso", async () => {
     const { service, prisma } = build();
     (prisma.financialEntry.findMany as jest.Mock).mockResolvedValue([

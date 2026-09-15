@@ -60,7 +60,7 @@ export class AuthService {
 
     const passwordMatches = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordMatches) {
-      await this.registerFailedLogin(user.id, user.failedLoginAttempts);
+      await this.registerFailedLogin(user.id);
       throw new UnauthorizedException("Credenciais inválidas.");
     }
 
@@ -81,16 +81,26 @@ export class AuthService {
     );
   }
 
-  private async registerFailedLogin(userId: string, currentAttempts: number) {
-    const attempts = currentAttempts + 1;
-    await this.prisma.user.update({
+  private async registerFailedLogin(userId: string) {
+    // Incremento atômico no banco — nunca "lê failedLoginAttempts, soma 1 em memória,
+    // escreve de volta". Esse segundo padrão tem uma janela de corrida: N tentativas
+    // concorrentes (trivial de disparar, inclusive de IPs diferentes) leem o mesmo valor
+    // antes de qualquer escrita confirmar, então o contador só avança +1 no total por
+    // rodada em vez de +N — o lockout nunca dispara sob força bruta paralela. O UPDATE com
+    // `increment` serializa via lock de linha do Postgres, então cada tentativa concorrente
+    // soma corretamente.
+    const updated = await this.prisma.user.update({
       where: { id: userId },
-      data: {
-        failedLoginAttempts: attempts,
-        lockedUntil:
-          attempts >= LOCKOUT_THRESHOLD ? new Date(Date.now() + lockoutDurationMs(attempts)) : undefined,
-      },
+      data: { failedLoginAttempts: { increment: 1 } },
+      select: { failedLoginAttempts: true },
     });
+
+    if (updated.failedLoginAttempts >= LOCKOUT_THRESHOLD) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { lockedUntil: new Date(Date.now() + lockoutDurationMs(updated.failedLoginAttempts)) },
+      });
+    }
   }
 
   // O access token dura pouco (12h, ver JWT_EXPIRES_IN) de propósito — o refresh token

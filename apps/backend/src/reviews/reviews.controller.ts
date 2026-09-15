@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { Role } from "@totalagenda/database";
 import { ReviewsService } from "./reviews.service";
 import { CreateReviewDto, ReportReviewDto } from "./dto/review-dtos";
@@ -22,8 +23,11 @@ export class ConsumerReviewsController {
     return this.reviews.reviewableAppointments(consumer);
   }
 
+  // Consistência com toda outra rota pública de escrita do projeto (mesmo já sendo
+  // naturalmente limitada pelo número de atendimentos concluídos do consumidor).
   @Public()
   @UseGuards(ConsumerJwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post()
   create(@CurrentConsumer() consumer: AuthenticatedConsumer, @Body() dto: CreateReviewDto) {
     return this.reviews.create(consumer, dto);

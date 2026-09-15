@@ -198,9 +198,14 @@ export class AppointmentsService {
       where.professionalId = user.professionalId;
     }
     if (from || to) {
+      const fromDate = from ? new Date(from) : undefined;
+      const toDate = to ? new Date(to) : undefined;
+      if ((fromDate && Number.isNaN(fromDate.getTime())) || (toDate && Number.isNaN(toDate.getTime()))) {
+        throw new BadRequestException("Intervalo de datas inválido.");
+      }
       where.startAt = {
-        ...(from ? { gte: new Date(from) } : {}),
-        ...(to ? { lte: new Date(to) } : {}),
+        ...(fromDate ? { gte: fromDate } : {}),
+        ...(toDate ? { lte: toDate } : {}),
       };
     }
 
@@ -208,6 +213,11 @@ export class AppointmentsService {
       where,
       include: APPOINTMENT_INCLUDE,
       orderBy: { startAt: "asc" },
+      // Sem filtro de data, isso é o histórico inteiro do tenant — teto evita que uma
+      // consulta sem from/to (ou um tenant antigo com muitos anos de dado) vire uma consulta
+      // pesada sem limite nenhum. A tela de agenda já usa getCalendar (com teto de 45 dias)
+      // pro caso do dia a dia; isso aqui é o endpoint de listagem/relatório mais amplo.
+      take: 500,
     });
     return appointments.map((appointment) => this.serialize(appointment));
   }
@@ -349,6 +359,7 @@ export class AppointmentsService {
       where: { clientId: client.clientId, tenantId: tenant.id },
       include: APPOINTMENT_INCLUDE,
       orderBy: { startAt: "desc" },
+      take: 200,
     });
     return appointments.map((appointment) => this.serialize(appointment));
   }
