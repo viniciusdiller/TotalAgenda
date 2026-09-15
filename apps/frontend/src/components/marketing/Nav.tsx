@@ -66,7 +66,7 @@ export function Nav() {
                 Entrar
               </Button>
               <Button href={LANDING_URL} className="px-5 py-2.5 text-sm">
-                Começar grátis
+                Para donos de salão
               </Button>
             </div>
 
@@ -100,7 +100,7 @@ export function Nav() {
                 Entrar
               </Button>
               <Button href={LANDING_URL} className="w-full">
-                Começar grátis
+                Para donos de salão
               </Button>
             </div>
           </Container>
