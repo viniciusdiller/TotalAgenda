@@ -4,6 +4,7 @@ import { Role } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
 import { PlanLimitService } from "../billing/plan-limit.service";
 import { hasOverlappingIntervals } from "../common/utils/interval.util";
+import { SLOT_BLOCKING_STATUSES } from "../appointments/appointments.service";
 import { CreateProfessionalDto } from "./dto/create-professional.dto";
 import { UpdateProfessionalDto } from "./dto/update-professional.dto";
 import { SetWorkingHoursDto } from "./dto/set-working-hours.dto";
@@ -72,9 +73,44 @@ export class ProfessionalsService {
       await this.planLimitService.assertCanAddProfessional(tenantId);
     }
 
-    return this.prisma.professional.update({
-      where: { id: professional.id },
-      data: { bio: dto.bio, isActive: dto.isActive },
+    // Desativar sem checar agenda futura deixava o agendamento "órfão": some da coluna do
+    // profissional no calendário (getCalendar filtra professionals por isActive) mas
+    // continua ocupando o horário (appointments não é filtrado do mesmo jeito) — o dono
+    // precisa resolver a agenda antes de desativar, não descobrir depois que sumiu.
+    if (dto.isActive === false && professional.isActive) {
+      const futureBlockingCount = await this.prisma.appointment.count({
+        where: {
+          professionalId: professional.id,
+          status: { in: SLOT_BLOCKING_STATUSES },
+          startAt: { gt: new Date() },
+        },
+      });
+      if (futureBlockingCount > 0) {
+        throw new ConflictException(
+          `Não é possível desativar: há ${futureBlockingCount} agendamento(s) futuro(s) para este profissional. Cancele ou remarque antes de desativar.`,
+        );
+      }
+    }
+
+    if (dto.email && dto.email !== professional.user.email) {
+      const existingUser = await this.prisma.user.findUnique({ where: { email: dto.email } });
+      if (existingUser && existingUser.id !== professional.userId) {
+        throw new ConflictException("Já existe uma conta com este e-mail.");
+      }
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      if (dto.name !== undefined || dto.email !== undefined) {
+        await tx.user.update({
+          where: { id: professional.userId },
+          data: { name: dto.name, email: dto.email },
+        });
+      }
+      return tx.professional.update({
+        where: { id: professional.id },
+        data: { bio: dto.bio, isActive: dto.isActive },
+        include: { user: { select: { id: true, name: true, email: true } } },
+      });
     });
   }
 
