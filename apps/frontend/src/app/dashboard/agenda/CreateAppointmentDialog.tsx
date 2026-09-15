@@ -40,6 +40,10 @@ export function CreateAppointmentDialog({
   const [startAt, setStartAt] = useState(
     DateTime.fromISO(defaultStartAt).setZone(TIMEZONE).toFormat("yyyy-LL-dd'T'HH:mm"),
   );
+  // datetime-local não tem granularidade de segundo — usar o minuto atual (não "agora"
+  // exato) como piso evita rejeitar o próprio minuto em que o diálogo foi aberto. O
+  // backend ainda tem uma tolerância própria (parseStaffDate) pro round-trip da requisição.
+  const minDateTimeLocal = DateTime.now().setZone(TIMEZONE).toFormat("yyyy-LL-dd'T'HH:mm");
   const [serviceIds, setServiceIds] = useState<string[]>(services[0] ? [services[0].id] : []);
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
@@ -155,6 +159,7 @@ export function CreateAppointmentDialog({
             <input
               type="datetime-local"
               value={startAt}
+              min={minDateTimeLocal}
               onChange={(e) => setStartAt(e.target.value)}
               className={clsx(
                 "mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white",

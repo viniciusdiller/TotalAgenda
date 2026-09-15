@@ -21,17 +21,21 @@ export default async function AgendaPage() {
   const from = DateTime.fromISO(today, { zone: TIMEZONE }).startOf("day").toISO()!;
   const to = DateTime.fromISO(today, { zone: TIMEZONE }).endOf("day").toISO()!;
 
-  const [calendar, services] = await Promise.all([
-    fetchCalendarAction(from, to).catch(
-      () => ({ professionals: [], appointments: [], timeBlocks: [] }) as CalendarResponse,
-    ),
+  const emptyCalendar: CalendarResponse = { professionals: [], appointments: [], timeBlocks: [] };
+  const [calendarResult, services] = await Promise.all([
+    fetchCalendarAction(from, to)
+      .then((data) => ({ data, error: false }))
+      // Sem isso, qualquer erro (sessão expirada, trial vencido, 500) virava silenciosamente
+      // "nenhum profissional ativo" — o dono não tinha nenhuma pista do motivo real.
+      .catch(() => ({ data: emptyCalendar, error: true })),
     authedFetch<AgendaService[]>("/services").catch(() => [] as AgendaService[]),
   ]);
 
   return (
     <AgendaView
       initialDate={today}
-      initialCalendar={calendar}
+      initialCalendar={calendarResult.data}
+      initialLoadError={calendarResult.error}
       services={services.filter((s) => s.isActive)}
       role={session?.user.role ?? "PROFESSIONAL"}
     />

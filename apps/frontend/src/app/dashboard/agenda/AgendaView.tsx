@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { DateTime } from "luxon";
-import { CaretLeft, CaretRight, Plus } from "@phosphor-icons/react/dist/ssr";
+import { CaretLeft, CaretRight, Plus, WarningCircle } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
 import type {
   CalendarResponse,
@@ -60,16 +61,19 @@ const GRID_HEIGHT = (DAY_END_HOUR - DAY_START_HOUR) * 60 * PX_PER_MIN;
 export function AgendaView({
   initialDate,
   initialCalendar,
+  initialLoadError = false,
   services,
   role,
 }: {
   initialDate: string;
   initialCalendar: CalendarResponse;
+  initialLoadError?: boolean;
   services: AgendaService[];
   role: StaffRole;
 }) {
   const [date, setDate] = useState(initialDate);
   const [calendar, setCalendar] = useState(initialCalendar);
+  const [loadError, setLoadError] = useState(initialLoadError);
   const [professionalFilter, setProfessionalFilter] = useState<string>("");
   const [selected, setSelected] = useState<PublicBooking | null>(null);
   const [createAt, setCreateAt] = useState<{ professionalId: string; startAt: string } | null>(null);
@@ -82,8 +86,15 @@ export function AgendaView({
       const from = DateTime.fromISO(nextDate, { zone: TIMEZONE }).startOf("day").toISO()!;
       const to = DateTime.fromISO(nextDate, { zone: TIMEZONE }).endOf("day").toISO()!;
       startTransition(async () => {
-        const data = await fetchCalendarAction(from, to, nextFilter || undefined);
-        setCalendar(data);
+        // Sem o try/catch, uma falha aqui (sessão expirada, trial vencido no meio do uso,
+        // erro de rede) derrubava a agenda inteira pro error boundary genérico do Next.
+        try {
+          const data = await fetchCalendarAction(from, to, nextFilter || undefined);
+          setCalendar(data);
+          setLoadError(false);
+        } catch {
+          setLoadError(true);
+        }
         setSelected(null);
       });
     },
@@ -189,9 +200,27 @@ export function AgendaView({
         </div>
       </div>
 
-      {columns.length === 0 ? (
+      {loadError ? (
+        <div className="mt-6 flex flex-col items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+          <p className="flex items-center gap-2">
+            <WarningCircle size={18} />
+            Não foi possível carregar a agenda deste dia.
+          </p>
+          <button
+            type="button"
+            onClick={() => reload(date, professionalFilter)}
+            className="rounded-md text-sm font-semibold text-red-700 underline hover:opacity-80 dark:text-red-300"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      ) : columns.length === 0 ? (
         <p className="mt-10 text-sm text-zinc-500 dark:text-stone-400">
-          Nenhum profissional ativo. Cadastre profissionais para usar a agenda.
+          Nenhum profissional ativo.{" "}
+          <Link href="/dashboard/profissionais" className="font-medium text-accent-600 underline dark:text-accent-400">
+            Cadastre profissionais
+          </Link>{" "}
+          para usar a agenda.
         </p>
       ) : (
         <div
@@ -344,6 +373,7 @@ export function AgendaView({
       {selected ? (
         <AppointmentPanel
           appointment={selected}
+          professionals={calendar.professionals}
           canManage={canManage}
           onClose={() => setSelected(null)}
           onChanged={() => reload(date, professionalFilter)}

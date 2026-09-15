@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { DateTime } from "luxon";
 import { X } from "@phosphor-icons/react/dist/ssr";
-import type { PublicBooking } from "@totalagenda/shared-types";
+import type { CalendarProfessional, PublicBooking } from "@totalagenda/shared-types";
 import {
   cancelAppointmentAction,
   rescheduleAppointmentAction,
@@ -32,11 +32,13 @@ const NEXT_STATUSES: Record<string, Array<"CONFIRMED" | "IN_SERVICE" | "COMPLETE
 
 export function AppointmentPanel({
   appointment,
+  professionals,
   canManage,
   onClose,
   onChanged,
 }: {
   appointment: PublicBooking;
+  professionals: CalendarProfessional[];
   canManage: boolean;
   onClose: () => void;
   onChanged: () => void;
@@ -44,6 +46,12 @@ export function AppointmentPanel({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [rescheduleValue, setRescheduleValue] = useState("");
+  const [rescheduleProfessionalId, setRescheduleProfessionalId] = useState(
+    appointment.professionalId,
+  );
+  // datetime-local não tem granularidade de segundo — usar o minuto atual (não "agora"
+  // exato) como piso evita rejeitar o próprio minuto em que o campo foi aberto.
+  const minDateTimeLocal = DateTime.now().setZone(TIMEZONE).toFormat("yyyy-LL-dd'T'HH:mm");
 
   const total = (appointment.priceCentsSnapshot / 100).toLocaleString("pt-BR", {
     style: "currency",
@@ -155,31 +163,53 @@ export function AppointmentPanel({
             ) : null}
 
             {["SCHEDULED", "CONFIRMED"].includes(appointment.status) ? (
-              <div className="flex items-end gap-2">
-                <label className="flex-1 text-xs text-zinc-500 dark:text-stone-400">
-                  Remarcar para
-                  <input
-                    type="datetime-local"
-                    value={rescheduleValue}
-                    onChange={(e) => setRescheduleValue(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-white/15 dark:bg-zinc-900 dark:text-white"
-                  />
-                </label>
-                <button
-                  type="button"
-                  disabled={isPending || !rescheduleValue}
-                  onClick={() =>
-                    run(() =>
-                      rescheduleAppointmentAction(
-                        appointment.id,
-                        DateTime.fromISO(rescheduleValue, { zone: TIMEZONE }).toISO()!,
-                      ),
-                    )
-                  }
-                  className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 disabled:opacity-50 dark:border-white/15 dark:text-stone-200"
-                >
-                  Mover
-                </button>
+              <div className="space-y-2">
+                {professionals.length > 1 ? (
+                  <label className="block text-xs text-zinc-500 dark:text-stone-400">
+                    Profissional
+                    <select
+                      value={rescheduleProfessionalId}
+                      onChange={(e) => setRescheduleProfessionalId(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-white/15 dark:bg-zinc-900 dark:text-white"
+                    >
+                      {professionals.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                <div className="flex items-end gap-2">
+                  <label className="flex-1 text-xs text-zinc-500 dark:text-stone-400">
+                    Remarcar para
+                    <input
+                      type="datetime-local"
+                      value={rescheduleValue}
+                      min={minDateTimeLocal}
+                      onChange={(e) => setRescheduleValue(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-white/15 dark:bg-zinc-900 dark:text-white"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    disabled={isPending || !rescheduleValue}
+                    onClick={() =>
+                      run(() =>
+                        rescheduleAppointmentAction(
+                          appointment.id,
+                          DateTime.fromISO(rescheduleValue, { zone: TIMEZONE }).toISO()!,
+                          rescheduleProfessionalId !== appointment.professionalId
+                            ? rescheduleProfessionalId
+                            : undefined,
+                        ),
+                      )
+                    }
+                    className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 disabled:opacity-50 dark:border-white/15 dark:text-stone-200"
+                  >
+                    Mover
+                  </button>
+                </div>
               </div>
             ) : null}
 
