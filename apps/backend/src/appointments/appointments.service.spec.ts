@@ -62,7 +62,14 @@ function buildTxMock(overrides: Partial<Record<string, unknown>> = {}) {
 
 function buildPrismaMock(tx: ReturnType<typeof buildTxMock>) {
   return {
-    tenant: { findUnique: jest.fn().mockResolvedValue({ id: "tenant-1" }) },
+    tenant: {
+      findUnique: jest.fn().mockResolvedValue({ id: "tenant-1" }),
+      findUniqueOrThrow: jest.fn().mockResolvedValue({
+        id: "tenant-1",
+        trialEndsAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        subscription: null,
+      }),
+    },
     professional: {
       findFirst: jest.fn().mockResolvedValue({ id: "prof-1" }),
       findMany: jest.fn().mockResolvedValue([
@@ -172,6 +179,21 @@ describe("AppointmentsService", () => {
         }),
       );
     });
+
+    // Regressão: TenantBillingGuard não cobre rotas @Public(), então o link público de
+    // agendamento continuava aceitando marcações mesmo com o trial vencido/assinatura
+    // cancelada — só o dashboard ficava bloqueado.
+    it("lança ForbiddenException quando o tenant não tem acesso de billing (trial vencido)", async () => {
+      const prisma = buildPrismaMock(buildTxMock());
+      (prisma.tenant.findUniqueOrThrow as jest.Mock).mockResolvedValue({
+        id: "tenant-1",
+        trialEndsAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        subscription: null,
+      });
+      const service = new AppointmentsService(prisma, clientsService);
+
+      await expect(service.createFromPublicLink("slug", baseDto)).rejects.toThrow(ForbiddenException);
+    });
   });
 
   describe("createByStaff", () => {
@@ -223,6 +245,40 @@ describe("AppointmentsService", () => {
         }),
       ).rejects.toThrow(BadRequestException);
     });
+
+    // Regressão: walk-in criado pela recepção usava a mesma checagem estrita do fluxo
+    // público (startAt > Date.now()). Um datetime-local só tem granularidade de minuto,
+    // então escolher "agora" para um cliente no balcão quase sempre caía no passado depois
+    // do round-trip da requisição — precisa de uma tolerância que o fluxo público não tem.
+    it("aceita um horário poucos segundos no passado (walk-in escolhendo 'agora')", async () => {
+      const tx = buildTxMock();
+      const service = new AppointmentsService(buildPrismaMock(tx), clientsService);
+      const almostNow = new Date(Date.now() - 30_000).toISOString();
+
+      await expect(
+        service.createByStaff(owner, {
+          professionalId: "prof-1",
+          startAt: almostNow,
+          items: [{ serviceId: "svc-1" }],
+          clientName: "Novo Cliente",
+          clientPhone: "11988887777",
+        }),
+      ).resolves.toBeDefined();
+    });
+
+    it("ainda recusa um horário claramente no passado", async () => {
+      const service = new AppointmentsService(buildPrismaMock(buildTxMock()), clientsService);
+
+      await expect(
+        service.createByStaff(owner, {
+          professionalId: "prof-1",
+          startAt: "2020-01-01T10:00:00-03:00",
+          items: [{ serviceId: "svc-1" }],
+          clientName: "Novo Cliente",
+          clientPhone: "11988887777",
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe("cancelByToken", () => {
@@ -253,6 +309,22 @@ describe("AppointmentsService", () => {
 
       await expect(service.cancelByToken("nao-existe")).rejects.toThrow(NotFoundException);
     });
+
+    // Regressão: applyCancel só bloqueava CANCELED/COMPLETED, então um cliente com o link
+    // público conseguia cancelar um atendimento IN_SERVICE (profissional atendendo agora)
+    // ou já marcado NO_SHOW — diferente de applyReschedule, que já restringia a
+    // SCHEDULED/CONFIRMED. A recepção (cancelByStaff) continua podendo cancelar em
+    // qualquer estado não-terminal, só a ação iniciada pelo cliente ficou restrita.
+    it.each([AppointmentStatus.IN_SERVICE, AppointmentStatus.NO_SHOW])(
+      "lança BadRequestException ao tentar cancelar um atendimento %s pelo link público",
+      async (status) => {
+        const prisma = buildPrismaMock(buildTxMock());
+        (prisma.appointment.findUnique as jest.Mock).mockResolvedValue(hydratedAppointment({ status }));
+        const service = new AppointmentsService(prisma, clientsService);
+
+        await expect(service.cancelByToken("token-1")).rejects.toThrow(BadRequestException);
+      },
+    );
   });
 
   describe("rescheduleByToken", () => {
@@ -357,6 +429,34 @@ describe("AppointmentsService", () => {
       await expect(
         service.rescheduleByStaff(professional, "appt-1", { startAt: FUTURE_DATE }),
       ).resolves.toBeDefined();
+    });
+  });
+
+  describe("cancelByStaff", () => {
+    it("permite a recepção cancelar um atendimento IN_SERVICE (corrigir status marcado errado)", async () => {
+      const prisma = buildPrismaMock(buildTxMock());
+      (prisma.appointment.findFirst as jest.Mock).mockResolvedValue(
+        hydratedAppointment({ status: AppointmentStatus.IN_SERVICE }),
+      );
+      const service = new AppointmentsService(prisma, clientsService);
+
+      const result = await service.cancelByStaff(owner, "appt-1");
+
+      expect(result.status).toBe(AppointmentStatus.CANCELED);
+    });
+  });
+
+  describe("cancelForClient", () => {
+    it("lança BadRequestException ao tentar cancelar um atendimento IN_SERVICE pela área do cliente", async () => {
+      const prisma = buildPrismaMock(buildTxMock());
+      (prisma.appointment.findFirst as jest.Mock).mockResolvedValue(
+        hydratedAppointment({ status: AppointmentStatus.IN_SERVICE, tenantId: "tenant-1", clientId: "client-1" }),
+      );
+      const service = new AppointmentsService(prisma, clientsService);
+
+      await expect(
+        service.cancelForClient("slug", "appt-1", { clientId: "client-1", tenantId: "tenant-1" }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

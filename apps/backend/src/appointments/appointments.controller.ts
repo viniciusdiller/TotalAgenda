@@ -33,7 +33,11 @@ export class PublicAppointmentsController {
 export class PublicAppointmentManageController {
   constructor(private readonly appointments: AppointmentsService) {}
 
+  // manageToken (nanoid 24) já é a credencial em si — devolve nome/telefone do cliente,
+  // então precisa do mesmo throttle das ações de escrita abaixo, senão nada impede
+  // tentar adivinhar/força-bruta em cima do espaço de tokens só de leitura.
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Get()
   getByToken(@Param("token") token: string) {
     return this.appointments.findByToken(token);

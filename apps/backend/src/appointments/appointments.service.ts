@@ -9,6 +9,7 @@ import { nanoid } from "nanoid";
 import { DateTime } from "luxon";
 import { AppointmentStatus, Prisma, Role } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
+import { computeBillingStatus, hasBillingAccess } from "../billing/billing-status.util";
 import { CreateAppointmentDto } from "./dto/create-appointment.dto";
 import { CreateStaffAppointmentDto } from "./dto/create-staff-appointment.dto";
 import { RescheduleAppointmentDto } from "./dto/reschedule-appointment.dto";
@@ -19,8 +20,12 @@ import { AuthenticatedClient } from "../client-auth/types/client-auth-user";
 
 const MANAGE_TOKEN_LENGTH = 24;
 
+// Mesmo fuso fixo usado por AvailabilityService — datetime sem offset explícito (ex.:
+// vindo de um datetime-local de formulário) é interpretado neste fuso, não no do processo.
+const TENANT_TIMEZONE = "America/Sao_Paulo";
+
 // Estados que ocupam a agenda — batem com o WHERE parcial da constraint EXCLUDE.
-const SLOT_BLOCKING_STATUSES: AppointmentStatus[] = [
+export const SLOT_BLOCKING_STATUSES: AppointmentStatus[] = [
   AppointmentStatus.SCHEDULED,
   AppointmentStatus.CONFIRMED,
   AppointmentStatus.IN_SERVICE,
@@ -65,6 +70,7 @@ export class AppointmentsService {
 
   async createFromPublicLink(tenantSlug: string, dto: CreateAppointmentDto) {
     const tenant = await this.getTenantBySlug(tenantSlug);
+    await this.assertTenantAcceptsBookings(tenant.id);
 
     const resolved = await this.resolveServiceForProfessional(
       tenant.id,
@@ -133,7 +139,7 @@ export class AppointmentsService {
     );
     const totalDuration = resolvedItems.reduce((sum, item) => sum + item.durationMinutes, 0);
 
-    const startAt = this.parseFutureDate(
+    const startAt = this.parseStaffDate(
       dto.startAt,
       "Não é possível agendar em um horário no passado.",
     );
@@ -279,7 +285,7 @@ export class AppointmentsService {
   // ─────────────────────────────────────────────
 
   async cancelByToken(token: string) {
-    return this.applyCancel(await this.getByTokenOrThrow(token));
+    return this.applyCancel(await this.getByTokenOrThrow(token), { clientInitiated: true });
   }
 
   async rescheduleByToken(token: string, dto: RescheduleAppointmentDto) {
@@ -326,7 +332,9 @@ export class AppointmentsService {
     ) {
       throw new ForbiddenException("Você só pode remarcar para a sua própria agenda.");
     }
-    return this.applyReschedule(await this.findOwnedByStaff(user, id), dto);
+    return this.applyReschedule(await this.findOwnedByStaff(user, id), dto, {
+      staffInitiated: true,
+    });
   }
 
   // ─────────────────────────────────────────────
@@ -346,7 +354,9 @@ export class AppointmentsService {
   }
 
   async cancelForClient(slug: string, appointmentId: string, client: AuthenticatedClient) {
-    return this.applyCancel(await this.findOwnedByClient(slug, appointmentId, client));
+    return this.applyCancel(await this.findOwnedByClient(slug, appointmentId, client), {
+      clientInitiated: true,
+    });
   }
 
   async rescheduleForClient(
@@ -368,6 +378,22 @@ export class AppointmentsService {
       throw new NotFoundException("Negócio não encontrado.");
     }
     return tenant;
+  }
+
+  // TenantBillingGuard só cobre rotas autenticadas — o link público de agendamento é
+  // @Public() e passa direto pelo guard, então um tenant com trial vencido continuava
+  // recebendo agendamentos novos. Cancelar/remarcar/consultar por token não passa por
+  // aqui de propósito: quem já tem um agendamento não pode ficar preso sem conseguir
+  // geri-lo só porque o dono não pagou.
+  private async assertTenantAcceptsBookings(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      include: { subscription: true },
+    });
+    const status = computeBillingStatus(tenant, tenant.subscription);
+    if (!hasBillingAccess(status)) {
+      throw new ForbiddenException("Este negócio não está aceitando novos agendamentos no momento.");
+    }
   }
 
   private async getByTokenOrThrow(token: string) {
@@ -474,7 +500,7 @@ export class AppointmentsService {
   }
 
   private parseFutureDate(raw: string, pastMessage: string) {
-    const parsed = DateTime.fromISO(raw);
+    const parsed = DateTime.fromISO(raw, { zone: TENANT_TIMEZONE });
     if (!parsed.isValid) {
       throw new BadRequestException("Data/hora inválida.");
     }
@@ -484,16 +510,46 @@ export class AppointmentsService {
     return parsed;
   }
 
+  // Usado só nos caminhos de staff (walk-in / remarcação pela recepção): o input
+  // datetime-local só tem granularidade de minuto e o round-trip da requisição pode
+  // fazer "agora mesmo" cair alguns segundos no passado — tolerância evita rejeitar um
+  // walk-in legítimo. O fluxo público continua estrito (parseFutureDate).
+  private parseStaffDate(raw: string, pastMessage: string) {
+    const parsed = DateTime.fromISO(raw, { zone: TENANT_TIMEZONE });
+    if (!parsed.isValid) {
+      throw new BadRequestException("Data/hora inválida.");
+    }
+    if (parsed.toMillis() <= Date.now() - 2 * 60_000) {
+      throw new BadRequestException(pastMessage);
+    }
+    return parsed;
+  }
+
   private async lockProfessional(tx: Prisma.TransactionClient, professionalId: string) {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${professionalId})::bigint)`;
   }
 
-  private async applyCancel(appointment: AppointmentWithRelations) {
+  private async applyCancel(
+    appointment: AppointmentWithRelations,
+    options: { clientInitiated?: boolean } = {},
+  ) {
     if (appointment.status === AppointmentStatus.CANCELED) {
       throw new BadRequestException("Este agendamento já foi cancelado.");
     }
     if (appointment.status === AppointmentStatus.COMPLETED) {
       throw new BadRequestException("Um atendimento finalizado não pode ser cancelado.");
+    }
+    // Cliente (link público ou área logada) só cancela o que ainda não começou — diferente
+    // da recepção, que pode corrigir um IN_SERVICE/NO_SHOW marcado errado via este mesmo
+    // endpoint (ver comentário de STATUS_TRANSITIONS).
+    if (
+      options.clientInitiated &&
+      appointment.status !== AppointmentStatus.SCHEDULED &&
+      appointment.status !== AppointmentStatus.CONFIRMED
+    ) {
+      throw new BadRequestException(
+        "Apenas agendamentos confirmados ou pendentes podem ser cancelados.",
+      );
     }
 
     const updated = await this.prisma.appointment.update({
@@ -507,6 +563,7 @@ export class AppointmentsService {
   private async applyReschedule(
     appointment: AppointmentWithRelations,
     dto: RescheduleAppointmentDto,
+    options: { staffInitiated?: boolean } = {},
   ) {
     if (
       appointment.status !== AppointmentStatus.CONFIRMED &&
@@ -532,7 +589,7 @@ export class AppointmentsService {
             professionalId: targetProfessionalId,
             serviceId: item.serviceId,
             isActive: true,
-            professional: { tenantId: appointment.tenantId },
+            professional: { tenantId: appointment.tenantId, isActive: true },
             service: { tenantId: appointment.tenantId },
           },
           include: { service: true },
@@ -551,10 +608,9 @@ export class AppointmentsService {
     );
     const totalDuration = durations.reduce((sum, minutes) => sum + minutes, 0);
 
-    const startAt = this.parseFutureDate(
-      dto.startAt,
-      "Não é possível remarcar para um horário no passado.",
-    );
+    const startAt = options.staffInitiated
+      ? this.parseStaffDate(dto.startAt, "Não é possível remarcar para um horário no passado.")
+      : this.parseFutureDate(dto.startAt, "Não é possível remarcar para um horário no passado.");
     const endAt = startAt.plus({ minutes: totalDuration });
 
     return this.prisma.$transaction(async (tx) => {
