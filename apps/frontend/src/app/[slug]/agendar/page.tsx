@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import { getTenant } from "../layout";
 import { getClientToken, clientAuthedFetch } from "@/lib/client-session";
 import { BookingWizard } from "@/components/booking/BookingWizard";
@@ -33,7 +35,19 @@ export default async function AgendarPage({ params }: { params: Promise<{ slug: 
 
   return (
     <main className="min-h-dvh bg-stone-50 px-6 py-16 dark:bg-zinc-950">
-      <BookingWizard slug={tenant.slug} tenantName={tenant.name} initialClient={initialClient} />
+      <div className="mx-auto w-full max-w-lg">
+        <Link
+          href={`/${tenant.slug}`}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-800 dark:text-stone-400 dark:hover:text-stone-200"
+        >
+          <ArrowLeft size={16} />
+          {tenant.name}
+        </Link>
+      </div>
+
+      <div className="mt-6">
+        <BookingWizard slug={tenant.slug} tenantName={tenant.name} initialClient={initialClient} />
+      </div>
     </main>
   );
 }
