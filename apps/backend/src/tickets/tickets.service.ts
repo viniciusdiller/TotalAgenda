@@ -113,6 +113,19 @@ export class TicketsService {
     const ticket = await this.requireOpen(tenantId, id);
     const quantity = dto.quantity ?? 1;
 
+    // Preço de item de catálogo nunca vem do cliente — só CUSTOM (sem catálogo pra
+    // derivar) pode enviar unitPriceCents. Sem essa trava, um RECEPTIONIST mandava
+    // unitPriceCents: 1 num serviço de R$150 e o valor sobrescrevia o catálogo,
+    // corrompendo total da comanda, comissão (CommissionsService.computeForTicket) e
+    // receita lançada no financeiro (FinanceService.recordTicketIncome) — sem nenhum
+    // log de auditoria no projeto pra rastrear depois. Ver CLAUDE.md > Segurança >
+    // Confiança no cliente.
+    if (dto.kind !== "CUSTOM" && dto.unitPriceCents !== undefined) {
+      throw new BadRequestException(
+        "unitPriceCents não é aceito para SERVICE/PRODUCT — o preço vem sempre do catálogo.",
+      );
+    }
+
     let data: Prisma.TicketItemCreateWithoutTicketInput;
     if (dto.kind === "SERVICE") {
       const service = await this.prisma.service.findFirst({
@@ -124,7 +137,7 @@ export class TicketsService {
         service: { connect: { id: service.id } },
         description: service.name,
         quantity,
-        unitPriceCents: dto.unitPriceCents ?? service.priceCents,
+        unitPriceCents: service.priceCents,
       };
     } else if (dto.kind === "PRODUCT") {
       const product = await this.products.getOrThrow(tenantId, dto.productId!);
@@ -133,7 +146,7 @@ export class TicketsService {
         product: { connect: { id: product.id } },
         description: product.name,
         quantity,
-        unitPriceCents: dto.unitPriceCents ?? product.priceCents,
+        unitPriceCents: product.priceCents,
       };
     } else {
       data = {

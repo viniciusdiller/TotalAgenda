@@ -45,6 +45,7 @@ function build(over: Record<string, unknown> = {}) {
     },
     ticketItem: { create: jest.fn(), delete: jest.fn(), findFirst: jest.fn() },
     payment: { create: jest.fn() },
+    service: { findFirst: jest.fn() },
     $transaction: jest.fn().mockImplementation(async (cb) => cb(prismaTx)),
     ...over,
   } as unknown as PrismaService;
@@ -60,6 +61,7 @@ function build(over: Record<string, unknown> = {}) {
   return {
     service: new TicketsService(prisma, products, commissions, cash, finance),
     prisma,
+    products,
     commissions,
     finance,
     prismaTx,
@@ -106,6 +108,58 @@ describe("TicketsService", () => {
     await expect(
       service.addItem("t-1", "tk-1", { kind: "CUSTOM", description: "Gorjeta", unitPriceCents: 1000 }),
     ).rejects.toThrow(ConflictException);
+  });
+
+  // Regressão (auditoria de confiança no cliente): unitPriceCents sobrescrevia o
+  // preço do catálogo pra SERVICE/PRODUCT quando o cliente mandava o campo — um
+  // RECEPTIONIST conseguia fechar uma comanda de R$150 registrando R$0,01. Esses
+  // testes chamam o service direto (sem passar pelo DTO/ValidationPipe), então são a
+  // última linha de defesa se o guard em addItem for removido no futuro.
+  it("addItem rejeita unitPriceCents em item SERVICE — preço vem sempre do catálogo", async () => {
+    const { service, prisma } = build();
+    (prisma.service.findFirst as jest.Mock).mockResolvedValue({
+      id: "svc-1",
+      priceCents: 15000,
+      name: "Corte",
+    });
+    await expect(
+      service.addItem("t-1", "tk-1", {
+        kind: "SERVICE",
+        serviceId: "svc-1",
+        unitPriceCents: 1,
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("addItem rejeita unitPriceCents em item PRODUCT — preço vem sempre do catálogo", async () => {
+    const { service, products } = build();
+    (products.getOrThrow as jest.Mock).mockResolvedValue({
+      id: "prod-1",
+      priceCents: 8000,
+      name: "Shampoo",
+    });
+    await expect(
+      service.addItem("t-1", "tk-1", {
+        kind: "PRODUCT",
+        productId: "prod-1",
+        unitPriceCents: 1,
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it("addItem usa o preço do catálogo em SERVICE quando unitPriceCents não é enviado", async () => {
+    const { service, prisma } = build();
+    (prisma.service.findFirst as jest.Mock).mockResolvedValue({
+      id: "svc-1",
+      priceCents: 15000,
+      name: "Corte",
+    });
+    await service.addItem("t-1", "tk-1", { kind: "SERVICE", serviceId: "svc-1" });
+    expect(prisma.ticketItem.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ unitPriceCents: 15000 }),
+      }),
+    );
   });
 
   it("cancel recusa se há pagamento", async () => {
