@@ -4,7 +4,12 @@ import { auth } from "@/lib/auth";
 const AUTH_PAGES = ["/entrar"];
 
 export default auth((req) => {
-  const isLoggedIn = !!req.auth;
+  // req.auth com `error` (refresh do access token falhou — token deletado/expirado, refresh
+  // token vencido) ainda é um objeto truthy. Se essa camada tratasse isso como "logado", ela
+  // manda de volta pra /dashboard, o layout do dashboard vê o erro e manda pra /entrar, que
+  // essa camada manda de volta pra /dashboard de novo — loop infinito de redirect. As duas
+  // camadas precisam concordar sobre o que é "logado".
+  const isLoggedIn = !!req.auth && !req.auth.error;
   const { pathname } = req.nextUrl;
 
   const isDashboardRoute = pathname.startsWith("/dashboard");
