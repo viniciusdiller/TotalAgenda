@@ -47,6 +47,15 @@ depois" (evita janela de IDOR).
 - **Cliente final** (`Client`, escopado por tenant, identidade por telefone normalizado):
   login só-telefone sem OTP (v1), JWT próprio via `ClientAuthModule` / `ClientJwtAuthGuard`.
   O primeiro agendamento cria a conta (`ClientsService.upsertForBooking`).
+- **Consumidor do marketplace** (`Consumer`, fluxo de descoberta/avaliação público,
+  distinto do "Cliente final" de um tenant): JWT próprio via `ConsumerAuthModule` /
+  `ConsumerJwtAuthGuard` no backend; no frontend, `lib/marketplace-api.ts` guarda o
+  token em `localStorage` (`TOKEN_KEY = "ta_consumer_token"`), lido direto por um
+  Client Component (`app/descobrir/avaliar/page.tsx`) — diferente dos outros dois
+  domínios (cookie httpOnly), fica exposto a XSS. Trade-off aceito hoje pelo escopo
+  baixo de dado (avaliação pública); não tratar como equivalente em segurança aos
+  outros domínios se esse fluxo ganhar dado sensível — migrar pra cookie httpOnly
+  antes disso.
 
 ### Billing
 Cobrança real (Stripe, checkout, ciclo) vive no **Admin-TotalSoftware**, repositório
@@ -85,6 +94,42 @@ nunca são cortados por simplicidade. Ao escrever ou revisar código, varrer ati
   autorização — só como filtro adicional, sempre cruzado com o JWT.
 - `manageToken` (nanoid 24) é capability aleatória e não-enumerável para o fluxo público
   sem login — não substituível por `id` sequencial/uuid exposto.
+
+### Confiança no cliente (frontend nunca é fonte de verdade)
+Todo valor que o cliente HTTP envia e que afeta dinheiro, papel/permissão ou estado de
+negócio crítico deve ser **derivado ou limitado no backend**, nunca aceito como está só
+porque passou na validação de tipo do DTO. Validar tipo/faixa não é o mesmo que validar
+que o valor é *confiável para aquele contexto* — um `class-validator` que só checa
+"é um inteiro entre 0 e 100_000_000" não impede que esse inteiro seja o preço errado.
+
+- **Preço de item de catálogo nunca vem do cliente.** Caso real que motivou esta regra:
+  `AddTicketItemDto.unitPriceCents` aceitava um valor opcional que, quando presente,
+  *sobrescrevia* o preço do catálogo pra itens `SERVICE`/`PRODUCT`
+  (`tickets.service.ts`, `addItem`) — um RECEPTIONIST podia abrir uma comanda de um
+  serviço de R$150 e enviar `unitPriceCents: 1`, corrompendo o total da comanda, o
+  valor exigido pra fechar, a comissão calculada (`CommissionsService.computeForTicket`)
+  e a receita lançada no financeiro (`FinanceService.recordTicketIncome`) — sem log de
+  auditoria (não existe módulo de audit log no projeto). Corrigido: o campo só existe
+  pra `CUSTOM` (item avulso, sem catálogo pra derivar preço); pra `SERVICE`/`PRODUCT` o
+  service rejeita o campo explicitamente antes de qualquer outra coisa.
+- **Padrão correto já existente no código** — dois exemplos a seguir:
+  - `AppointmentItem.priceCentsSnapshot` é sempre copiado do catálogo no momento da
+    marcação, nunca aceito do body — nem `CreateAppointmentDto` nem
+    `CreateStaffAppointmentDto` têm campo de preço.
+  - `SetTicketDiscountDto.discountCents` é um valor que o cliente *pode* legitimamente
+    definir (decisão do staff, não preço de catálogo) — mas `TicketsService.setDiscount`
+    limita contra um valor derivado do servidor (`discountCents <= subtotal`) antes de
+    persistir. Quando o valor do cliente é legítimo, ele ainda precisa de um
+    bound-check contra algo que o servidor calculou, não contra nada.
+- Regra prática ao revisar/escrever um DTO ou service: pra todo campo que chega do
+  cliente e participa de total/comissão/papel/status, perguntar "o backend pode
+  derivar isso sozinho, ou já tem um limite calculado no servidor pra checar contra?"
+  — se a resposta é não pras duas, o campo não devia existir nesse formato.
+- Validação de DTO não é a última linha de defesa: os testes de `*.service.ts`
+  instanciam o service direto, sem passar pelo `ValidationPipe` (ver
+  `tickets.service.spec.ts`) — se a regra só existe no decorator do DTO, um novo
+  caller (ou um teste) que pule o DTO reabre o buraco. Derivar do banco no service é o
+  que realmente fecha a brecha, a validação do DTO é só a primeira camada.
 
 ### Injeção SQL / NoSQL
 - Acesso a dados **só** via Prisma Client (parametrizado). `$queryRaw` / `$executeRaw`
@@ -131,7 +176,8 @@ nunca são cortados por simplicidade. Ao escrever ou revisar código, varrer ati
 ### Backend
 - Um módulo Nest por domínio: `<dominio>.module.ts` / `.service.ts` / `.controller.ts` /
   `dto/*.dto.ts`. Múltiplos controllers no mesmo arquivo quando compartilham domínio
-  (público vs. admin vs. cliente — ver `bookings.controller.ts`).
+  (público vs. admin vs. cliente — ver `waitlist.controller.ts`, que tem
+  `PublicWaitlistController` e `WaitlistController` lado a lado).
 - DTOs com class-validator; `ValidationPipe` global é `whitelist + forbidNonWhitelisted`.
 - Dinheiro sempre em **centavos** (`Int`), nunca float. Sufixo `Cents`.
 - Duração sempre em **minutos** (`Int`). Horário do dia como minutos desde meia-noite
@@ -147,14 +193,21 @@ nunca são cortados por simplicidade. Ao escrever ou revisar código, varrer ati
   Actions (`actions.ts` por rota), não chamada client→backend (exceto wizard público que
   bate em `/public/*`).
 - `lib/api.ts` = cliente dos endpoints `/public/*` (sem auth). `lib/api-server.ts`
-  (`authedFetch`) = chamadas autenticadas server-side com o JWT da sessão.
+  (`authedFetch`) = chamadas autenticadas server-side com o JWT da sessão. Nenhum dos
+  dois é onde a validação de verdade acontece — o backend valida tudo de novo (ver
+  CLAUDE.md > Segurança > Confiança no cliente); estes clients só existem por DX.
+- `lib/marketplace-api.ts` (`marketplaceApi`) = cliente dos endpoints
+  `/public/marketplace/*`. Reusar sempre esse client em vez de inline `fetch` num
+  Server Component — `RegisteredPlaces.tsx` e `app/descobrir/page.tsx` hoje duplicam
+  a própria chamada em vez de reusar `marketplaceApi.search`, evitar repetir esse
+  padrão em páginas novas.
 - Cor de destaque: token `--color-accent-*` em `globals.css`; tenant pode sobrescrever com
   `accentColor` (aplicado como CSS var `--tenant-accent` no layout de `/[slug]`).
 - Ícones: `@phosphor-icons/react` (usar o import `/dist/ssr` em Server Components).
 
 ### Testes
 - Backend: `*.spec.ts` ao lado do arquivo, `jest` + `ts-jest`. Services testados com
-  Prisma mockado (unit) — ver `bookings.service.spec.ts`, `availability.service.spec.ts`.
+  Prisma mockado (unit) — ver `tickets.service.spec.ts`, `availability.service.spec.ts`.
 - Regra do projeto: validação de segurança, tratamento de erro em boundary e casos
   críticos **têm** teste — não são cortados por "simplicidade".
 
