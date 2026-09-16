@@ -5,6 +5,8 @@ import { motion, useMotionValueEvent, useScroll } from "motion/react";
 import { List, X } from "@phosphor-icons/react/dist/ssr";
 import { Container } from "../ui/Container";
 import { Button } from "../ui/Button";
+import { ThemeToggle } from "../ui/ThemeToggle";
+import { Logo } from "../brand/Logo";
 
 const LANDING_URL =
   process.env.NEXT_PUBLIC_LANDING_URL ??
@@ -37,11 +39,8 @@ export function Nav() {
         />
         <Container className="relative">
           <nav className="flex h-16 items-center justify-between">
-            <a
-              href="#top"
-              className="font-display text-lg font-bold tracking-tight text-zinc-900 dark:text-white"
-            >
-              TotalAgenda
+            <a href="#top">
+              <Logo />
             </a>
 
             <ul className="hidden items-center gap-8 lg:flex">
@@ -58,6 +57,7 @@ export function Nav() {
             </ul>
 
             <div className="hidden items-center gap-3 lg:flex">
+              <ThemeToggle />
               <Button
                 href="/entrar"
                 variant="ghost"
@@ -95,6 +95,10 @@ export function Nav() {
                 {link.label}
               </a>
             ))}
+            <div className="mt-2 flex items-center justify-between px-3">
+              <span className="text-sm font-medium text-zinc-600 dark:text-stone-300">Tema</span>
+              <ThemeToggle />
+            </div>
             <div className="mt-2 flex flex-col gap-2 px-3">
               <Button href="/entrar" variant="ghost" className="w-full">
                 Entrar

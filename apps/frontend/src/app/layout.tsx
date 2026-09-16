@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Manrope } from "next/font/google";
+import { Bricolage_Grotesque, Manrope, Outfit } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const display = Bricolage_Grotesque({
   variable: "--font-display",
@@ -12,6 +13,14 @@ const body = Manrope({
   variable: "--font-body",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+});
+
+// Só pro wordmark da marca (components/brand/Logo.tsx) — não substitui --font-display,
+// que segue usado nos headings do site inteiro.
+const brand = Outfit({
+  variable: "--font-brand",
+  subsets: ["latin"],
+  weight: ["700"],
 });
 
 export const metadata: Metadata = {
@@ -31,11 +40,28 @@ export const metadata: Metadata = {
   },
 };
 
+// Roda antes do React hidratar — aplica a classe .dark certa (localStorage, senão
+// preferência do SO) antes do primeiro paint, pra não piscar o tema errado.
+const THEME_INIT_SCRIPT = `
+(function () {
+  try {
+    var stored = localStorage.getItem("theme");
+    var dark = stored ? stored === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.classList.toggle("dark", dark);
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="pt-BR" className={`${display.variable} ${body.variable}`}>
+    <html
+      lang="pt-BR"
+      className={`${display.variable} ${body.variable} ${brand.variable}`}
+      suppressHydrationWarning
+    >
       <body className="min-h-dvh bg-stone-50 font-body text-zinc-900 antialiased dark:bg-zinc-950 dark:text-stone-100">
-        {children}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );
