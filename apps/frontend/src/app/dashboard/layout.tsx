@@ -6,6 +6,8 @@ import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
 import { SidebarNav } from "./SidebarNav";
 import { signOutAction } from "./actions";
+import { Logo } from "@/components/brand/Logo";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 interface TenantMe {
   name: string;
@@ -76,9 +78,7 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
   return (
     <div className="flex min-h-dvh bg-stone-50 dark:bg-zinc-950">
       <aside className="hidden w-64 shrink-0 border-r border-zinc-200 p-5 md:block dark:border-white/10">
-        <p className="font-display text-lg font-bold text-zinc-900 dark:text-white">
-          TotalAgenda
-        </p>
+        <Logo />
         {tenant ? (
           <>
             <p className="mt-1 truncate text-sm text-zinc-500 dark:text-stone-400">
@@ -115,15 +115,18 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
                   : "Profissional"}
             </p>
           </div>
-          <form action={signOutAction}>
-            <button
-              type="submit"
-              className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-800 dark:text-stone-400 dark:hover:text-stone-200"
-            >
-              <SignOut size={16} />
-              Sair
-            </button>
-          </form>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <form action={signOutAction}>
+              <button
+                type="submit"
+                className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-800 dark:text-stone-400 dark:hover:text-stone-200"
+              >
+                <SignOut size={16} />
+                Sair
+              </button>
+            </form>
+          </div>
         </header>
 
         {billing ? <BillingStatusBanner billing={billing} /> : null}

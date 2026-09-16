@@ -1,16 +1,31 @@
 @import "tailwindcss";
 
+/* Troca o dark: de "segue o SO" pra "segue a classe .dark na <html>" — controlado pelo
+   ThemeProvider (components/ThemeProvider.tsx). Não quebra nenhum dark: já existente,
+   só muda o gatilho. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --font-display: var(--font-display);
   --font-body: var(--font-body);
+  --font-brand: var(--font-brand);
 
-  /* Accent: violet/roxo, deliberately not blue-SaaS/brass-craft. Locked across the whole page. */
-  --color-accent-50: #f5f3ff;
-  --color-accent-100: #ede9fe;
-  --color-accent-300: #c4b5fd;
-  --color-accent-500: #7c3aed;
-  --color-accent-600: #6d28d9;
-  --color-accent-700: #5b21b6;
+  /* Marca TotalAgenda (paleta 3a — roxo + coral). A outra branch de rebranding troca
+     só estes valores, o --brand-wordmark abaixo, components/brand/palette.ts e
+     app/icon.svg. */
+  --color-accent-50: #f1ecff;
+  --color-accent-100: #e3d9ff;
+  --color-accent-300: #b599ff;
+  --color-accent-500: #6c3bf4;
+  --color-accent-600: #5c2ce0;
+  --color-accent-700: #4b21b8;
+}
+
+:root {
+  --brand-wordmark: #6c3bf4;
+}
+.dark {
+  --brand-wordmark: #b9a0ff;
 }
 
 @media (prefers-reduced-motion: reduce) {

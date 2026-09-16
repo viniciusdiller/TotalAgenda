@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import { LoginForm } from "./LoginForm";
+import { Logo } from "@/components/brand/Logo";
 
 export const metadata: Metadata = { title: "Entrar - TotalAgenda" };
 
@@ -16,8 +17,8 @@ export default function LoginPage() {
           <ArrowLeft size={16} />
           Voltar
         </Link>
-        <Link href="/" className="mt-6 block font-display text-lg font-bold text-zinc-900 dark:text-white">
-          TotalAgenda
+        <Link href="/" className="mt-6 inline-block">
+          <Logo />
         </Link>
         <h1 className="mt-6 font-display text-2xl font-bold text-zinc-900 dark:text-white">
           Entrar
