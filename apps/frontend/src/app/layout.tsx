@@ -40,14 +40,14 @@ export const metadata: Metadata = {
   },
 };
 
-// Roda antes do React hidratar — aplica a classe .dark certa (localStorage, senão
-// preferência do SO) antes do primeiro paint, pra não piscar o tema errado.
+// Roda antes do React hidratar — aplica a classe .dark antes do primeiro paint, pra
+// não piscar o tema errado. Padrão é sempre claro pra visita nova (não segue mais a
+// preferência do SO) — só fica escuro se o usuário já escolheu isso antes.
 const THEME_INIT_SCRIPT = `
 (function () {
   try {
     var stored = localStorage.getItem("theme");
-    var dark = stored ? stored === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
-    document.documentElement.classList.toggle("dark", dark);
+    document.documentElement.classList.toggle("dark", stored === "dark");
   } catch (e) {}
 })();
 `;
