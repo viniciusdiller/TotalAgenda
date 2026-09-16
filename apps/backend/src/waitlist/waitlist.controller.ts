@@ -1,9 +1,10 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
-import { Role, WaitlistStatus } from "@totalagenda/database";
+import { Role } from "@totalagenda/database";
 import { WaitlistService } from "./waitlist.service";
 import { CreateWaitlistEntryDto } from "./dto/create-waitlist-entry.dto";
 import { UpdateWaitlistStatusDto } from "./dto/update-waitlist-status.dto";
+import { FindWaitlistQueryDto } from "./dto/find-waitlist-query.dto";
 import { Public } from "../common/decorators/public.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -30,8 +31,8 @@ export class WaitlistController {
 
   @Roles(Role.OWNER)
   @Get()
-  findAll(@CurrentUser() user: AuthenticatedUser, @Query("status") status?: WaitlistStatus) {
-    return this.waitlistService.findAllByTenant(user.tenantId, status);
+  findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: FindWaitlistQueryDto) {
+    return this.waitlistService.findAllByTenant(user.tenantId, query.status);
   }
 
   @Roles(Role.OWNER)
