@@ -137,7 +137,13 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
   concatenação de input. O único raw hoje é `pg_advisory_xact_lock(hashtext(${id}))` —
   interpolação por parâmetro, não string.
 - `ValidationPipe` global com `whitelist: true` + `forbidNonWhitelisted: true`: campo não
-  declarado no DTO → 400. Todo input de fronteira passa por DTO com class-validator.
+  declarado no DTO → 400. Todo input de fronteira passa por DTO com class-validator —
+  **isso inclui `@Query()`, não só `@Body()`**. `@Query("campo") x: string` solto (sem
+  DTO) não passa pelo `ValidationPipe` de jeito nenhum; um valor inválido vai cru pro
+  Prisma e vira 500 (`PrismaClientValidationError` não é capturado por
+  `PrismaExceptionFilter`) em vez de 400. Caso real: `GET /waitlist?status=...` —
+  corrigido com `FindWaitlistQueryDto` (`@Query() query: FindWaitlistQueryDto`), mesmo
+  padrão de `GetAvailabilityQueryDto`/`SearchMarketplaceQueryDto`.
 
 ### DoS / abuso
 - `ThrottlerModule` global (100 req/min por IP). Rotas públicas sensíveis a spam têm
