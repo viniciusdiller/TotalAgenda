@@ -41,7 +41,7 @@ export default async function Home() {
         <Faq />
         <FinalCta />
       </main>
-      <Footer />
+      <Footer isHome />
     </>
   );
 }

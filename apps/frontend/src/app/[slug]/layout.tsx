@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { publicApi, ApiError } from "@/lib/api";
+import { Footer } from "@/components/marketing/Footer";
 
 // Mesmo valor de --color-accent-500 em app/globals.css — usado quando o tenant não
 // escolheu uma cor de destaque própria.
@@ -36,8 +37,10 @@ export default async function TenantLayout({
   return (
     <div
       style={{ "--tenant-accent": tenant.accentColor || DEFAULT_TENANT_ACCENT } as React.CSSProperties}
+      className="flex min-h-dvh flex-col"
     >
       {children}
+      <Footer />
     </div>
   );
 }

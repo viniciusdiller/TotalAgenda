@@ -13,6 +13,7 @@ import {
   getConsumerToken,
   setConsumerToken,
 } from "@/lib/marketplace-api";
+import { Footer } from "@/components/marketing/Footer";
 
 const FOCUS_RING =
   "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/40 focus-visible:border-accent-500 rounded-md";
@@ -104,9 +105,17 @@ export default function AvaliarPage() {
     }
   }
 
-  if (checking) return <main className="mx-auto max-w-md px-4 py-10 text-sm">Carregando...</main>;
+  if (checking) {
+    return (
+      <>
+        <main className="mx-auto max-w-md px-4 py-10 text-sm">Carregando...</main>
+        <Footer />
+      </>
+    );
+  }
 
   return (
+    <>
     <main className="mx-auto max-w-md px-4 py-10">
       <Link
         href="/descobrir"
@@ -245,5 +254,7 @@ export default function AvaliarPage() {
       )}
       {msg ? <p className="mt-4 text-sm text-red-600 dark:text-red-400">{msg}</p> : null}
     </main>
+    <Footer />
+    </>
   );
 }

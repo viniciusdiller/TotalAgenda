@@ -55,7 +55,7 @@ export default async function TenantProfilePage({
   ]);
 
   return (
-    <main className="min-h-dvh bg-stone-50 dark:bg-zinc-950">
+    <main className="flex-1 bg-stone-50 dark:bg-zinc-950">
       <TenantProfileHeader tenant={tenant} />
       {tenant.showServices ? <ServicesSection services={services} /> : null}
       {tenant.showTeam ? <TeamSection team={team} /> : null}

@@ -25,7 +25,7 @@ export default async function ClientLoginPage({ params }: { params: Promise<{ sl
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-stone-50 px-6 py-16 dark:bg-zinc-950">
+    <main className="flex flex-1 items-center justify-center bg-stone-50 px-6 py-16 dark:bg-zinc-950">
       <div className="w-full max-w-sm">
         <Link
           href={`/${tenant.slug}`}

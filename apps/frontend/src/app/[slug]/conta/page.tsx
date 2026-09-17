@@ -34,7 +34,7 @@ export default async function ContaPage({ params }: { params: Promise<{ slug: st
   }
 
   return (
-    <main className="min-h-dvh bg-stone-50 px-6 py-16 dark:bg-zinc-950">
+    <main className="flex-1 bg-stone-50 px-6 py-16 dark:bg-zinc-950">
       <ClientAccountView
         slug={slug}
         tenantName={tenant.name}

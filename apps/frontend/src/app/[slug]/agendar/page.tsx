@@ -34,7 +34,7 @@ export default async function AgendarPage({ params }: { params: Promise<{ slug: 
     : null;
 
   return (
-    <main className="min-h-dvh bg-stone-50 px-6 py-16 dark:bg-zinc-950">
+    <main className="flex-1 bg-stone-50 px-6 py-16 dark:bg-zinc-950">
       <div className="mx-auto w-full max-w-lg">
         <Link
           href={`/${tenant.slug}`}
