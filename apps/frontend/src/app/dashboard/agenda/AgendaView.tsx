@@ -13,6 +13,12 @@ import type {
 import { fetchCalendarAction } from "./actions";
 import { AppointmentPanel } from "./AppointmentPanel";
 import { CreateAppointmentDialog } from "./CreateAppointmentDialog";
+import {
+  APPOINTMENT_STATUS_ORDER,
+  getStatusBlockClasses,
+  getStatusDotClasses,
+  getStatusLabel,
+} from "@/lib/appointment-status";
 
 const TIMEZONE = "America/Sao_Paulo";
 const DAY_START_HOUR = 7;
@@ -34,21 +40,6 @@ interface AgendaService {
   durationMinutes: number;
   priceCents: number;
 }
-
-const STATUS_STYLES: Record<string, string> = {
-  SCHEDULED:
-    "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200",
-  CONFIRMED:
-    "border-accent-300 bg-accent-50 text-accent-800 dark:border-accent-500/40 dark:bg-accent-500/10 dark:text-accent-200",
-  IN_SERVICE:
-    "border-sky-300 bg-sky-50 text-sky-900 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-200",
-  COMPLETED:
-    "border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200",
-  NO_SHOW:
-    "border-zinc-300 bg-zinc-100 text-zinc-500 line-through dark:border-white/15 dark:bg-white/5",
-  CANCELED:
-    "border-zinc-200 bg-zinc-50 text-zinc-400 line-through dark:border-white/10 dark:bg-white/[0.03]",
-};
 
 function minutesFromDayStart(iso: string, day: string) {
   const dayStart = DateTime.fromISO(day, { zone: TIMEZONE }).startOf("day");
@@ -223,12 +214,21 @@ export function AgendaView({
           para usar a agenda.
         </p>
       ) : (
-        <div
-          className={clsx(
-            "mt-6 overflow-x-auto rounded-2xl border border-zinc-200 dark:border-white/10",
-            isPending && "opacity-60",
-          )}
-        >
+        <>
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-zinc-500 dark:text-stone-400">
+            {APPOINTMENT_STATUS_ORDER.map((status) => (
+              <span key={status} className="inline-flex items-center gap-1.5">
+                <span className={clsx("h-2 w-2 rounded-full", getStatusDotClasses(status))} />
+                {getStatusLabel(status)}
+              </span>
+            ))}
+          </div>
+          <div
+            className={clsx(
+              "mt-3 overflow-x-auto rounded-2xl border border-zinc-200 dark:border-white/10",
+              isPending && "opacity-60",
+            )}
+          >
           <div className="flex min-w-max">
             {/* Gutter de horas */}
             <div className="w-14 shrink-0 border-r border-zinc-200 dark:border-white/10">
@@ -311,12 +311,14 @@ export function AgendaView({
                     {/* Atendimentos */}
                     {appts.map((a) => {
                       const top = (minutesFromDayStart(a.startAt, date) - GRID_TOP_MIN) * PX_PER_MIN;
-                      const height = Math.max(
-                        22,
-                        (minutesFromDayStart(a.endAt, date) -
-                          minutesFromDayStart(a.startAt, date)) *
-                          PX_PER_MIN,
-                      );
+                      const durationMin =
+                        minutesFromDayStart(a.endAt, date) - minutesFromDayStart(a.startAt, date);
+                      const naturalHeight = durationMin * PX_PER_MIN;
+                      // Piso de 26px é só legibilidade (cabe a primeira linha) — não tenta
+                      // "corrigir" a duração visualmente, por isso atendimentos curtos ganham o
+                      // texto de duração explícito abaixo em vez de depender só da altura.
+                      const height = Math.max(26, naturalHeight);
+                      const isCompact = naturalHeight < 26;
                       return (
                         <button
                           key={a.id}
@@ -327,17 +329,28 @@ export function AgendaView({
                           }}
                           className={clsx(
                             "absolute inset-x-1 overflow-hidden rounded-md border px-2 py-1 text-left text-[11px] leading-tight",
-                            STATUS_STYLES[a.status] ?? STATUS_STYLES.CONFIRMED,
+                            "transition-[filter] duration-150 hover:brightness-95 dark:hover:brightness-125",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-current",
+                            getStatusBlockClasses(a.status),
                           )}
                           style={{ top, height }}
                         >
-                          <span className="block font-semibold">
-                            {DateTime.fromISO(a.startAt).setZone(TIMEZONE).toFormat("HH:mm")}{" "}
-                            {a.clientName}
-                          </span>
-                          <span className="block truncate opacity-80">
-                            {a.items?.map((i) => i.serviceName).join(", ") ?? a.service?.name}
-                          </span>
+                          {isCompact ? (
+                            <span className="block truncate font-semibold">
+                              {DateTime.fromISO(a.startAt).setZone(TIMEZONE).toFormat("HH:mm")}{" "}
+                              {a.clientName} · {durationMin}min
+                            </span>
+                          ) : (
+                            <>
+                              <span className="block font-semibold">
+                                {DateTime.fromISO(a.startAt).setZone(TIMEZONE).toFormat("HH:mm")}{" "}
+                                {a.clientName}
+                              </span>
+                              <span className="block truncate opacity-80">
+                                {a.items?.map((i) => i.serviceName).join(", ") ?? a.service?.name}
+                              </span>
+                            </>
+                          )}
                         </button>
                       );
                     })}
@@ -347,6 +360,7 @@ export function AgendaView({
             })}
           </div>
         </div>
+        </>
       )}
 
       {canManage ? (

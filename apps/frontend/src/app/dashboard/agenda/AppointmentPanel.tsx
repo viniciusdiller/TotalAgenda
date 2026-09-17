@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import { DateTime } from "luxon";
+import clsx from "clsx";
 import { X } from "@phosphor-icons/react/dist/ssr";
 import type { CalendarProfessional, PublicBooking } from "@totalagenda/shared-types";
 import {
@@ -10,17 +12,9 @@ import {
   setAppointmentStatusAction,
 } from "./actions";
 import { openTicketAction } from "../comandas/actions";
+import { STATUS_LABEL, getStatusBadgeClasses, getStatusLabel } from "@/lib/appointment-status";
 
 const TIMEZONE = "America/Sao_Paulo";
-
-const STATUS_LABEL: Record<string, string> = {
-  SCHEDULED: "Pendente",
-  CONFIRMED: "Confirmado",
-  IN_SERVICE: "Em atendimento",
-  COMPLETED: "Finalizado",
-  NO_SHOW: "Faltou",
-  CANCELED: "Cancelado",
-};
 
 // Próximos status oferecidos como botão a partir do atual.
 const NEXT_STATUSES: Record<string, Array<"CONFIRMED" | "IN_SERVICE" | "COMPLETED" | "NO_SHOW">> = {
@@ -44,26 +38,38 @@ export function AppointmentPanel({
   onChanged: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [rescheduleValue, setRescheduleValue] = useState("");
   const [rescheduleProfessionalId, setRescheduleProfessionalId] = useState(
     appointment.professionalId,
   );
+  const reduceMotion = useReducedMotion();
   // datetime-local não tem granularidade de segundo — usar o minuto atual (não "agora"
   // exato) como piso evita rejeitar o próprio minuto em que o campo foi aberto.
   const minDateTimeLocal = DateTime.now().setZone(TIMEZONE).toFormat("yyyy-LL-dd'T'HH:mm");
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
 
   const total = (appointment.priceCentsSnapshot / 100).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
 
-  function run(fn: () => Promise<{ ok: boolean; error?: string }>) {
+  function run(label: string, fn: () => Promise<{ ok: boolean; error?: string }>) {
     setError(null);
+    setPendingLabel(label);
     startTransition(async () => {
       const result = await fn();
       if (result.ok) onChanged();
       else setError(result.error ?? "Erro.");
+      setPendingLabel(null);
     });
   }
 
@@ -71,14 +77,30 @@ export function AppointmentPanel({
   const canCancel = !["CANCELED", "COMPLETED"].includes(appointment.status);
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-zinc-900/30" onClick={onClose}>
-      <aside
+    <motion.div
+      role="presentation"
+      initial={reduceMotion ? undefined : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15 }}
+      className="fixed inset-0 z-40 flex justify-end bg-zinc-900/30"
+      onClick={onClose}
+    >
+      <motion.aside
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="appointment-panel-title"
+        initial={reduceMotion ? undefined : { opacity: 0, x: 24 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
         className="flex h-full w-full max-w-sm flex-col bg-white p-6 shadow-xl dark:bg-zinc-950"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between">
           <div>
-            <p className="font-display text-lg font-bold text-zinc-900 dark:text-white">
+            <p
+              id="appointment-panel-title"
+              className="font-display text-lg font-bold text-zinc-900 dark:text-white"
+            >
               {appointment.clientName}
             </p>
             <p className="text-sm text-zinc-500 dark:text-stone-400">{appointment.clientPhone}</p>
@@ -88,8 +110,13 @@ export function AppointmentPanel({
           </button>
         </div>
 
-        <span className="mt-3 w-fit rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:bg-white/5 dark:text-stone-300">
-          {STATUS_LABEL[appointment.status] ?? appointment.status}
+        <span
+          className={clsx(
+            "mt-3 w-fit rounded-full px-2.5 py-1 text-xs font-medium",
+            getStatusBadgeClasses(appointment.status),
+          )}
+        >
+          {getStatusLabel(appointment.status)}
         </span>
 
         <dl className="mt-5 space-y-3 text-sm">
@@ -152,11 +179,11 @@ export function AppointmentPanel({
                     type="button"
                     disabled={isPending}
                     onClick={() =>
-                      run(() => setAppointmentStatusAction(appointment.id, status))
+                      run(status, () => setAppointmentStatusAction(appointment.id, status))
                     }
                     className="rounded-full bg-accent-500 px-4 py-2 text-sm font-semibold text-white hover:bg-accent-600 disabled:opacity-50"
                   >
-                    {STATUS_LABEL[status]}
+                    {isPending && pendingLabel === status ? "Aplicando..." : STATUS_LABEL[status]}
                   </button>
                 ))}
               </div>
@@ -195,7 +222,7 @@ export function AppointmentPanel({
                     type="button"
                     disabled={isPending || !rescheduleValue}
                     onClick={() =>
-                      run(() =>
+                      run("reschedule", () =>
                         rescheduleAppointmentAction(
                           appointment.id,
                           DateTime.fromISO(rescheduleValue, { zone: TIMEZONE }).toISO()!,
@@ -207,7 +234,7 @@ export function AppointmentPanel({
                     }
                     className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 disabled:opacity-50 dark:border-white/15 dark:text-stone-200"
                   >
-                    Mover
+                    {isPending && pendingLabel === "reschedule" ? "Movendo..." : "Mover"}
                   </button>
                 </div>
               </div>
@@ -218,14 +245,14 @@ export function AppointmentPanel({
                 type="button"
                 disabled={isPending}
                 onClick={() =>
-                  run(async () => {
+                  run("ticket", async () => {
                     await openTicketAction({ appointmentId: appointment.id });
                     return { ok: true };
                   })
                 }
                 className="w-full rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 disabled:opacity-50 dark:border-white/15 dark:text-stone-200"
               >
-                Abrir comanda
+                {isPending && pendingLabel === "ticket" ? "Abrindo..." : "Abrir comanda"}
               </button>
             ) : null}
 
@@ -233,15 +260,15 @@ export function AppointmentPanel({
               <button
                 type="button"
                 disabled={isPending}
-                onClick={() => run(() => cancelAppointmentAction(appointment.id))}
+                onClick={() => run("cancel", () => cancelAppointmentAction(appointment.id))}
                 className="w-full rounded-full border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-500/20 dark:text-red-400"
               >
-                Cancelar atendimento
+                {isPending && pendingLabel === "cancel" ? "Cancelando..." : "Cancelar atendimento"}
               </button>
             ) : null}
           </div>
         ) : null}
-      </aside>
-    </div>
+      </motion.aside>
+    </motion.div>
   );
 }

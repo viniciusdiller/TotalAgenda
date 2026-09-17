@@ -8,6 +8,7 @@ import { X } from "@phosphor-icons/react/dist/ssr";
 import type { CalendarProfessional } from "@totalagenda/shared-types";
 import { formatPhoneBR } from "@/lib/masks";
 import { createStaffAppointmentAction } from "./actions";
+import { getStatusDotClasses } from "@/lib/appointment-status";
 
 const FOCUS_RING =
   "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/40 focus-visible:border-accent-500";
@@ -230,6 +231,12 @@ export function CreateAppointmentDialog({
               checked={confirmed}
               onChange={(e) => setConfirmed(e.target.checked)}
               className={clsx("rounded", FOCUS_RING)}
+            />
+            <span
+              className={clsx(
+                "h-2 w-2 shrink-0 rounded-full",
+                getStatusDotClasses(confirmed ? "CONFIRMED" : "SCHEDULED"),
+              )}
             />
             Já confirmado (senão entra como pendente)
           </label>
