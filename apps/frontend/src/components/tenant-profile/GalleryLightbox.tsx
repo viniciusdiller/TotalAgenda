@@ -1,42 +1,53 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { CaretLeft, CaretRight, X } from "@phosphor-icons/react/dist/ssr";
 import type { PublicGalleryImage } from "@totalagenda/shared-types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+const SPRING = { type: "spring" as const, stiffness: 300, damping: 30 };
 
 export function GalleryLightbox({
   images,
-  openIndex,
+  index,
   onClose,
+  onNavigate,
 }: {
   images: PublicGalleryImage[];
-  openIndex: number | null;
+  index: number | null;
   onClose: () => void;
+  onNavigate: (index: number) => void;
 }) {
-  const [index, setIndex] = useState(openIndex ?? 0);
   const reduceMotion = useReducedMotion();
+  const open = index != null;
 
+  // Trava o scroll da página (com compensação da largura da scrollbar, pra não dar
+  // um "pulo" horizontal quando ela some) e fecha/navega pelo teclado.
   useEffect(() => {
-    if (openIndex != null) setIndex(openIndex);
-  }, [openIndex]);
+    if (!open) return;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const prevOverflow = document.body.style.overflow;
+    const prevPadding = document.body.style.paddingRight;
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
 
-  useEffect(() => {
-    if (openIndex == null) return;
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
-      if (e.key === "ArrowRight") setIndex((i) => (i + 1) % images.length);
-      if (e.key === "ArrowLeft") setIndex((i) => (i - 1 + images.length) % images.length);
+      if (e.key === "ArrowRight") onNavigate(((index as number) + 1) % images.length);
+      if (e.key === "ArrowLeft") onNavigate(((index as number) - 1 + images.length) % images.length);
     }
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [openIndex, onClose, images.length]);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.paddingRight = prevPadding;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, index, images.length, onClose, onNavigate]);
 
   return (
     <AnimatePresence>
-      {openIndex != null ? (
+      {open ? (
         <motion.div
           role="dialog"
           aria-modal="true"
@@ -44,18 +55,35 @@ export function GalleryLightbox({
           initial={reduceMotion ? undefined : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/90 p-4"
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 p-4 backdrop-blur-xl sm:p-10"
           onClick={onClose}
         >
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar"
-            className="absolute top-5 right-5 text-white/70 hover:text-white"
+          <motion.div
+            layoutId={`gallery-photo-${images[index as number].id}`}
+            transition={reduceMotion ? { duration: 0 } : SPRING}
+            className="relative max-h-[85vh] max-w-full overflow-hidden rounded-2xl bg-zinc-900 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
           >
-            <X size={24} />
-          </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`${API_URL}${images[index as number].url}`}
+              alt=""
+              className="block max-h-[85vh] w-auto max-w-full object-contain"
+            />
+
+            <motion.button
+              type="button"
+              onClick={onClose}
+              aria-label="Fechar"
+              initial={reduceMotion ? undefined : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.15 }}
+              className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md transition-colors hover:bg-black/60"
+            >
+              <X size={16} />
+            </motion.button>
+          </motion.div>
 
           {images.length > 1 ? (
             <>
@@ -63,34 +91,26 @@ export function GalleryLightbox({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setIndex((i) => (i - 1 + images.length) % images.length);
+                  onNavigate(((index as number) - 1 + images.length) % images.length);
                 }}
                 aria-label="Anterior"
-                className="absolute left-3 text-white/70 hover:text-white sm:left-6"
+                className="absolute left-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-md transition-colors hover:bg-black/50 sm:left-6"
               >
-                <CaretLeft size={28} />
+                <CaretLeft size={20} />
               </button>
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setIndex((i) => (i + 1) % images.length);
+                  onNavigate(((index as number) + 1) % images.length);
                 }}
                 aria-label="Próxima"
-                className="absolute right-3 text-white/70 hover:text-white sm:right-6"
+                className="absolute right-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur-md transition-colors hover:bg-black/50 sm:right-6"
               >
-                <CaretRight size={28} />
+                <CaretRight size={20} />
               </button>
             </>
           ) : null}
-
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`${API_URL}${images[index].url}`}
-            alt=""
-            onClick={(e) => e.stopPropagation()}
-            className="max-h-[85vh] max-w-full rounded-lg object-contain shadow-2xl"
-          />
         </motion.div>
       ) : null}
     </AnimatePresence>

@@ -1,4 +1,4 @@
-import { MapPin, Clock, WhatsappLogo, InstagramLogo } from "@phosphor-icons/react/dist/ssr";
+import { MapPin, Clock, WhatsappLogo, InstagramLogo, ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
 import type { PublicTenant } from "@totalagenda/shared-types";
 import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
@@ -45,15 +45,28 @@ export function ContactSection({ tenant }: { tenant: PublicTenant }) {
           ) : null}
 
           {tenant.address ? (
-            <div className="mt-4 overflow-hidden rounded-2xl border border-zinc-200 dark:border-white/10">
-              <iframe
-                title={`Mapa de ${tenant.name}`}
-                src={`https://www.google.com/maps?q=${encodeURIComponent(tenant.address)}&output=embed`}
-                className="h-56 w-full"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
-            </div>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tenant.address)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="group mt-4 block overflow-hidden rounded-2xl border border-zinc-200 shadow-sm transition-shadow hover:shadow-md dark:border-white/10"
+            >
+              <div className="relative">
+                <iframe
+                  title={`Mapa de ${tenant.name}`}
+                  src={`https://www.google.com/maps?q=${encodeURIComponent(tenant.address)}&output=embed`}
+                  className="h-56 w-full pointer-events-none"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  tabIndex={-1}
+                />
+                <span className="absolute inset-0 bg-zinc-950/0 transition-colors group-hover:bg-zinc-950/5" />
+              </div>
+              <span className="flex items-center justify-between gap-2 bg-white px-4 py-2.5 text-xs font-medium text-zinc-500 dark:bg-zinc-900 dark:text-stone-400">
+                Ver rota no Google Maps
+                <ArrowUpRight size={14} className="shrink-0" />
+              </span>
+            </a>
           ) : null}
 
           {hasLinks ? (
@@ -69,7 +82,7 @@ export function ContactSection({ tenant }: { tenant: PublicTenant }) {
                   href={tenant.instagramUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#dc2743]/20 transition-opacity hover:opacity-90"
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#dc2743]/20 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-[#dc2743]/30"
                 >
                   <InstagramLogo size={18} weight="bold" />
                   {handle ?? "Instagram"}
