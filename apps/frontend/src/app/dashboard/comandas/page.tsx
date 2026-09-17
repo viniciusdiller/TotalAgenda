@@ -6,6 +6,7 @@ import type { Ticket } from "@totalagenda/shared-types";
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
 import { OpenTicketButton } from "./OpenTicketButton";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const brl = (cents: number) =>
   (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -26,11 +27,8 @@ export default async function ComandasPage() {
       </div>
 
       {tickets.length === 0 ? (
-        <div className="mt-10 flex flex-col items-center rounded-2xl border border-dashed border-zinc-300 py-16 text-center dark:border-white/15">
-          <Receipt size={32} className="text-zinc-400" />
-          <p className="mt-3 text-sm text-zinc-500 dark:text-stone-400">
-            Nenhuma comanda aberta.
-          </p>
+        <div className="mt-8">
+          <EmptyState icon={Receipt} title="Nenhuma comanda aberta" />
         </div>
       ) : (
         <ul className="mt-6 flex flex-col divide-y divide-zinc-200 dark:divide-white/10">
@@ -38,7 +36,7 @@ export default async function ComandasPage() {
             <li key={ticket.id}>
               <Link
                 href={`/dashboard/comandas/${ticket.id}`}
-                className="flex items-center justify-between gap-4 py-3.5 hover:opacity-70"
+                className="-mx-3 flex items-center justify-between gap-4 rounded-lg px-3 py-3.5 transition-colors hover:bg-zinc-900/5 dark:hover:bg-white/5"
               >
                 <div>
                   <p className="font-medium text-zinc-900 dark:text-white">

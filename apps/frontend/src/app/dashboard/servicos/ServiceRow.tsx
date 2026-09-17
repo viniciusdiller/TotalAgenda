@@ -160,7 +160,7 @@ export function ServiceRow({
                 type="button"
                 disabled={isPending}
                 onClick={startEditing}
-                className="text-sm font-medium text-zinc-500 hover:text-zinc-800 disabled:opacity-50 dark:text-stone-400 dark:hover:text-stone-200"
+                className="rounded-md px-2 py-1 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-900/5 hover:text-zinc-800 disabled:opacity-50 disabled:hover:bg-transparent dark:text-stone-400 dark:hover:bg-white/5 dark:hover:text-stone-200"
               >
                 Editar
               </button>
@@ -168,7 +168,7 @@ export function ServiceRow({
                 type="button"
                 disabled={isPending}
                 onClick={toggleActive}
-                className="text-sm font-medium text-zinc-500 hover:text-zinc-800 disabled:opacity-50 dark:text-stone-400 dark:hover:text-stone-200"
+                className="rounded-md px-2 py-1 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-900/5 hover:text-zinc-800 disabled:opacity-50 disabled:hover:bg-transparent dark:text-stone-400 dark:hover:bg-white/5 dark:hover:text-stone-200"
               >
                 {isActive ? "Desativar" : "Ativar"}
               </button>

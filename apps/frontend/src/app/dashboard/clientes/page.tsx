@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { DateTime } from "luxon";
-import { IdentificationCard, MagnifyingGlass, Plus } from "@phosphor-icons/react/dist/ssr";
+import { IdentificationCard, LockSimple, MagnifyingGlass, Plus } from "@phosphor-icons/react/dist/ssr";
 import type { AdminClientListItem } from "@totalagenda/shared-types";
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
 
 export default async function ClientsPage({
   searchParams,
@@ -14,9 +15,10 @@ export default async function ClientsPage({
   const session = await auth();
   if (session?.user.role === "PROFESSIONAL") {
     return (
-      <p className="text-sm text-zinc-500 dark:text-stone-400">
+      <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600 dark:border-white/10 dark:bg-white/[0.03] dark:text-stone-300">
+        <LockSimple size={18} />
         Apenas o dono e a recepção acessam a base de clientes.
-      </p>
+      </div>
     );
   }
 
@@ -30,13 +32,10 @@ export default async function ClientsPage({
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-bold text-zinc-900 dark:text-white">Clientes</h1>
-        <Link
-          href="/dashboard/clientes/novo"
-          className="inline-flex items-center gap-2 rounded-full bg-accent-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-600"
-        >
+        <Button href="/dashboard/clientes/novo" className="px-5 py-2.5 text-sm">
           <Plus size={16} weight="bold" />
           Novo cliente
-        </Link>
+        </Button>
       </div>
 
       <form className="mt-6 flex max-w-sm items-center gap-2 rounded-lg border border-zinc-300 px-3 py-2 dark:border-white/15">
@@ -61,13 +60,10 @@ export default async function ClientsPage({
             }
             action={
               !query ? (
-                <Link
-                  href="/dashboard/clientes/novo"
-                  className="mt-1 inline-flex items-center gap-2 rounded-full bg-accent-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-600"
-                >
+                <Button href="/dashboard/clientes/novo" className="mt-1 px-5 py-2.5 text-sm">
                   <Plus size={16} weight="bold" />
                   Novo cliente
-                </Link>
+                </Button>
               ) : undefined
             }
           />
@@ -78,7 +74,7 @@ export default async function ClientsPage({
             <li key={client.id}>
               <Link
                 href={`/dashboard/clientes/${client.id}`}
-                className="flex items-center justify-between gap-4 py-3.5 hover:opacity-70"
+                className="-mx-3 flex items-center justify-between gap-4 rounded-lg px-3 py-3.5 transition-colors hover:bg-zinc-900/5 dark:hover:bg-white/5"
               >
                 <div>
                   <p className="font-medium text-zinc-900 dark:text-white">{client.name}</p>

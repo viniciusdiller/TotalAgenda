@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import type { AdminClientDetail } from "@totalagenda/shared-types";
 import { Input } from "@/components/ui/Input";
 import { MaskedInput } from "@/components/ui/MaskedInput";
+import { Button } from "@/components/ui/Button";
 import { type ClientFormState } from "./actions";
 
 const initial: ClientFormState = {};
@@ -60,13 +61,9 @@ export function ClientForm({
         <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-fit rounded-full bg-accent-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-accent-600 disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending} className="w-fit disabled:opacity-50">
         {pending ? "Salvando..." : submitLabel}
-      </button>
+      </Button>
     </form>
   );
 }

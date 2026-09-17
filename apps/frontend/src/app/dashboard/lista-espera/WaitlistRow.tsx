@@ -40,7 +40,7 @@ export function WaitlistRow({
             type="button"
             disabled={isPending}
             onClick={() => updateStatus("CONTACTED")}
-            className="text-sm font-medium text-zinc-500 hover:text-zinc-800 disabled:opacity-50 dark:text-stone-400 dark:hover:text-stone-200"
+            className="rounded-md px-2 py-1 text-sm font-medium text-zinc-500 transition-colors hover:bg-zinc-900/5 hover:text-zinc-800 disabled:opacity-50 disabled:hover:bg-transparent dark:text-stone-400 dark:hover:bg-white/5 dark:hover:text-stone-200"
           >
             Marcar como contatado
           </button>
@@ -48,7 +48,7 @@ export function WaitlistRow({
             type="button"
             disabled={isPending}
             onClick={() => updateStatus("RESOLVED")}
-            className="text-sm font-medium text-accent-600 hover:text-accent-700 disabled:opacity-50 dark:text-accent-300"
+            className="rounded-md px-2 py-1 text-sm font-medium text-accent-600 transition-colors hover:bg-accent-50 disabled:opacity-50 disabled:hover:bg-transparent dark:text-accent-300 dark:hover:bg-accent-500/10"
           >
             Resolver
           </button>
