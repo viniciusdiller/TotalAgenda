@@ -50,7 +50,7 @@ export async function RegisteredPlaces() {
           {places.map((place, i) => (
             <Reveal key={place.id} delay={i * 0.05}>
               <Link
-                href={`/descobrir/${place.slug}`}
+                href={`/${place.slug}`}
                 className="flex h-full flex-col rounded-2xl border border-zinc-200 p-5 transition-colors hover:border-accent-300 dark:border-white/10"
               >
                 {place.logoUrl ? (

@@ -105,7 +105,7 @@ export function DiscoverSearch({
           {results.map((r) => (
             <li key={r.id}>
               <Link
-                href={`/descobrir/${r.slug}`}
+                href={`/${r.slug}`}
                 className="block rounded-2xl border border-zinc-200 p-4 transition-colors hover:border-accent-300 dark:border-white/10"
               >
                 <div className="flex items-start justify-between gap-3">
