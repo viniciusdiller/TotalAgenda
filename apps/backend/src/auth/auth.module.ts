@@ -20,8 +20,8 @@ import { JwtStrategy } from "./strategies/jwt.strategy";
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
-  // JwtModule exportado para o client-auth reaproveitar o mesmo JwtService (mesmo
-  // JWT_SECRET) sem reconfigurar — ver client-auth/client-auth.module.ts.
+  // JwtModule exportado para o consumer-auth reaproveitar o mesmo JwtService (mesmo
+  // JWT_SECRET) sem reconfigurar — ver consumer-auth/consumer-auth.module.ts.
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { Role } from "@totalagenda/database";
 import { WaitlistService } from "./waitlist.service";
@@ -9,19 +9,27 @@ import { Public } from "../common/decorators/public.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { AuthenticatedUser } from "../auth/types/auth-user";
+import { ConsumerJwtAuthGuard } from "../consumer-auth/guards/consumer-jwt-auth.guard";
+import { CurrentConsumer } from "../consumer-auth/decorators/current-consumer.decorator";
+import { AuthenticatedConsumer } from "../consumer-auth/types/consumer-auth-user";
 
 @Controller("public/tenants/:slug/waitlist")
 export class PublicWaitlistController {
   constructor(private readonly waitlistService: WaitlistService) {}
 
-  // Rota pública de escrita sem autenticação — mesmo limite usado em toda outra rota
-  // pública de escrita (criação de agendamento, cancelar/remarcar por token) pra não deixar
-  // essa de fora e virar vetor de flood na tabela de espera (e no Client, via upsert).
+  // Exige sessão de Consumer (mesmo modelo do agendamento): nome/telefone do cliente vêm da
+  // identidade autenticada, não do body. Mantém o mesmo limite das outras rotas públicas de
+  // escrita pra não virar vetor de flood na tabela de espera.
   @Public()
+  @UseGuards(ConsumerJwtAuthGuard)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post()
-  create(@Param("slug") slug: string, @Body() dto: CreateWaitlistEntryDto) {
-    return this.waitlistService.createFromPublicLink(slug, dto);
+  create(
+    @Param("slug") slug: string,
+    @Body() dto: CreateWaitlistEntryDto,
+    @CurrentConsumer() consumer: AuthenticatedConsumer,
+  ) {
+    return this.waitlistService.createFromPublicLink(slug, dto, consumer);
   }
 }
 

@@ -8,7 +8,7 @@ import { Public } from "../common/decorators/public.decorator";
 
 // Login/refresh/set-password só tinham o limite global (100 req/min por IP) — a maior
 // superfície de tentativa de senha do app sem nenhum throttle dedicado. Mesmo limite (10/min)
-// já usado em client-auth/consumer-auth pro mesmo tipo de rota.
+// já usado em consumer-auth pro mesmo tipo de rota.
 const AUTH_THROTTLE = { default: { limit: 10, ttl: 60_000 } };
 
 @Controller("auth")

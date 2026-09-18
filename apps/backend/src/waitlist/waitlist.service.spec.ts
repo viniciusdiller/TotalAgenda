@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { WaitlistService } from "./waitlist.service";
 import { PrismaService } from "../prisma/prisma.service";
-import { ClientsService } from "../clients/clients.service";
+import { ConsumerAuthService } from "../consumer-auth/consumer-auth.service";
 
 function buildPrisma(overrides: Record<string, unknown> = {}) {
   return {
@@ -29,27 +29,30 @@ function buildPrisma(overrides: Record<string, unknown> = {}) {
   } as unknown as PrismaService;
 }
 
-function buildClientsService() {
+function buildConsumerAuth() {
   return {
-    upsertForBooking: jest.fn().mockResolvedValue({ id: "client-1" }),
-  } as unknown as ClientsService;
+    ensureLink: jest
+      .fn()
+      .mockResolvedValue({ id: "client-1", name: "Cliente Teste", phone: "11999998888" }),
+  } as unknown as ConsumerAuthService;
 }
+
+const consumer = { consumerId: "consumer-1" };
 
 const baseDto = {
   serviceId: "svc-1",
-  clientName: "Cliente Teste",
-  clientPhone: "11999998888",
 };
 
 describe("WaitlistService.createFromPublicLink", () => {
   it("cria a entrada quando serviço (e profissional, se informado) pertencem ao tenant", async () => {
     const prisma = buildPrisma();
-    const service = new WaitlistService(prisma, buildClientsService());
+    const service = new WaitlistService(prisma, buildConsumerAuth());
 
-    const result = await service.createFromPublicLink("slug", {
-      ...baseDto,
-      professionalId: "prof-1",
-    });
+    const result = await service.createFromPublicLink(
+      "slug",
+      { ...baseDto, professionalId: "prof-1" },
+      consumer,
+    );
 
     expect(prisma.service.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ id: "svc-1", tenantId: "tenant-1" }) }),
@@ -65,27 +68,27 @@ describe("WaitlistService.createFromPublicLink", () => {
   // e esse nome vazaria no findAllByTenant (include de service/professional) do tenant errado.
   it("rejeita serviceId que não pertence ao tenant do slug", async () => {
     const prisma = buildPrisma({ service: { findFirst: jest.fn().mockResolvedValue(null) } });
-    const service = new WaitlistService(prisma, buildClientsService());
+    const service = new WaitlistService(prisma, buildConsumerAuth());
 
-    await expect(service.createFromPublicLink("slug", baseDto)).rejects.toThrow(BadRequestException);
+    await expect(service.createFromPublicLink("slug", baseDto, consumer)).rejects.toThrow(BadRequestException);
     expect(prisma.waitlistEntry.create).not.toHaveBeenCalled();
   });
 
   it("rejeita professionalId que não pertence ao tenant do slug", async () => {
     const prisma = buildPrisma({ professional: { findFirst: jest.fn().mockResolvedValue(null) } });
-    const service = new WaitlistService(prisma, buildClientsService());
+    const service = new WaitlistService(prisma, buildConsumerAuth());
 
     await expect(
-      service.createFromPublicLink("slug", { ...baseDto, professionalId: "prof-de-outro-tenant" }),
+      service.createFromPublicLink("slug", { ...baseDto, professionalId: "prof-de-outro-tenant" }, consumer),
     ).rejects.toThrow(BadRequestException);
     expect(prisma.waitlistEntry.create).not.toHaveBeenCalled();
   });
 
   it("lança NotFoundException se o tenant não existe", async () => {
     const prisma = buildPrisma({ tenant: { findUnique: jest.fn().mockResolvedValue(null) } });
-    const service = new WaitlistService(prisma, buildClientsService());
+    const service = new WaitlistService(prisma, buildConsumerAuth());
 
-    await expect(service.createFromPublicLink("slug-invalido", baseDto)).rejects.toThrow(
+    await expect(service.createFromPublicLink("slug-invalido", baseDto, consumer)).rejects.toThrow(
       NotFoundException,
     );
   });
@@ -103,8 +106,20 @@ describe("WaitlistService.createFromPublicLink", () => {
         }),
       },
     });
-    const service = new WaitlistService(prisma, buildClientsService());
+    const service = new WaitlistService(prisma, buildConsumerAuth());
 
-    await expect(service.createFromPublicLink("slug", baseDto)).rejects.toThrow(ForbiddenException);
+    await expect(service.createFromPublicLink("slug", baseDto, consumer)).rejects.toThrow(ForbiddenException);
+  });
+
+  // Identidade vem da sessão do Consumer, nunca do body (mesma regra do agendamento).
+  it("grava nome/telefone do Client derivado de ensureLink", async () => {
+    const prisma = buildPrisma();
+    const consumerAuth = buildConsumerAuth();
+    const service = new WaitlistService(prisma, consumerAuth);
+
+    const result = await service.createFromPublicLink("slug", baseDto, consumer);
+
+    expect(consumerAuth.ensureLink).toHaveBeenCalledWith(prisma, "consumer-1", "tenant-1");
+    expect(result).toMatchObject({ clientName: "Cliente Teste", clientPhone: "11999998888", clientId: "client-1" });
   });
 });

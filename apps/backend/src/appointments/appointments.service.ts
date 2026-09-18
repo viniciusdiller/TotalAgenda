@@ -16,7 +16,8 @@ import { RescheduleAppointmentDto } from "./dto/reschedule-appointment.dto";
 import { UpdateAppointmentStatusDto } from "./dto/update-appointment-status.dto";
 import { AuthenticatedUser } from "../auth/types/auth-user";
 import { ClientsService } from "../clients/clients.service";
-import { AuthenticatedClient } from "../client-auth/types/client-auth-user";
+import { ConsumerAuthService } from "../consumer-auth/consumer-auth.service";
+import { AuthenticatedConsumer } from "../consumer-auth/types/consumer-auth-user";
 
 const MANAGE_TOKEN_LENGTH = 24;
 
@@ -52,7 +53,7 @@ const APPOINTMENT_INCLUDE = {
     include: { service: { select: { id: true, name: true } } },
   },
   professional: { include: { user: { select: { name: true } } } },
-  tenant: { select: { slug: true } },
+  tenant: { select: { slug: true, name: true } },
 } satisfies Prisma.AppointmentInclude;
 
 type AppointmentWithRelations = Prisma.AppointmentGetPayload<{ include: typeof APPOINTMENT_INCLUDE }>;
@@ -62,13 +63,20 @@ export class AppointmentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly clientsService: ClientsService,
+    private readonly consumerAuth: ConsumerAuthService,
   ) {}
 
   // ─────────────────────────────────────────────
   // Criação
   // ─────────────────────────────────────────────
 
-  async createFromPublicLink(tenantSlug: string, dto: CreateAppointmentDto) {
+  // A identidade de quem agenda vem da sessão do Consumer, nunca do body: o Client do tenant é
+  // derivado (ou criado) por ensureLink dentro da mesma transação do agendamento.
+  async createFromPublicLink(
+    tenantSlug: string,
+    dto: CreateAppointmentDto,
+    consumer: AuthenticatedConsumer,
+  ) {
     const tenant = await this.getTenantBySlug(tenantSlug);
     await this.assertTenantAcceptsBookings(tenant.id);
 
@@ -85,19 +93,14 @@ export class AppointmentsService {
       await this.lockProfessional(tx, dto.professionalId);
       await this.assertNoConflict(tx, dto.professionalId, startAt.toJSDate(), endAt.toJSDate());
 
-      const client = await this.clientsService.upsertForBooking(
-        tx,
-        tenant.id,
-        dto.clientName,
-        dto.clientPhone,
-      );
+      const client = await this.consumerAuth.ensureLink(tx, consumer.consumerId, tenant.id);
 
       const created = await tx.appointment.create({
         data: {
           tenantId: tenant.id,
           professionalId: dto.professionalId,
-          clientName: dto.clientName,
-          clientPhone: dto.clientPhone,
+          clientName: client.name,
+          clientPhone: client.phone,
           clientId: client.id,
           startAt: startAt.toJSDate(),
           endAt: endAt.toJSDate(),
@@ -348,15 +351,21 @@ export class AppointmentsService {
   }
 
   // ─────────────────────────────────────────────
-  // Área do cliente logado (my-bookings) — mesma lógica de cancel/reschedule, muda só como
-  // o atendimento é localizado: por dono (clientId), sempre na cláusula WHERE (sem janela
-  // de IDOR).
+  // Área do cliente logado (Consumer, cross-salão) — mesma lógica de cancel/reschedule, muda só
+  // como o atendimento é localizado: por dono (Consumer → ConsumerTenantLink → Client), sempre
+  // na cláusula WHERE (sem janela de IDOR).
   // ─────────────────────────────────────────────
 
-  async findForClient(slug: string, client: AuthenticatedClient) {
-    const tenant = await this.assertClientTenant(slug, client);
+  // Histórico de todos os salões onde este Consumer já agendou.
+  async findAllForConsumer(consumer: AuthenticatedConsumer) {
+    const links = await this.prisma.consumerTenantLink.findMany({
+      where: { consumerId: consumer.consumerId },
+      select: { clientId: true },
+    });
+    if (links.length === 0) return [];
+
     const appointments = await this.prisma.appointment.findMany({
-      where: { clientId: client.clientId, tenantId: tenant.id },
+      where: { clientId: { in: links.map((l) => l.clientId) } },
       include: APPOINTMENT_INCLUDE,
       orderBy: { startAt: "desc" },
       take: 200,
@@ -364,19 +373,18 @@ export class AppointmentsService {
     return appointments.map((appointment) => this.serialize(appointment));
   }
 
-  async cancelForClient(slug: string, appointmentId: string, client: AuthenticatedClient) {
-    return this.applyCancel(await this.findOwnedByClient(slug, appointmentId, client), {
+  async cancelForConsumer(appointmentId: string, consumer: AuthenticatedConsumer) {
+    return this.applyCancel(await this.findOwnedByConsumer(appointmentId, consumer), {
       clientInitiated: true,
     });
   }
 
-  async rescheduleForClient(
-    slug: string,
+  async rescheduleForConsumer(
     appointmentId: string,
     dto: RescheduleAppointmentDto,
-    client: AuthenticatedClient,
+    consumer: AuthenticatedConsumer,
   ) {
-    return this.applyReschedule(await this.findOwnedByClient(slug, appointmentId, client), dto);
+    return this.applyReschedule(await this.findOwnedByConsumer(appointmentId, consumer), dto);
   }
 
   // ─────────────────────────────────────────────
@@ -433,24 +441,18 @@ export class AppointmentsService {
     return appointment;
   }
 
-  private async findOwnedByClient(slug: string, id: string, client: AuthenticatedClient) {
-    const tenant = await this.assertClientTenant(slug, client);
+  // O dono entra no WHERE via filtro de relação — não busca por id e compara depois (janela de
+  // IDOR, e vazaria por 403 vs. 404 se o atendimento existe). Atendimento de outro consumidor
+  // simplesmente não aparece, igual a "não existe".
+  private async findOwnedByConsumer(id: string, consumer: AuthenticatedConsumer) {
     const appointment = await this.prisma.appointment.findFirst({
-      where: { id, tenantId: tenant.id, clientId: client.clientId },
+      where: { id, client: { consumerLink: { consumerId: consumer.consumerId } } },
       include: APPOINTMENT_INCLUDE,
     });
     if (!appointment) {
       throw new NotFoundException("Agendamento não encontrado.");
     }
     return appointment;
-  }
-
-  private async assertClientTenant(slug: string, client: AuthenticatedClient) {
-    const tenant = await this.prisma.tenant.findUnique({ where: { slug }, select: { id: true } });
-    if (!tenant || tenant.id !== client.tenantId) {
-      throw new ForbiddenException();
-    }
-    return tenant;
   }
 
   private async resolveStaffClient(tenantId: string, dto: CreateStaffAppointmentDto) {
@@ -720,7 +722,9 @@ export class AppointmentsService {
         id: appointment.professionalId,
         user: { name: appointment.professional.user.name },
       },
-      tenant: appointment.tenant ? { slug: appointment.tenant.slug } : undefined,
+      tenant: appointment.tenant
+        ? { slug: appointment.tenant.slug, name: appointment.tenant.name }
+        : undefined,
     };
   }
 }

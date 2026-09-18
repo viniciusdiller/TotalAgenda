@@ -1,7 +1,8 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { WaitlistStatus } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
-import { ClientsService } from "../clients/clients.service";
+import { ConsumerAuthService } from "../consumer-auth/consumer-auth.service";
+import { AuthenticatedConsumer } from "../consumer-auth/types/consumer-auth-user";
 import { computeBillingStatus, hasBillingAccess } from "../billing/billing-status.util";
 import { CreateWaitlistEntryDto } from "./dto/create-waitlist-entry.dto";
 
@@ -9,10 +10,14 @@ import { CreateWaitlistEntryDto } from "./dto/create-waitlist-entry.dto";
 export class WaitlistService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly clientsService: ClientsService,
+    private readonly consumerAuth: ConsumerAuthService,
   ) {}
 
-  async createFromPublicLink(tenantSlug: string, dto: CreateWaitlistEntryDto) {
+  async createFromPublicLink(
+    tenantSlug: string,
+    dto: CreateWaitlistEntryDto,
+    consumer: AuthenticatedConsumer,
+  ) {
     const tenant = await this.prisma.tenant.findUnique({
       where: { slug: tenantSlug },
       select: { id: true },
@@ -44,20 +49,15 @@ export class WaitlistService {
       }
     }
 
-    const client = await this.clientsService.upsertForBooking(
-      this.prisma,
-      tenant.id,
-      dto.clientName,
-      dto.clientPhone,
-    );
+    const client = await this.consumerAuth.ensureLink(this.prisma, consumer.consumerId, tenant.id);
 
     return this.prisma.waitlistEntry.create({
       data: {
         tenantId: tenant.id,
         serviceId: dto.serviceId,
         professionalId: dto.professionalId,
-        clientName: dto.clientName,
-        clientPhone: dto.clientPhone,
+        clientName: client.name,
+        clientPhone: client.phone,
         clientId: client.id,
         preferredDate: dto.preferredDate ? new Date(dto.preferredDate) : undefined,
         notes: dto.notes,

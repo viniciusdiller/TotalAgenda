@@ -4,18 +4,18 @@ import {
   AppointmentsController,
   PublicAppointmentsController,
   PublicAppointmentManageController,
-  ClientAppointmentsController,
+  ConsumerAppointmentsController,
 } from "./appointments.controller";
 import { ClientsModule } from "../clients/clients.module";
-import { ClientAuthModule } from "../client-auth/client-auth.module";
+import { ConsumerAuthModule } from "../consumer-auth/consumer-auth.module";
 
 @Module({
-  imports: [ClientsModule, ClientAuthModule],
+  imports: [ClientsModule, ConsumerAuthModule],
   controllers: [
     AppointmentsController,
     PublicAppointmentsController,
     PublicAppointmentManageController,
-    ClientAppointmentsController,
+    ConsumerAppointmentsController,
   ],
   providers: [AppointmentsService],
   exports: [AppointmentsService],

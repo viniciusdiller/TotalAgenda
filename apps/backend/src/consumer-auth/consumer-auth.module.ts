@@ -8,8 +8,8 @@ import { ConsumerJwtAuthGuard } from "./guards/consumer-jwt-auth.guard";
   imports: [AuthModule],
   controllers: [ConsumerAuthController],
   providers: [ConsumerAuthService, ConsumerJwtAuthGuard],
-  // Reexporta AuthModule pelo mesmo motivo do ClientAuthModule (JwtService visível onde o
-  // guard é usado via @UseGuards em outro módulo — ex.: ReviewsModule).
+  // Reexporta AuthModule pra o JwtService ficar visível onde o guard é usado via
+  // @UseGuards em outro módulo — ex.: AppointmentsModule, WaitlistModule, ReviewsModule.
   exports: [AuthModule, ConsumerAuthService, ConsumerJwtAuthGuard],
 })
 export class ConsumerAuthModule {}

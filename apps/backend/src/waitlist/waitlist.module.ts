@@ -1,10 +1,10 @@
 import { Module } from "@nestjs/common";
 import { WaitlistService } from "./waitlist.service";
 import { WaitlistController, PublicWaitlistController } from "./waitlist.controller";
-import { ClientsModule } from "../clients/clients.module";
+import { ConsumerAuthModule } from "../consumer-auth/consumer-auth.module";
 
 @Module({
-  imports: [ClientsModule],
+  imports: [ConsumerAuthModule],
   controllers: [WaitlistController, PublicWaitlistController],
   providers: [WaitlistService],
   exports: [WaitlistService],

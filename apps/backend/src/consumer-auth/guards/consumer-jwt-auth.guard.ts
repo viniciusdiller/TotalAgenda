@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from
 import { JwtService } from "@nestjs/jwt";
 import { ConsumerJwtPayload } from "../types/consumer-auth-user";
 
-// Mesmo estilo do ClientJwtAuthGuard: sem Passport, aplicado localmente via
+// Guard sem Passport (independente do JwtAuthGuard de staff), aplicado localmente via
 // @Public() + @UseGuards(ConsumerJwtAuthGuard).
 @Injectable()
 export class ConsumerJwtAuthGuard implements CanActivate {

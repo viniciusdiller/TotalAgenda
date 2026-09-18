@@ -1,4 +1,4 @@
-import { IsDateString, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { IsDateString, IsOptional, IsString, MaxLength } from "class-validator";
 
 export class CreateWaitlistEntryDto {
   @IsString()
@@ -7,16 +7,6 @@ export class CreateWaitlistEntryDto {
   @IsOptional()
   @IsString()
   professionalId?: string;
-
-  @IsString()
-  @MinLength(2)
-  @MaxLength(120)
-  clientName!: string;
-
-  @IsString()
-  @MinLength(8)
-  @MaxLength(20)
-  clientPhone!: string;
 
   @IsOptional()
   @IsDateString()

@@ -20,7 +20,6 @@ import { WaitlistModule } from "./waitlist/waitlist.module";
 import { BillingModule } from "./billing/billing.module";
 import { WebhooksModule } from "./webhooks/webhooks.module";
 import { ClientsModule } from "./clients/clients.module";
-import { ClientAuthModule } from "./client-auth/client-auth.module";
 import { IntakeModule } from "./intake/intake.module";
 import { ProductsModule } from "./products/products.module";
 import { TicketsModule } from "./tickets/tickets.module";
@@ -48,7 +47,6 @@ import { ReviewsModule } from "./reviews/reviews.module";
     BillingModule,
     WebhooksModule,
     ClientsModule,
-    ClientAuthModule,
     IntakeModule,
     ProductsModule,
     TicketsModule,

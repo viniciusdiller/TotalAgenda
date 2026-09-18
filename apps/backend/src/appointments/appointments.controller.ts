@@ -10,10 +10,9 @@ import { Public } from "../common/decorators/public.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { AuthenticatedUser } from "../auth/types/auth-user";
-import { ClientJwtAuthGuard } from "../client-auth/guards/client-jwt-auth.guard";
-import { CurrentClient } from "../client-auth/decorators/current-client.decorator";
-import { AuthenticatedClient } from "../client-auth/types/client-auth-user";
-import { ClientAuthService } from "../client-auth/client-auth.service";
+import { ConsumerJwtAuthGuard } from "../consumer-auth/guards/consumer-jwt-auth.guard";
+import { CurrentConsumer } from "../consumer-auth/decorators/current-consumer.decorator";
+import { AuthenticatedConsumer } from "../consumer-auth/types/consumer-auth-user";
 
 // Agendamento pelo link público do tenant. Caminho mantido em /bookings por
 // compatibilidade com o wizard público do frontend.
@@ -22,10 +21,15 @@ export class PublicAppointmentsController {
   constructor(private readonly appointments: AppointmentsService) {}
 
   @Public()
+  @UseGuards(ConsumerJwtAuthGuard)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post()
-  create(@Param("slug") slug: string, @Body() dto: CreateAppointmentDto) {
-    return this.appointments.createFromPublicLink(slug, dto);
+  create(
+    @Param("slug") slug: string,
+    @Body() dto: CreateAppointmentDto,
+    @CurrentConsumer() consumer: AuthenticatedConsumer,
+  ) {
+    return this.appointments.createFromPublicLink(slug, dto, consumer);
   }
 }
 
@@ -118,46 +122,34 @@ export class AppointmentsController {
   }
 }
 
-// Área do cliente logado (login só por telefone, ver client-auth/). Protegida pelo
-// ClientJwtAuthGuard local — @Public() pula a cadeia global de guards de staff.
-@Controller("public/tenants/:slug/my-bookings")
-export class ClientAppointmentsController {
-  constructor(
-    private readonly appointments: AppointmentsService,
-    private readonly clientAuthService: ClientAuthService,
-  ) {}
+// Área do cliente logado (Consumer, todos os salões — ver consumer-auth/). Protegida pelo
+// ConsumerJwtAuthGuard local — @Public() pula a cadeia global de guards de staff.
+@Controller("public/consumer/bookings")
+export class ConsumerAppointmentsController {
+  constructor(private readonly appointments: AppointmentsService) {}
 
   @Public()
-  @UseGuards(ClientJwtAuthGuard)
+  @UseGuards(ConsumerJwtAuthGuard)
   @Get()
-  async findMine(@Param("slug") slug: string, @CurrentClient() client: AuthenticatedClient) {
-    const [clientInfo, bookings] = await Promise.all([
-      this.clientAuthService.me(client),
-      this.appointments.findForClient(slug, client),
-    ]);
-    return { client: clientInfo, bookings };
+  findMine(@CurrentConsumer() consumer: AuthenticatedConsumer) {
+    return this.appointments.findAllForConsumer(consumer);
   }
 
   @Public()
-  @UseGuards(ClientJwtAuthGuard)
+  @UseGuards(ConsumerJwtAuthGuard)
   @Patch(":id/cancel")
-  cancelMine(
-    @Param("slug") slug: string,
-    @Param("id") id: string,
-    @CurrentClient() client: AuthenticatedClient,
-  ) {
-    return this.appointments.cancelForClient(slug, id, client);
+  cancelMine(@Param("id") id: string, @CurrentConsumer() consumer: AuthenticatedConsumer) {
+    return this.appointments.cancelForConsumer(id, consumer);
   }
 
   @Public()
-  @UseGuards(ClientJwtAuthGuard)
+  @UseGuards(ConsumerJwtAuthGuard)
   @Patch(":id/reschedule")
   rescheduleMine(
-    @Param("slug") slug: string,
     @Param("id") id: string,
     @Body() dto: RescheduleAppointmentDto,
-    @CurrentClient() client: AuthenticatedClient,
+    @CurrentConsumer() consumer: AuthenticatedConsumer,
   ) {
-    return this.appointments.rescheduleForClient(slug, id, dto, client);
+    return this.appointments.rescheduleForConsumer(id, dto, consumer);
   }
 }
