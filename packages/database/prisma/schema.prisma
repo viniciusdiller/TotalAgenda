@@ -772,6 +772,12 @@ model Consumer {
   phone         String   @unique // normalizado, sem DDI 55
   name          String
   email         String?
+  // null = conta do fluxo antigo (só telefone) ainda não migrada; preenchido no cadastro
+  // novo e na etapa de "crie sua senha" do primeiro login (ver ConsumerAuthService). Sem
+  // campos de token de convite como em User: aqui o fluxo é síncrono, não por link.
+  passwordHash        String?
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime? @db.Timestamptz(6)
   consentedAt   DateTime @db.Timestamptz(6) // aceite dos termos/privacidade
   createdAt     DateTime @default(now()) @db.Timestamptz(6)
   updatedAt     DateTime @updatedAt @db.Timestamptz(6)
