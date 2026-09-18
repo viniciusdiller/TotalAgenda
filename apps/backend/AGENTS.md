@@ -31,10 +31,9 @@ não domínio.
 | `availability` | Cálculo de horários livres de um profissional pra um serviço (`public/tenants/:slug/professionals/:id/availability`). |
 | `billing` | Espelho de plano/assinatura sincronizado por webhook; `PlanLimitService`/`TenantBillingGuard` leem daqui. |
 | `cash-register` | Abertura/fechamento de caixa, conferência de valor físico contra `Payment`/`CashMovement`. |
-| `client-auth` | Login só-telefone do cliente final de um tenant (`Client`), sem OTP. |
 | `clients` | CRUD de `Client` (ficha 360, intake) pelo staff. |
 | `commissions` | Regras de comissão por profissional/serviço e cálculo no fechamento de comanda. |
-| `consumer-auth` | Login do `Consumer` (identidade de descoberta/avaliação no marketplace, distinta de `Client`). |
+| `consumer-auth` | Identidade global do cliente final (`Consumer`): login telefone+senha, migração de contas antigas, perfil, troca de senha, `ensureLink` com o `Client` de cada tenant. |
 | `finance` | Lançamentos manuais + automáticos (receita de comanda, comissão), DRE, fluxo de caixa. |
 | `intake` | Formulários de ficha de anamnese/cadastro configuráveis pelo tenant e respostas de cliente. |
 | `marketplace` | Busca/descoberta pública de estabelecimentos (`public/marketplace`), config de visibilidade do tenant. |
@@ -52,9 +51,9 @@ não domínio.
 
 `JwtAuthGuard → RolesGuard → TenantBillingGuard`, registrados globalmente em
 `app.module.ts`. `@Public()` pula os três; `@Roles(...)` restringe por papel depois do
-`JwtAuthGuard` já ter populado `request.user`. `ClientJwtAuthGuard`
-(`client-auth`/rotas de cliente final) e `ConsumerJwtAuthGuard` (`consumer-auth`) são
-pipelines próprios, não passam pelos guards globais de staff — cada domínio de
+`JwtAuthGuard` já ter populado `request.user`. `ConsumerJwtAuthGuard`
+(`consumer-auth`, usado em agendamento, lista de espera e histórico do cliente final) é
+um pipeline próprio, não passa pelos guards globais de staff — cada domínio de
 identidade (ver CLAUDE.md raiz > Autenticação) tem seu próprio guard e seu próprio
 `AuthenticatedX` type, não misturar.
 

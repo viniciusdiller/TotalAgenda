@@ -43,19 +43,27 @@ depois" (evita janela de IDOR).
 ### Autenticação — dois domínios distintos
 - **Staff** (`User`, roles `OWNER` / `PROFESSIONAL` / `RECEPTIONIST`): login e-mail+senha,
   JWT via `AuthModule`. Guards globais: `JwtAuthGuard` → `RolesGuard` → `TenantBillingGuard`
-  (`app.module.ts`). `@Public()` libera rota; `@Roles()` restringe.
-- **Cliente final** (`Client`, escopado por tenant, identidade por telefone normalizado):
-  login só-telefone sem OTP (v1), JWT próprio via `ClientAuthModule` / `ClientJwtAuthGuard`.
-  O primeiro agendamento cria a conta (`ClientsService.upsertForBooking`).
-- **Consumidor do marketplace** (`Consumer`, fluxo de descoberta/avaliação público,
-  distinto do "Cliente final" de um tenant): JWT próprio via `ConsumerAuthModule` /
-  `ConsumerJwtAuthGuard` no backend; no frontend, `lib/marketplace-api.ts` guarda o
-  token em `localStorage` (`TOKEN_KEY = "ta_consumer_token"`), lido direto por um
-  Client Component (`app/descobrir/avaliar/page.tsx`) — diferente dos outros dois
-  domínios (cookie httpOnly), fica exposto a XSS. Trade-off aceito hoje pelo escopo
-  baixo de dado (avaliação pública); não tratar como equivalente em segurança aos
-  outros domínios se esse fluxo ganhar dado sensível — migrar pra cookie httpOnly
-  antes disso.
+  (`app.module.ts`). `@Public()` libera rota; `@Roles()` restringe. Login em `/entrar`.
+- **Cliente final** (`Consumer`, identidade **global** — um telefone = uma conta em todos os
+  salões): telefone + senha (bcrypt 12, lockout progressivo e hash dummy contra timing, mesma
+  política do staff via `common/utils/lockout.util.ts`), JWT próprio via `ConsumerAuthModule` /
+  `ConsumerJwtAuthGuard` (não passa pelos guards globais de staff). No frontend, um único
+  cookie httpOnly `ta_consumer` (`path: /`, `lib/consumer-session.ts`); login em
+  `/minha-conta/entrar`, perfil e histórico cross-salão em `/minha-conta`. O `Client` por
+  tenant continua existindo como registro de CRM do salão (ficha, notas, tags, anamnese) e é
+  ligado ao `Consumer` por `ConsumerTenantLink`; agendar e entrar na lista de espera **exigem
+  login** e derivam o `Client` do tenant via `ConsumerAuthService.ensureLink` — nome/telefone
+  nunca vêm do body. Posse de um atendimento = relação `client.consumerLink.consumerId` no
+  `WHERE` (nunca buscar por id e comparar depois).
+  - Migração de contas antigas (só telefone): `POST /public/consumer/login/start` diz qual
+    formulário mostrar; quem ainda não tem senha cria uma em `login/set-password`, e o backfill
+    liga os `Client` de todos os salões com aquele telefone (exceção deliberada à regra de
+    filtrar por `tenantId`, sem sobrescrever `Client.name`).
+  - **Trade-offs conscientes (UX vs. segurança):** `login/start` revela se um telefone tem
+    conta/senha (sinal estreito: nenhuma credencial é testada ali; o passo que confere senha
+    devolve sempre o mesmo 401 genérico). Posse do telefone ainda basta pra criar a senha de
+    uma conta antiga (sem OTP — v1); adicionar OTP/e-mail nesse passo é o próximo endurecimento
+    antes de abrir amplamente.
 
 ### Billing
 Cobrança real (Stripe, checkout, ciclo) vive no **Admin-TotalSoftware**, repositório
