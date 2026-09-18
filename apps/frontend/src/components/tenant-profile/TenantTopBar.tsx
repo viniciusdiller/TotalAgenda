@@ -51,7 +51,7 @@ export function TenantTopBar({
           {client ? (
             <div className="flex items-center gap-2.5">
               <Link
-                href={`/${slug}/conta`}
+                href="/minha-conta"
                 className="relative inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-semibold text-zinc-900 transition-colors hover:border-(--tenant-accent)/40 dark:border-white/10 dark:bg-white/5 dark:text-white"
               >
                 <CalendarCheck size={17} className="text-(--tenant-accent)" />
@@ -63,7 +63,7 @@ export function TenantTopBar({
                 ) : null}
               </Link>
               <Link
-                href={`/${slug}/conta`}
+                href="/minha-conta"
                 className="flex items-center gap-2.5 rounded-full border border-zinc-200 py-1.5 pr-3 pl-1.5 transition-colors hover:border-(--tenant-accent)/40 dark:border-white/10"
               >
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-(--tenant-accent) font-brand text-[13px] font-bold text-white">
@@ -79,13 +79,21 @@ export function TenantTopBar({
               </Link>
             </div>
           ) : (
-            <Link
-              href="/descobrir"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-stone-300 dark:hover:text-white"
-            >
-              <ArrowLeft size={16} />
-              Descobrir
-            </Link>
+            <div className="flex items-center gap-5">
+              <Link
+                href="/descobrir"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-stone-300 dark:hover:text-white"
+              >
+                <ArrowLeft size={16} />
+                Descobrir
+              </Link>
+              <Link
+                href={`/minha-conta/entrar?next=${encodeURIComponent(`/${slug}`)}`}
+                className="rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-semibold text-zinc-900 transition-colors hover:border-(--tenant-accent)/40 dark:border-white/10 dark:bg-white/5 dark:text-white"
+              >
+                Entrar
+              </Link>
+            </div>
           )}
         </Container>
       </div>

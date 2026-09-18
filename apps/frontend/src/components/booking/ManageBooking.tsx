@@ -8,6 +8,7 @@ import { publicApi, ApiError } from "@/lib/api";
 import { Button } from "../ui/Button";
 import { DateTimeStep } from "./DateTimeStep";
 import { WaitlistForm } from "./WaitlistForm";
+import { joinWaitlistAction } from "@/app/[slug]/agendar/actions";
 
 const TIMEZONE = "America/Sao_Paulo";
 
@@ -79,13 +80,11 @@ export function ManageBooking({ token }: { token: string }) {
     loadSlots(date);
   }
 
-  async function handleJoinWaitlist(input: { clientName: string; clientPhone: string }) {
-    if (!booking?.tenant?.slug) return;
-    await publicApi.joinWaitlist(booking.tenant.slug, {
+  async function handleJoinWaitlist() {
+    if (!booking?.tenant?.slug) return { error: "Não foi possível entrar na lista agora." };
+    return joinWaitlistAction(booking.tenant.slug, {
       serviceId: booking.serviceId,
       professionalId: booking.professionalId,
-      clientName: input.clientName,
-      clientPhone: input.clientPhone,
       preferredDate: selectedDate,
     });
   }

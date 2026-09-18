@@ -7,11 +7,15 @@ import { publicApi } from "@/lib/api";
 import { Button } from "../ui/Button";
 import { DateTimeStep } from "../booking/DateTimeStep";
 import { WaitlistForm } from "../booking/WaitlistForm";
-import { cancelMyBookingAction, rescheduleMyBookingAction } from "@/app/[slug]/conta/actions";
+import { joinWaitlistAction } from "@/app/[slug]/agendar/actions";
+import { cancelMyBookingAction, rescheduleMyBookingAction } from "@/app/minha-conta/actions";
 
 const TIMEZONE = "America/Sao_Paulo";
 
-export function ClientBookingCard({ slug, booking }: { slug: string; booking: PublicBooking }) {
+// A lista da conta cruza vários salões: o slug do salão de cada atendimento vem do próprio
+// atendimento (booking.tenant), nunca de uma rota.
+export function ConsumerBookingCard({ booking }: { booking: PublicBooking }) {
+  const slug = booking.tenant?.slug ?? "";
   const [mode, setMode] = useState<"view" | "reschedule">("view");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -68,12 +72,10 @@ export function ClientBookingCard({ slug, booking }: { slug: string; booking: Pu
     loadSlots(date);
   }
 
-  async function handleJoinWaitlist(input: { clientName: string; clientPhone: string }) {
-    await publicApi.joinWaitlist(slug, {
+  async function handleJoinWaitlist() {
+    return joinWaitlistAction(slug, {
       serviceId: booking.serviceId,
       professionalId: booking.professionalId,
-      clientName: input.clientName,
-      clientPhone: input.clientPhone,
       preferredDate: selectedDate,
     });
   }
@@ -81,7 +83,7 @@ export function ClientBookingCard({ slug, booking }: { slug: string; booking: Pu
   function handleCancel() {
     setError(null);
     startTransition(async () => {
-      const result = await cancelMyBookingAction(slug, booking.id);
+      const result = await cancelMyBookingAction(booking.id);
       if (result?.error) setError(result.error);
     });
   }
@@ -90,7 +92,7 @@ export function ClientBookingCard({ slug, booking }: { slug: string; booking: Pu
     if (!selectedSlot) return;
     setError(null);
     startTransition(async () => {
-      const result = await rescheduleMyBookingAction(slug, booking.id, selectedSlot.startAt);
+      const result = await rescheduleMyBookingAction(booking.id, selectedSlot.startAt);
       if (result?.error) {
         setError(result.error);
       } else {
@@ -105,7 +107,12 @@ export function ClientBookingCard({ slug, booking }: { slug: string; booking: Pu
         <>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="font-display font-semibold text-zinc-900 dark:text-white">
+              {booking.tenant ? (
+                <p className="text-xs font-semibold tracking-wide text-(--tenant-accent) uppercase">
+                  {booking.tenant.name}
+                </p>
+              ) : null}
+              <p className="mt-0.5 font-display font-semibold text-zinc-900 dark:text-white">
                 {booking.service?.name}
               </p>
               <p className="mt-0.5 text-sm text-zinc-500 dark:text-stone-400">

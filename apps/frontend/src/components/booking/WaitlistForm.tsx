@@ -1,40 +1,38 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { CheckCircle } from "@phosphor-icons/react/dist/ssr";
-import { Input } from "../ui/Input";
-import { MaskedInput } from "../ui/MaskedInput";
 import { Button } from "../ui/Button";
+import type { WaitlistActionResult } from "@/app/[slug]/agendar/actions";
 
+// Sem campos de nome/telefone: a lista de espera também exige login, e o contato é o da conta.
 export function WaitlistForm({
   onSubmit,
   onCancel,
 }: {
-  onSubmit: (input: { clientName: string; clientPhone: string }) => Promise<void>;
+  onSubmit: () => Promise<WaitlistActionResult>;
   onCancel: () => void;
 }) {
-  const [clientName, setClientName] = useState("");
-  const [clientPhone, setClientPhone] = useState("");
+  const pathname = usePathname();
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsLogin, setNeedsLogin] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!clientName.trim() || !clientPhone.trim()) {
-      setError("Preencha nome e telefone para entrar na lista.");
-      return;
-    }
     setError(null);
     setSubmitting(true);
-    try {
-      await onSubmit({ clientName, clientPhone });
+    const result = await onSubmit();
+    setSubmitting(false);
+    if ("ok" in result) {
       setDone(true);
-    } catch {
-      setError("Não foi possível entrar na lista agora. Tente novamente.");
-    } finally {
-      setSubmitting(false);
+      return;
     }
+    setError(result.error);
+    setNeedsLogin(!!result.unauthorized);
   }
 
   if (done) {
@@ -54,25 +52,19 @@ export function WaitlistForm({
   return (
     <form onSubmit={handleSubmit} className="rounded-2xl border border-zinc-200 p-5 dark:border-white/10">
       <p className="text-sm font-medium text-zinc-900 dark:text-white">Entrar na lista de espera</p>
+      <p className="mt-1 text-sm text-zinc-500 dark:text-stone-400">
+        Usamos o telefone da sua conta pra te chamar quando abrir um horário.
+      </p>
       <div className="mt-4 flex flex-col gap-4">
-        <Input
-          label="Seu nome"
-          name="waitlistName"
-          value={clientName}
-          onChange={(e) => setClientName(e.target.value)}
-          accentScoped
-        />
-        <MaskedInput
-          mask="phone"
-          label="Seu telefone"
-          name="waitlistPhone"
-          type="tel"
-          placeholder="(11) 91234-5678"
-          value={clientPhone}
-          onChange={setClientPhone}
-          accentScoped
-        />
         {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
+        {needsLogin ? (
+          <Link
+            href={`/minha-conta/entrar?next=${encodeURIComponent(pathname)}`}
+            className="text-sm font-semibold text-(--tenant-accent)"
+          >
+            Entrar na minha conta
+          </Link>
+        ) : null}
         <div className="flex gap-2">
           <Button type="submit" variant="tenant" disabled={submitting} className="flex-1">
             {submitting ? "Enviando..." : "Entrar na lista"}

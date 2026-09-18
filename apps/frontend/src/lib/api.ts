@@ -1,9 +1,6 @@
 import type {
   ApiErrorBody,
   AvailableSlot,
-  ClientLoginResponse,
-  CreateBookingInput,
-  CreateWaitlistInput,
   PublicBooking,
   PublicProfessional,
   PublicService,
@@ -59,12 +56,6 @@ export const publicApi = {
       )}&date=${date}`,
     ),
 
-  createBooking: (slug: string, input: CreateBookingInput) =>
-    request<PublicBooking>(`/public/tenants/${slug}/bookings`, {
-      method: "POST",
-      body: JSON.stringify(input),
-    }),
-
   getBookingByToken: (token: string) => request<PublicBooking>(`/public/bookings/${token}`),
 
   cancelBooking: (token: string) =>
@@ -74,17 +65,5 @@ export const publicApi = {
     request<PublicBooking>(`/public/bookings/${token}/reschedule`, {
       method: "PATCH",
       body: JSON.stringify({ startAt, professionalId }),
-    }),
-
-  joinWaitlist: (slug: string, input: CreateWaitlistInput) =>
-    request<unknown>(`/public/tenants/${slug}/waitlist`, {
-      method: "POST",
-      body: JSON.stringify(input),
-    }),
-
-  clientLogin: (slug: string, phone: string) =>
-    request<ClientLoginResponse>(`/public/tenants/${slug}/client-auth/login`, {
-      method: "POST",
-      body: JSON.stringify({ phone }),
     }),
 };

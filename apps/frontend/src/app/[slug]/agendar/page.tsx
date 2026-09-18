@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import { getTenant } from "../layout";
-import { getClientToken, clientAuthedFetch } from "@/lib/client-session";
+import type { ConsumerMe } from "@totalagenda/shared-types";
+import { consumerAuthedFetch } from "@/lib/consumer-session";
+import { formatPhoneBR } from "@/lib/masks";
 import { BookingWizard } from "@/components/booking/BookingWizard";
 
 export async function generateMetadata({
@@ -25,13 +27,12 @@ export default async function AgendarPage({ params }: { params: Promise<{ slug: 
     notFound();
   }
 
-  const token = await getClientToken(slug);
-  const initialClient = token
-    ? await clientAuthedFetch<{ name: string; phone: string }>(
-        slug,
-        `/public/tenants/${slug}/client-auth/me`,
-      ).catch(() => null)
-    : null;
+  // Agendar exige conta (não existe mais agendamento sem login): sem sessão válida, vai pro
+  // login e volta pra cá depois.
+  const consumer = await consumerAuthedFetch<ConsumerMe>("/public/consumer/me").catch(() => null);
+  if (!consumer) {
+    redirect(`/minha-conta/entrar?next=${encodeURIComponent(`/${slug}/agendar`)}`);
+  }
 
   return (
     <main className="flex-1 bg-stone-50 px-6 py-16 dark:bg-zinc-950">
@@ -46,7 +47,11 @@ export default async function AgendarPage({ params }: { params: Promise<{ slug: 
       </div>
 
       <div className="mt-6">
-        <BookingWizard slug={tenant.slug} tenantName={tenant.name} initialClient={initialClient} />
+        <BookingWizard
+          slug={tenant.slug}
+          tenantName={tenant.name}
+          client={{ name: consumer.name, phone: formatPhoneBR(consumer.phone) }}
+        />
       </div>
     </main>
   );

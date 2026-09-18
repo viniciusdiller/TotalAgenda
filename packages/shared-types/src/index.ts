@@ -35,22 +35,6 @@ export interface UpdateTenantProfileInput {
   showContact?: boolean;
 }
 
-export interface PublicClient {
-  id: string;
-  name: string;
-  phone: string;
-}
-
-export interface ClientLoginResponse {
-  accessToken: string;
-  client: PublicClient;
-}
-
-export interface MyBookingsResponse {
-  client: PublicClient;
-  bookings: PublicBooking[];
-}
-
 export interface PublicService {
   id: string;
   name: string;
@@ -70,12 +54,12 @@ export interface AvailableSlot {
   endAt: string;
 }
 
+// Quem agenda NÃO vai no payload: a identidade é a do Consumer autenticado (cookie de sessão),
+// e o backend deriva o Client do tenant a partir dela.
 export interface CreateBookingInput {
   professionalId: string;
   serviceId: string;
   startAt: string;
-  clientName: string;
-  clientPhone: string;
 }
 
 export type StaffRole = "OWNER" | "RECEPTIONIST" | "PROFESSIONAL";
@@ -186,6 +170,19 @@ export interface MarketplaceSettings {
   priceRange: number | null;
   categorySlugs: string[];
   availableCategories: MarketplaceCategory[];
+}
+
+export type ConsumerLoginStatus = "register" | "needs_password_setup" | "password_required";
+
+export interface ConsumerProfile {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+}
+
+export interface ConsumerMe extends ConsumerProfile {
+  establishments: Array<{ name: string; slug: string; logoUrl: string | null }>;
 }
 
 export interface ConsumerSession {
@@ -478,14 +475,12 @@ export interface PublicBooking {
   items?: AppointmentItem[];
   service?: { name: string };
   professional?: { id: string; user: { name: string } };
-  tenant?: { slug: string };
+  tenant?: { slug: string; name: string };
 }
 
 export interface CreateWaitlistInput {
   serviceId: string;
   professionalId?: string;
-  clientName: string;
-  clientPhone: string;
   preferredDate?: string;
   notes?: string;
 }

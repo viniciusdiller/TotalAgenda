@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { DateTime } from "luxon";
-import type { MyBookingsResponse } from "@totalagenda/shared-types";
+import type { ConsumerMe, PublicBooking } from "@totalagenda/shared-types";
 import { getTenant } from "./layout";
 import { publicApi } from "@/lib/api";
 import { marketplaceApi } from "@/lib/marketplace-api";
 import { ApiError } from "@/lib/api";
-import { getClientToken, clientAuthedFetch } from "@/lib/client-session";
+import { getConsumerToken, consumerAuthedFetch } from "@/lib/consumer-session";
 import { TenantProfileHeader } from "@/components/tenant-profile/TenantProfileHeader";
 import { ServicesSection } from "@/components/tenant-profile/ServicesSection";
 import { TeamSection } from "@/components/tenant-profile/TeamSection";
@@ -32,25 +32,26 @@ async function getMarketplaceData(slug: string) {
   }
 }
 
-// Dados do chip de perfil e do badge de "Compromissos" na navbar (ver TenantTopBar) —
-// só existem quando o visitante está logado como cliente deste tenant (cookie próprio
-// por slug, ver lib/client-session.ts). Falha (token expirado, backend fora) degrada
-// pra "deslogado" em vez de quebrar a página pública inteira por causa de uma
-// conveniência de navbar.
+// Dados do chip de perfil e do badge de "Compromissos" na navbar (ver TenantTopBar) — só
+// existem quando o visitante está logado (conta global, cookie único, ver
+// lib/consumer-session.ts). A lista de agendamentos cruza todos os salões, então o contador
+// filtra pelos deste. Falha (token expirado, backend fora) degrada pra "deslogado" em vez de
+// quebrar a página pública inteira por causa de uma conveniência de navbar.
 async function getClientNav(slug: string) {
-  const token = await getClientToken(slug);
+  const token = await getConsumerToken();
   if (!token) return null;
 
   try {
-    const data = await clientAuthedFetch<MyBookingsResponse>(
-      slug,
-      `/public/tenants/${slug}/my-bookings`,
-    );
+    const [me, bookings] = await Promise.all([
+      consumerAuthedFetch<ConsumerMe>("/public/consumer/me"),
+      consumerAuthedFetch<PublicBooking[]>("/public/consumer/bookings"),
+    ]);
     const now = DateTime.now();
-    const upcomingCount = data.bookings.filter(
-      (b) => b.status === "CONFIRMED" && DateTime.fromISO(b.startAt) >= now,
+    const upcomingCount = bookings.filter(
+      (b) =>
+        b.tenant?.slug === slug && b.status === "CONFIRMED" && DateTime.fromISO(b.startAt) >= now,
     ).length;
-    return { name: data.client.name, upcomingCount };
+    return { name: me.name, upcomingCount };
   } catch {
     return null;
   }

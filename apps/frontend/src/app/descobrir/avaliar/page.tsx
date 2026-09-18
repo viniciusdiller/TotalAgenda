@@ -1,260 +1,40 @@
-"use client";
-
-import { useEffect, useState } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
-import clsx from "clsx";
-import { DateTime } from "luxon";
-import { CaretLeft, Star } from "@phosphor-icons/react/dist/ssr";
+import { redirect } from "next/navigation";
+import { CaretLeft } from "@phosphor-icons/react/dist/ssr";
 import type { ReviewablePastAppointment } from "@totalagenda/shared-types";
-import { ApiError } from "@/lib/api";
-import { formatPhoneBR } from "@/lib/masks";
-import {
-  consumerApi,
-  getConsumerToken,
-  setConsumerToken,
-} from "@/lib/marketplace-api";
+import { consumerAuthedFetch } from "@/lib/consumer-session";
 import { Footer } from "@/components/marketing/Footer";
+import { ReviewList } from "./ReviewList";
 
-const FOCUS_RING =
-  "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/40 focus-visible:border-accent-500 rounded-md";
+export const metadata: Metadata = { title: "Avaliar visitas - TotalAgenda" };
 
-function Stars({ value, onChange }: { value: number; onChange: (n: number) => void }) {
-  return (
-    <div className="flex gap-1">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <button
-          key={n}
-          type="button"
-          onClick={() => onChange(n)}
-          aria-label={`${n} estrelas`}
-          className={FOCUS_RING}
-        >
-          <Star size={24} weight={n <= value ? "fill" : "regular"} className="text-amber-500" />
-        </button>
-      ))}
-    </div>
-  );
-}
-
-export default function AvaliarPage() {
-  const [authed, setAuthed] = useState(false);
-  const [checking, setChecking] = useState(true);
-
-  const [mode, setMode] = useState<"login" | "register">("login");
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [consent, setConsent] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
-
-  const [pending, setPending] = useState<ReviewablePastAppointment[]>([]);
-  const [rating, setRating] = useState<Record<string, number>>({});
-  const [comment, setComment] = useState<Record<string, string>>({});
-  const [done, setDone] = useState<Record<string, boolean>>({});
-  const [sending, setSending] = useState<Record<string, boolean>>({});
-  const [authPending, setAuthPending] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!getConsumerToken()) {
-      setChecking(false);
-      return;
-    }
-    consumerApi
-      .me()
-      .then(() => {
-        setAuthed(true);
-        return consumerApi.pendingReviews().then(setPending);
-      })
-      .catch(() => setConsumerToken(null))
-      .finally(() => setChecking(false));
-  }, []);
-
-  async function submitAuth(e: React.FormEvent) {
-    e.preventDefault();
-    setAuthError(null);
-    setAuthPending(true);
-    try {
-      const session =
-        mode === "login"
-          ? await consumerApi.login(phone)
-          : await consumerApi.register({ name, phone, consent });
-      setConsumerToken(session.accessToken);
-      setAuthed(true);
-      setPending(await consumerApi.pendingReviews());
-    } catch (err) {
-      setAuthError(err instanceof ApiError ? err.message : "Erro.");
-    } finally {
-      setAuthPending(false);
-    }
-  }
-
-  async function submitReview(appointmentId: string) {
-    setMsg(null);
-    setSending((s) => ({ ...s, [appointmentId]: true }));
-    try {
-      await consumerApi.submitReview({
-        appointmentId,
-        rating: rating[appointmentId] ?? 5,
-        comment: comment[appointmentId]?.trim() || undefined,
-      });
-      setDone((d) => ({ ...d, [appointmentId]: true }));
-    } catch (err) {
-      setMsg(err instanceof ApiError ? err.message : "Erro ao enviar.");
-    } finally {
-      setSending((s) => ({ ...s, [appointmentId]: false }));
-    }
-  }
-
-  if (checking) {
-    return (
-      <>
-        <main className="mx-auto max-w-md px-4 py-10 text-sm">Carregando...</main>
-        <Footer />
-      </>
-    );
+export default async function AvaliarPage() {
+  // Mesma conta global do resto do site (cookie httpOnly único) — sem sessão, vai pro login e
+  // volta pra cá.
+  const pending = await consumerAuthedFetch<ReviewablePastAppointment[]>(
+    "/public/consumer/reviews/pending",
+  ).catch(() => null);
+  if (!pending) {
+    redirect("/minha-conta/entrar?next=/descobrir/avaliar");
   }
 
   return (
     <>
-    <main className="mx-auto max-w-md px-4 py-10">
-      <Link
-        href="/descobrir"
-        className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900 dark:text-stone-400 dark:hover:text-white"
-      >
-        <CaretLeft size={14} />
-        Descobrir
-      </Link>
-      <h1 className="mt-3 font-display text-2xl font-bold text-zinc-900 dark:text-white">
-        Avaliar visitas
-      </h1>
-
-      {!authed ? (
-        <form onSubmit={submitAuth} className="mt-6 space-y-3">
-          <div className="flex gap-2 text-sm">
-            <button
-              type="button"
-              onClick={() => setMode("login")}
-              className={clsx(
-                mode === "login" ? "font-semibold text-accent-600" : "text-zinc-400",
-                FOCUS_RING,
-              )}
-            >
-              Entrar
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("register")}
-              className={clsx(
-                mode === "register" ? "font-semibold text-accent-600" : "text-zinc-400",
-                FOCUS_RING,
-              )}
-            >
-              Criar conta
-            </button>
-          </div>
-
-          {mode === "register" ? (
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Seu nome"
-              required
-              className={clsx(
-                "w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white",
-                FOCUS_RING,
-              )}
-            />
-          ) : null}
-          <input
-            value={formatPhoneBR(phone)}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="(11) 91234-5678"
-            inputMode="tel"
-            type="tel"
-            required
-            className={clsx(
-              "w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white",
-              FOCUS_RING,
-            )}
-          />
-          {mode === "register" ? (
-            <label className="flex items-start gap-2 text-xs text-zinc-500 dark:text-stone-400">
-              <input
-                type="checkbox"
-                checked={consent}
-                onChange={(e) => setConsent(e.target.checked)}
-                required
-                className={clsx("mt-0.5", FOCUS_RING)}
-              />
-              Aceito os termos de uso e a política de privacidade. Meus dados serão usados só
-              para identificar minhas visitas e avaliações.
-            </label>
-          ) : null}
-          {authError ? <p className="text-sm text-red-600">{authError}</p> : null}
-          <button
-            type="submit"
-            disabled={authPending}
-            className={clsx(
-              "rounded-full bg-accent-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-accent-600 disabled:opacity-60",
-              FOCUS_RING,
-            )}
-          >
-            {authPending ? "Enviando..." : mode === "login" ? "Entrar" : "Criar conta"}
-          </button>
-        </form>
-      ) : pending.length === 0 ? (
-        <p className="mt-6 text-sm text-zinc-500 dark:text-stone-400">
-          Nenhuma visita concluída aguardando avaliação.
-        </p>
-      ) : (
-        <ul className="mt-6 space-y-4">
-          {pending.map((a) => (
-            <li key={a.id} className="rounded-xl border border-zinc-200 p-4 dark:border-white/10">
-              <p className="font-medium text-zinc-900 dark:text-white">{a.tenant.name}</p>
-              <p className="text-xs text-zinc-400">
-                {a.items.map((i) => i.service.name).join(", ")} ·{" "}
-                {DateTime.fromISO(a.startAt).setLocale("pt-BR").toFormat("dd/LL/yyyy")}
-              </p>
-              {done[a.id] ? (
-                <p className="mt-2 text-sm text-emerald-600 dark:text-emerald-400">
-                  Avaliação enviada. Obrigado!
-                </p>
-              ) : (
-                <div className="mt-3 space-y-2">
-                  <Stars
-                    value={rating[a.id] ?? 5}
-                    onChange={(n) => setRating((r) => ({ ...r, [a.id]: n }))}
-                  />
-                  <textarea
-                    value={comment[a.id] ?? ""}
-                    onChange={(e) => setComment((c) => ({ ...c, [a.id]: e.target.value }))}
-                    placeholder="Comentário (opcional)"
-                    rows={2}
-                    className={clsx(
-                      "w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white",
-                      FOCUS_RING,
-                    )}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => submitReview(a.id)}
-                    disabled={sending[a.id]}
-                    className={clsx(
-                      "rounded-full bg-accent-500 px-5 py-2 text-sm font-semibold text-white hover:bg-accent-600 disabled:opacity-60",
-                      FOCUS_RING,
-                    )}
-                  >
-                    {sending[a.id] ? "Enviando..." : "Enviar avaliação"}
-                  </button>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-      {msg ? <p className="mt-4 text-sm text-red-600 dark:text-red-400">{msg}</p> : null}
-    </main>
-    <Footer />
+      <main className="mx-auto max-w-md px-4 py-10">
+        <Link
+          href="/descobrir"
+          className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900 dark:text-stone-400 dark:hover:text-white"
+        >
+          <CaretLeft size={14} />
+          Descobrir
+        </Link>
+        <h1 className="mt-3 font-display text-2xl font-bold text-zinc-900 dark:text-white">
+          Avaliar visitas
+        </h1>
+        <ReviewList pending={pending} />
+      </main>
+      <Footer />
     </>
   );
 }

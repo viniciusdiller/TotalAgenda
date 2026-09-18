@@ -26,7 +26,7 @@ export function TenantFooter({ tenant }: { tenant: PublicTenant }) {
 
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
           <Link
-            href={`/${tenant.slug}/entrar`}
+            href={`/minha-conta/entrar?next=${encodeURIComponent(`/${tenant.slug}`)}`}
             className="font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-stone-300 dark:hover:text-white"
           >
             Entrar na minha conta

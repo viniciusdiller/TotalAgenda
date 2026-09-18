@@ -1,15 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { motion } from "motion/react";
 import { DateTime } from "luxon";
 import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import type {
   AvailableSlot,
+  PublicBooking,
   PublicProfessional,
   PublicService,
 } from "@totalagenda/shared-types";
-import { publicApi, ApiError } from "@/lib/api";
+import { publicApi } from "@/lib/api";
+import { createBookingAction, joinWaitlistAction } from "@/app/[slug]/agendar/actions";
 import { StepIndicator } from "./StepIndicator";
 import { ServiceStep } from "./ServiceStep";
 import { ProfessionalStep } from "./ProfessionalStep";
@@ -26,13 +29,13 @@ type Step = 1 | 2 | 3 | 4;
 export function BookingWizard({
   slug,
   tenantName,
-  initialClient,
+  client,
 }: {
   slug: string;
   tenantName: string;
-  // Presente quando o visitante já tem sessão de cliente (ver app/[slug]/agendar/page.tsx)
-  // — pula a coleta manual de nome/telefone no último passo.
-  initialClient?: { name: string; phone: string } | null;
+  // Agendar exige login (ver app/[slug]/agendar/page.tsx, que redireciona quem não tem
+  // sessão): quem agenda é sempre a conta logada, nunca dados digitados aqui.
+  client: { name: string; phone: string };
 }) {
   const [step, setStep] = useState<Step>(1);
 
@@ -58,14 +61,10 @@ export function BookingWizard({
   // troca de data rápido e a resposta da data anterior chega depois da mais nova).
   const slotsRequestRef = useRef(0);
 
-  const [clientName, setClientName] = useState(initialClient?.name ?? "");
-  const [clientPhone, setClientPhone] = useState(initialClient?.phone ?? "");
-  const [formErrors, setFormErrors] = useState<{ clientName?: string; clientPhone?: string }>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [booking, setBooking] = useState<Awaited<ReturnType<typeof publicApi.createBooking>> | null>(
-    null,
-  );
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const [booking, setBooking] = useState<PublicBooking | null>(null);
 
   const loadServices = useCallback(() => {
     setServices(null);
@@ -154,45 +153,32 @@ export function BookingWizard({
     }
   }
 
-  async function handleJoinWaitlist(input: { clientName: string; clientPhone: string }) {
-    if (!selectedService) return;
-    await publicApi.joinWaitlist(slug, {
+  async function handleJoinWaitlist() {
+    if (!selectedService) return { error: "Selecione um serviço primeiro." };
+    return joinWaitlistAction(slug, {
       serviceId: selectedService.id,
       professionalId: selectedProfessional?.id,
-      clientName: input.clientName,
-      clientPhone: input.clientPhone,
       preferredDate: selectedDate,
     });
   }
 
   async function handleConfirmBooking() {
-    if (!initialClient) {
-      const errors: typeof formErrors = {};
-      if (clientName.trim().length < 2) errors.clientName = "Informe seu nome completo.";
-      if (clientPhone.trim().length < 8) errors.clientPhone = "Informe um telefone válido.";
-      setFormErrors(errors);
-      if (Object.keys(errors).length > 0) return;
-    }
     if (!selectedProfessional || !selectedService || !selectedSlot) return;
 
     setSubmitting(true);
     setSubmitError(null);
-    try {
-      const result = await publicApi.createBooking(slug, {
-        professionalId: selectedProfessional.id,
-        serviceId: selectedService.id,
-        startAt: selectedSlot.startAt,
-        clientName: clientName.trim(),
-        clientPhone: clientPhone.trim(),
-      });
-      setBooking(result);
-    } catch (err) {
-      setSubmitError(
-        err instanceof ApiError ? err.message : "Não foi possível confirmar o agendamento.",
-      );
-    } finally {
-      setSubmitting(false);
+    const result = await createBookingAction(slug, {
+      professionalId: selectedProfessional.id,
+      serviceId: selectedService.id,
+      startAt: selectedSlot.startAt,
+    });
+    if ("booking" in result) {
+      setBooking(result.booking);
+    } else {
+      setSubmitError(result.error);
+      setSessionExpired(!!result.unauthorized);
     }
+    setSubmitting(false);
   }
 
   if (booking) {
@@ -288,16 +274,19 @@ export function BookingWizard({
                   service={selectedService}
                   professional={selectedProfessional}
                   startAt={selectedSlot.startAt}
-                  clientName={clientName}
-                  clientPhone={clientPhone}
-                  onChangeName={setClientName}
-                  onChangePhone={setClientPhone}
-                  errors={formErrors}
-                  lockedClient={initialClient ?? undefined}
+                  client={client}
                 />
 
                 {submitError ? (
                   <p className="text-sm text-red-600 dark:text-red-400">{submitError}</p>
+                ) : null}
+                {sessionExpired ? (
+                  <Link
+                    href={`/minha-conta/entrar?next=${encodeURIComponent(`/${slug}/agendar`)}`}
+                    className="text-sm font-semibold text-(--tenant-accent)"
+                  >
+                    Entrar na minha conta
+                  </Link>
                 ) : null}
 
                 <Button
