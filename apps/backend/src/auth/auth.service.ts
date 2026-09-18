@@ -4,6 +4,7 @@ import * as bcrypt from "bcrypt";
 import { Role } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
 import { hashPasswordSetToken } from "../common/utils/password-set-token.util";
+import { LOCKOUT_THRESHOLD, lockoutDurationMs } from "../common/utils/lockout.util";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshDto } from "./dto/refresh.dto";
 import { SetPasswordDto } from "./dto/set-password.dto";
@@ -19,18 +20,6 @@ const BCRYPT_ROUNDS = 12;
 // resposta não pode denunciar o que a mensagem esconde").
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync("timing-attack-mitigation", BCRYPT_ROUNDS);
 
-// Lockout progressivo por conta (email), além do rate limit por IP que já existe no
-// ThrottlerGuard (@Throttle no controller) — um cobre "muitas tentativas de qualquer IP",
-// o outro cobre "muitas tentativas contra esta conta específica", inclusive de IPs
-// diferentes (botnet). LOCKOUT_THRESHOLD tentativas erradas seguidas travam a conta; cada
-// tentativa extra durante esse número escalona pra um bloqueio mais longo, até o teto.
-const LOCKOUT_THRESHOLD = 5;
-const LOCKOUT_SCHEDULE_MINUTES = [1, 5, 15, 30, 60];
-
-function lockoutDurationMs(failedAttempts: number): number {
-  const step = Math.min(failedAttempts - LOCKOUT_THRESHOLD, LOCKOUT_SCHEDULE_MINUTES.length - 1);
-  return LOCKOUT_SCHEDULE_MINUTES[Math.max(step, 0)] * 60_000;
-}
 
 @Injectable()
 export class AuthService {

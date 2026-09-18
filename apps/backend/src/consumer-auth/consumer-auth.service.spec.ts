@@ -1,63 +1,298 @@
-import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, UnauthorizedException } from "@nestjs/common";
+import * as bcrypt from "bcrypt";
+import { JwtService } from "@nestjs/jwt";
 import { ConsumerAuthService } from "./consumer-auth.service";
 import { PrismaService } from "../prisma/prisma.service";
-import { JwtService } from "@nestjs/jwt";
 
-function build(over: Record<string, unknown> = {}) {
-  const prisma = {
+const CORRECT_PASSWORD = "senha-correta-123";
+// bcrypt de verdade (não mockado): o timing/comparação é parte do que os testes de lockout
+// verificam — mockar bcrypt.compare esconderia justamente o que precisa ser testado.
+const PASSWORD_HASH = bcrypt.hashSync(CORRECT_PASSWORD, 4);
+
+const PHONE = "11988887777";
+
+const BASE_CONSUMER = {
+  id: "c-1",
+  phone: PHONE,
+  name: "Ana",
+  email: "ana@example.com",
+  passwordHash: PASSWORD_HASH as string | null,
+  failedLoginAttempts: 0,
+  lockedUntil: null as Date | null,
+};
+
+// Simula a semântica de UPDATE ... SET x = x + 1 (estado mutável compartilhado entre
+// chamadas), senão o teste de corrida não pega a regressão de lockout sob concorrência.
+function build(initialConsumer: Record<string, unknown> | null = null, over: Record<string, unknown> = {}) {
+  const state: Record<string, unknown> = initialConsumer ? { ...initialConsumer } : {};
+  const prisma: Record<string, unknown> = {
     consumer: {
-      findUnique: jest.fn().mockResolvedValue(null),
-      findUniqueOrThrow: jest.fn(),
-      create: jest.fn().mockImplementation(({ data }) => ({ id: "c-1", ...data })),
+      findUnique: jest.fn().mockImplementation(() => Promise.resolve(initialConsumer ? { ...state } : null)),
+      findUniqueOrThrow: jest.fn().mockImplementation(() => Promise.resolve({ ...state })),
+      create: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: "c-new", ...data })),
+      update: jest.fn().mockImplementation(({ data }) => {
+        const increment = data.failedLoginAttempts?.increment;
+        if (typeof increment === "number") {
+          state.failedLoginAttempts = ((state.failedLoginAttempts as number) ?? 0) + increment;
+        } else if ("failedLoginAttempts" in data) {
+          state.failedLoginAttempts = data.failedLoginAttempts;
+        }
+        if ("lockedUntil" in data) state.lockedUntil = data.lockedUntil;
+        if ("passwordHash" in data) state.passwordHash = data.passwordHash;
+        if ("email" in data) state.email = data.email;
+        if ("name" in data) state.name = data.name;
+        return Promise.resolve({ ...state });
+      }),
       delete: jest.fn(),
     },
-    client: { upsert: jest.fn().mockResolvedValue({ id: "cl-1" }) },
+    client: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
+      upsert: jest.fn().mockResolvedValue({ id: "cl-1", name: "Ana", phone: PHONE }),
+      update: jest.fn(),
+    },
     consumerTenantLink: { upsert: jest.fn() },
-    tenant: { findUnique: jest.fn() },
-    $transaction: jest.fn().mockImplementation(async (cb) => cb(prisma)),
     ...over,
-  } as unknown as PrismaService;
+  };
+  prisma.$transaction = jest.fn().mockImplementation(async (cb: (tx: unknown) => unknown) => cb(prisma));
   const jwt = { sign: jest.fn().mockReturnValue("tok") } as unknown as JwtService;
-  return { service: new ConsumerAuthService(prisma, jwt), prisma };
+  return { service: new ConsumerAuthService(prisma as unknown as PrismaService, jwt), prisma: prisma as any };
 }
 
-describe("ConsumerAuthService", () => {
-  const base = { name: "Ana", phone: "11988887777", consent: true };
-
-  it("register sem consentimento é rejeitado", async () => {
-    const { service } = build();
-    await expect(service.register({ ...base, consent: false })).rejects.toThrow(BadRequestException);
+describe("ConsumerAuthService.loginStart", () => {
+  it("devolve 'register' quando não há Consumer nem Client com o telefone", async () => {
+    const { service } = build(null);
+    await expect(service.loginStart({ phone: PHONE })).resolves.toEqual({ status: "register" });
   });
 
-  it("register com telefone já existente lança Conflict", async () => {
-    const { service, prisma } = build();
-    (prisma.consumer.findUnique as jest.Mock).mockResolvedValue({ id: "existe" });
-    await expect(service.register(base)).rejects.toThrow(ConflictException);
+  it("devolve 'needs_password_setup' quando só existe Client (em qualquer tenant)", async () => {
+    const { service, prisma } = build(null);
+    prisma.client.findFirst.mockResolvedValue({ id: "cl-9" });
+    await expect(service.loginStart({ phone: PHONE })).resolves.toEqual({ status: "needs_password_setup" });
+    // Cross-tenant de propósito: sem filtro de tenantId.
+    expect(prisma.client.findFirst).toHaveBeenCalledWith({ where: { phone: PHONE }, select: { id: true } });
   });
 
-  it("register normaliza telefone, grava consentimento e devolve token", async () => {
-    const { service, prisma } = build();
-    const result = await service.register({ ...base, phone: "+55 (11) 98888-7777" });
-    const data = (prisma.consumer.create as jest.Mock).mock.calls[0][0].data;
-    expect(data.phone).toBe("11988887777");
+  it("devolve 'needs_password_setup' para Consumer sem senha e 'password_required' com senha", async () => {
+    const semSenha = build({ ...BASE_CONSUMER, passwordHash: null });
+    await expect(semSenha.service.loginStart({ phone: PHONE })).resolves.toEqual({
+      status: "needs_password_setup",
+    });
+    const comSenha = build({ ...BASE_CONSUMER });
+    await expect(comSenha.service.loginStart({ phone: PHONE })).resolves.toEqual({
+      status: "password_required",
+    });
+  });
+});
+
+describe("ConsumerAuthService.login", () => {
+  it("rejeita telefone inexistente com a mesma UnauthorizedException genérica de senha errada", async () => {
+    const { service } = build(null);
+    await expect(service.login({ phone: PHONE, password: "qualquer" })).rejects.toThrow(
+      new UnauthorizedException("Credenciais inválidas."),
+    );
+  });
+
+  // Regressão: só o loginStart pode sugerir "crie sua senha". No login, conta sem senha tem que
+  // ser indistinguível de conta inexistente.
+  it("rejeita conta sem senha (não migrada) com o mesmo 401 genérico", async () => {
+    const { service } = build({ ...BASE_CONSUMER, passwordHash: null });
+    await expect(service.login({ phone: PHONE, password: "qualquer" })).rejects.toThrow(
+      new UnauthorizedException("Credenciais inválidas."),
+    );
+  });
+
+  it("rejeita senha errada e incrementa failedLoginAttempts atomicamente", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER });
+    await expect(service.login({ phone: PHONE, password: "errada" })).rejects.toThrow(UnauthorizedException);
+    expect(prisma.consumer.update).toHaveBeenCalledWith({
+      where: { id: "c-1" },
+      data: { failedLoginAttempts: { increment: 1 } },
+      select: { failedLoginAttempts: true },
+    });
+  });
+
+  it("trava a conta na 5ª tentativa errada seguida", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER, failedLoginAttempts: 4 });
+    await expect(service.login({ phone: PHONE, password: "errada" })).rejects.toThrow(UnauthorizedException);
+    const calls = prisma.consumer.update.mock.calls;
+    expect(calls[0][0].data).toEqual({ failedLoginAttempts: { increment: 1 } });
+    expect(calls[1][0].data.lockedUntil.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  // Regressão (mesma do login de staff): ler-somar-gravar perdia tentativas sob força bruta
+  // paralela e o lockout nunca disparava.
+  it("incrementa corretamente sob duas tentativas concorrentes", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER });
+    await Promise.all([
+      service.login({ phone: PHONE, password: "errada-1" }).catch(() => {}),
+      service.login({ phone: PHONE, password: "errada-2" }).catch(() => {}),
+    ]);
+    const finalState = await prisma.consumer.findUnique();
+    expect(finalState.failedLoginAttempts).toBe(2);
+  });
+
+  it("rejeita a SENHA CORRETA enquanto travada, sem tocar no contador", async () => {
+    const { service, prisma } = build({
+      ...BASE_CONSUMER,
+      failedLoginAttempts: 6,
+      lockedUntil: new Date(Date.now() + 5 * 60_000),
+    });
+    await expect(service.login({ phone: PHONE, password: CORRECT_PASSWORD })).rejects.toThrow(
+      UnauthorizedException,
+    );
+    // Senão um atacante mantém a conta bloqueada pra sempre martelando durante a janela.
+    expect(prisma.consumer.update).not.toHaveBeenCalled();
+  });
+
+  it("permite login depois que lockedUntil passou e reseta o contador", async () => {
+    const { service, prisma } = build({
+      ...BASE_CONSUMER,
+      failedLoginAttempts: 5,
+      lockedUntil: new Date(Date.now() - 1000),
+    });
+    const result = await service.login({ phone: PHONE, password: CORRECT_PASSWORD });
+    expect(result.accessToken).toBe("tok");
+    expect(prisma.consumer.update).toHaveBeenCalledWith({
+      where: { id: "c-1" },
+      data: { failedLoginAttempts: 0, lockedUntil: null },
+    });
+  });
+
+  it("login bem-sucedido sem falhas anteriores não chama update à toa", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER });
+    await service.login({ phone: PHONE, password: CORRECT_PASSWORD });
+    expect(prisma.consumer.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("ConsumerAuthService.register", () => {
+  const dto = {
+    name: "Ana",
+    phone: PHONE,
+    email: "Ana@Example.com",
+    password: CORRECT_PASSWORD,
+    consent: true,
+  };
+
+  it("sem consentimento é rejeitado", async () => {
+    const { service } = build(null);
+    await expect(service.register({ ...dto, consent: false })).rejects.toThrow(BadRequestException);
+  });
+
+  it("telefone já existente lança Conflict", async () => {
+    const { service } = build({ ...BASE_CONSUMER });
+    await expect(service.register(dto)).rejects.toThrow(ConflictException);
+  });
+
+  it("normaliza telefone/e-mail, grava só o HASH da senha e o consentimento", async () => {
+    const { service, prisma } = build(null);
+    const result = await service.register({ ...dto, phone: "+55 (11) 98888-7777" });
+    const data = prisma.consumer.create.mock.calls[0][0].data;
+    expect(data.phone).toBe(PHONE);
+    expect(data.email).toBe("ana@example.com");
+    expect(data.passwordHash).not.toBe(CORRECT_PASSWORD);
+    expect(await bcrypt.compare(CORRECT_PASSWORD, data.passwordHash)).toBe(true);
     expect(data.consentedAt).toBeInstanceOf(Date);
     expect(result.accessToken).toBe("tok");
   });
+});
 
-  it("login sem conta lança NotFound", async () => {
-    const { service } = build();
-    await expect(service.login({ phone: "11988887777" })).rejects.toThrow(NotFoundException);
+describe("ConsumerAuthService.setPasswordForMigration", () => {
+  const dto = { phone: PHONE, password: CORRECT_PASSWORD, email: "ana@example.com", consent: true };
+
+  // Regressão: sem essa checagem, qualquer um que soubesse o telefone poderia RESETAR a senha
+  // de uma conta já protegida por este endpoint.
+  it("recusa quando a conta já tem senha, sem alterar nada", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER });
+    await expect(service.setPasswordForMigration(dto)).rejects.toThrow(ConflictException);
+    expect(prisma.consumer.update).not.toHaveBeenCalled();
   });
 
-  it("ensureLink faz upsert de client e vínculo (idempotente)", async () => {
-    const { service, prisma } = build();
-    (prisma.consumer.findUniqueOrThrow as jest.Mock).mockResolvedValue({
-      id: "c-1",
-      name: "Ana",
-      phone: "11988887777",
-    });
-    await service.ensureLink("c-1", "t-1");
-    expect(prisma.client.upsert).toHaveBeenCalled();
-    expect(prisma.consumerTenantLink.upsert).toHaveBeenCalled();
+  it("define a senha de um Consumer existente sem senha e faz o backfill", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER, passwordHash: null });
+    prisma.client.findMany.mockResolvedValue([
+      { id: "cl-a", tenantId: "t-a" },
+      { id: "cl-b", tenantId: "t-b" },
+    ]);
+    const result = await service.setPasswordForMigration(dto);
+    expect(result.accessToken).toBe("tok");
+    expect(prisma.consumerTenantLink.upsert).toHaveBeenCalledTimes(2);
+  });
+
+  it("cria o Consumer a partir do Client mais recente quando não existe", async () => {
+    const { service, prisma } = build(null);
+    prisma.client.findFirst.mockResolvedValue({ name: "Ana Souza" });
+    await service.setPasswordForMigration(dto);
+    expect(prisma.client.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { phone: PHONE }, orderBy: { updatedAt: "desc" } }),
+    );
+    expect(prisma.consumer.create.mock.calls[0][0].data.name).toBe("Ana Souza");
+  });
+
+  it("rejeita quando não há Consumer nem histórico de Client", async () => {
+    const { service } = build(null);
+    await expect(service.setPasswordForMigration(dto)).rejects.toThrow(BadRequestException);
+  });
+
+  // Regressão de escopo: o backfill é em lote, entre vários tenants — não pode sobrescrever o
+  // nome que a ficha de cada salão guarda (ensureLink, de propósito, resincroniza; este não).
+  it("o backfill nunca altera Client.name de nenhum tenant", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER, passwordHash: null });
+    prisma.client.findMany.mockResolvedValue([{ id: "cl-a", tenantId: "t-a" }]);
+    await service.setPasswordForMigration(dto);
+    expect(prisma.client.update).not.toHaveBeenCalled();
+    expect(prisma.client.upsert).not.toHaveBeenCalled();
+  });
+
+  it("exige consentimento", async () => {
+    const { service } = build(null);
+    await expect(service.setPasswordForMigration({ ...dto, consent: false })).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+});
+
+describe("ConsumerAuthService.changePassword / updateProfile", () => {
+  it("recusa senha atual incorreta", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER });
+    await expect(
+      service.changePassword({ consumerId: "c-1" }, { currentPassword: "errada", newPassword: "nova-senha-123" }),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.consumer.update).not.toHaveBeenCalled();
+  });
+
+  it("troca a senha (só o hash) quando a atual confere", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER });
+    await service.changePassword(
+      { consumerId: "c-1" },
+      { currentPassword: CORRECT_PASSWORD, newPassword: "nova-senha-123" },
+    );
+    const hash = prisma.consumer.update.mock.calls[0][0].data.passwordHash;
+    expect(hash).not.toBe("nova-senha-123");
+    expect(await bcrypt.compare("nova-senha-123", hash)).toBe(true);
+  });
+
+  it("updateProfile normaliza e-mail e nunca aceita telefone", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER });
+    await service.updateProfile({ consumerId: "c-1" }, { name: " Ana Maria ", email: "NOVA@Example.com" });
+    const data = prisma.consumer.update.mock.calls[0][0].data;
+    expect(data).toEqual({ name: "Ana Maria", email: "nova@example.com" });
+    expect(data).not.toHaveProperty("phone");
+  });
+});
+
+describe("ConsumerAuthService.ensureLink", () => {
+  it("faz upsert de client e vínculo usando o client recebido (participa da transação de quem chama)", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER });
+    const tx = {
+      consumer: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: "c-1", name: "Ana", phone: PHONE }) },
+      client: { upsert: jest.fn().mockResolvedValue({ id: "cl-1" }) },
+      consumerTenantLink: { upsert: jest.fn() },
+    };
+    await service.ensureLink(tx as never, "c-1", "t-1");
+    expect(tx.client.upsert).toHaveBeenCalled();
+    expect(tx.consumerTenantLink.upsert).toHaveBeenCalled();
+    expect(prisma.client.upsert).not.toHaveBeenCalled();
   });
 });

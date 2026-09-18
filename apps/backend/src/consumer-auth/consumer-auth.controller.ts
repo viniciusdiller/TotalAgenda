@@ -1,7 +1,14 @@
-import { Body, Controller, Delete, Get, NotFoundException, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Patch, Post, UseGuards } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { ConsumerAuthService } from "./consumer-auth.service";
-import { ConsumerLoginDto, RegisterConsumerDto } from "./dto/consumer-dtos";
+import {
+  ChangeConsumerPasswordDto,
+  ConsumerLoginDto,
+  ConsumerLoginStartDto,
+  ConsumerSetPasswordMigrationDto,
+  RegisterConsumerDto,
+  UpdateConsumerProfileDto,
+} from "./dto/consumer-dtos";
 import { ConsumerJwtAuthGuard } from "./guards/consumer-jwt-auth.guard";
 import { CurrentConsumer } from "./decorators/current-consumer.decorator";
 import { AuthenticatedConsumer } from "./types/consumer-auth-user";
@@ -10,6 +17,13 @@ import { Public } from "../common/decorators/public.decorator";
 @Controller("public/consumer")
 export class ConsumerAuthController {
   constructor(private readonly consumerAuth: ConsumerAuthService) {}
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post("login/start")
+  loginStart(@Body() dto: ConsumerLoginStartDto) {
+    return this.consumerAuth.loginStart(dto);
+  }
 
   @Public()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
@@ -26,6 +40,13 @@ export class ConsumerAuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post("login/set-password")
+  setPassword(@Body() dto: ConsumerSetPasswordMigrationDto) {
+    return this.consumerAuth.setPasswordForMigration(dto);
+  }
+
+  @Public()
   @UseGuards(ConsumerJwtAuthGuard)
   @Get("me")
   me(@CurrentConsumer() consumer: AuthenticatedConsumer) {
@@ -34,24 +55,23 @@ export class ConsumerAuthController {
 
   @Public()
   @UseGuards(ConsumerJwtAuthGuard)
+  @Patch("me")
+  updateProfile(@CurrentConsumer() consumer: AuthenticatedConsumer, @Body() dto: UpdateConsumerProfileDto) {
+    return this.consumerAuth.updateProfile(consumer, dto);
+  }
+
+  @Public()
+  @UseGuards(ConsumerJwtAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Patch("password")
+  changePassword(@CurrentConsumer() consumer: AuthenticatedConsumer, @Body() dto: ChangeConsumerPasswordDto) {
+    return this.consumerAuth.changePassword(consumer, dto);
+  }
+
+  @Public()
+  @UseGuards(ConsumerJwtAuthGuard)
   @Delete("me")
   deleteAccount(@CurrentConsumer() consumer: AuthenticatedConsumer) {
     return this.consumerAuth.deleteAccount(consumer);
-  }
-
-  // Vincula o consumidor logado a um estabelecimento (cria/associa o Client daquele
-  // tenant). Chamado pelo portal após um agendamento pelo marketplace.
-  @Public()
-  @UseGuards(ConsumerJwtAuthGuard)
-  @Throttle({ default: { limit: 20, ttl: 60_000 } })
-  @Post("link/:slug")
-  async link(
-    @CurrentConsumer() consumer: AuthenticatedConsumer,
-    @Param("slug") slug: string,
-  ) {
-    const tenant = await this.consumerAuth.tenantIdBySlug(slug);
-    if (!tenant) throw new NotFoundException("Estabelecimento não encontrado.");
-    await this.consumerAuth.ensureLink(consumer.consumerId, tenant);
-    return { linked: true };
   }
 }
