@@ -1,3 +1,4 @@
+import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import type { PublicService } from "@totalagenda/shared-types";
 import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
@@ -14,37 +15,54 @@ function formatDuration(minutes: number) {
   return rest ? `${hours}h${rest}` : `${hours}h`;
 }
 
-export function ServicesSection({ services }: { services: PublicService[] }) {
+export function ServicesSection({ slug, services }: { slug: string; services: PublicService[] }) {
   if (services.length === 0) return null;
 
   return (
     <Reveal>
-      <section className="border-t border-zinc-200 py-16 dark:border-white/10">
-        <Container className="max-w-2xl">
-          <SectionHeading eyebrow="O que oferecemos" title="Serviços" />
+      <section id="servicos" className="border-t border-zinc-200 py-16 dark:border-white/10">
+        <Container>
+          <SectionHeading
+            eyebrow="O que oferecemos"
+            title="Serviços"
+            action={
+              <span className="text-sm text-zinc-500 dark:text-stone-400">
+                {services.length} {services.length === 1 ? "serviço" : "serviços"}
+              </span>
+            }
+          />
 
-          <ul className="mt-6 flex flex-col divide-y divide-zinc-200 dark:divide-white/10">
+          <div className="mt-8 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
             {services.map((service) => (
-              <li key={service.id} className="flex items-center justify-between gap-6 py-4">
+              <div
+                key={service.id}
+                className="group flex flex-col gap-4 rounded-2xl border border-zinc-200 p-5 transition-colors hover:border-(--tenant-accent)/40 dark:border-white/10"
+              >
                 <div className="min-w-0">
-                  <p className="font-medium text-zinc-900 dark:text-white">{service.name}</p>
+                  <p className="font-brand font-semibold text-zinc-900 dark:text-white">{service.name}</p>
                   {service.description ? (
-                    <p className="mt-0.5 truncate text-sm text-zinc-500 dark:text-stone-400">
-                      {service.description}
-                    </p>
+                    <p className="mt-1 text-sm text-zinc-500 dark:text-stone-400">{service.description}</p>
                   ) : null}
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className="font-display font-semibold text-(--tenant-accent)">
-                    {formatPrice(service.priceCents)}
-                  </p>
-                  <p className="text-xs text-zinc-400 dark:text-stone-500">
+                  <p className="mt-2 text-xs text-zinc-400 dark:text-stone-500">
                     {formatDuration(service.durationMinutes)}
                   </p>
                 </div>
-              </li>
+
+                <div className="mt-auto flex items-center justify-between gap-3">
+                  <p className="font-brand text-lg font-bold text-zinc-900 dark:text-white">
+                    {formatPrice(service.priceCents)}
+                  </p>
+                  <a
+                    href={`/${slug}/agendar`}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-(--tenant-accent)/10 px-3.5 py-2 text-sm font-semibold text-(--tenant-accent) transition-colors group-hover:bg-(--tenant-accent) group-hover:text-white"
+                  >
+                    Agendar
+                    <ArrowRight size={14} />
+                  </a>
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         </Container>
       </section>
     </Reveal>

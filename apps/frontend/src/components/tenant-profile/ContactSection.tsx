@@ -2,7 +2,6 @@ import { MapPin, Clock, WhatsappLogo, ArrowUpRight } from "@phosphor-icons/react
 import type { PublicTenant } from "@totalagenda/shared-types";
 import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
-import { Button } from "../ui/Button";
 import { SectionHeading } from "../ui/SectionHeading";
 import { InstagramCard } from "./InstagramCard";
 
@@ -61,10 +60,15 @@ export function ContactSection({ tenant }: { tenant: PublicTenant }) {
                     ) : null}
                   </div>
                   {hasWhatsapp ? (
-                    <Button variant="tenant" href={`https://wa.me/${tenant.whatsappNumber}`} className="mt-4">
-                      <WhatsappLogo size={18} weight="bold" />
+                    <a
+                      href={`https://wa.me/${tenant.whatsappNumber}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-4 inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 py-3 text-[15px] font-semibold text-white shadow-lg transition-colors hover:bg-[#1cb457]"
+                    >
+                      <WhatsappLogo size={18} weight="fill" />
                       Chamar no WhatsApp
-                    </Button>
+                    </a>
                   ) : null}
                 </div>
               ) : null}

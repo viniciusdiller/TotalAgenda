@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { DateTime } from "luxon";
+import type { MyBookingsResponse } from "@totalagenda/shared-types";
 import { getTenant } from "./layout";
 import { publicApi } from "@/lib/api";
 import { marketplaceApi } from "@/lib/marketplace-api";
 import { ApiError } from "@/lib/api";
+import { getClientToken, clientAuthedFetch } from "@/lib/client-session";
 import { TenantProfileHeader } from "@/components/tenant-profile/TenantProfileHeader";
 import { ServicesSection } from "@/components/tenant-profile/ServicesSection";
 import { TeamSection } from "@/components/tenant-profile/TeamSection";
@@ -11,16 +14,45 @@ import { GallerySection } from "@/components/tenant-profile/GallerySection";
 import { ContactSection } from "@/components/tenant-profile/ContactSection";
 import { ReviewsSection } from "@/components/tenant-profile/ReviewsSection";
 
-// Avaliações só existem pra tenant com listedInMarketplace: true (é o que a rota de
-// marketplace exige) — não é toggle de exibição, é ausência de dado mesmo pra quem não
-// está listado, então 404 aqui é esperado, não erro.
-async function getReviews(slug: string) {
+// Avaliações e categorias (tags do header) só existem pra tenant com
+// listedInMarketplace: true (é o que a rota de marketplace exige) — não é toggle de
+// exibição, é ausência de dado mesmo pra quem não está listado, então 404 aqui é
+// esperado, não erro.
+async function getMarketplaceData(slug: string) {
   try {
     const establishment = await marketplaceApi.establishment(slug);
-    return { rating: establishment.rating, reviews: establishment.reviews };
+    return {
+      rating: establishment.rating,
+      reviews: establishment.reviews,
+      categories: establishment.categories,
+    };
   } catch (err) {
     if (err instanceof ApiError && err.statusCode === 404) return null;
     throw err;
+  }
+}
+
+// Dados do chip de perfil e do badge de "Compromissos" na navbar (ver TenantTopBar) —
+// só existem quando o visitante está logado como cliente deste tenant (cookie próprio
+// por slug, ver lib/client-session.ts). Falha (token expirado, backend fora) degrada
+// pra "deslogado" em vez de quebrar a página pública inteira por causa de uma
+// conveniência de navbar.
+async function getClientNav(slug: string) {
+  const token = await getClientToken(slug);
+  if (!token) return null;
+
+  try {
+    const data = await clientAuthedFetch<MyBookingsResponse>(
+      slug,
+      `/public/tenants/${slug}/my-bookings`,
+    );
+    const now = DateTime.now();
+    const upcomingCount = data.bookings.filter(
+      (b) => b.status === "CONFIRMED" && DateTime.fromISO(b.startAt) >= now,
+    ).length;
+    return { name: data.client.name, upcomingCount };
+  } catch {
+    return null;
   }
 }
 
@@ -48,26 +80,34 @@ export default async function TenantProfilePage({
     notFound();
   }
 
-  const [services, team, reviewsData] = await Promise.all([
+  const [services, team, marketplaceData, client] = await Promise.all([
     tenant.showServices ? publicApi.getServices(slug) : Promise.resolve([]),
     tenant.showTeam ? publicApi.getTeam(slug) : Promise.resolve([]),
-    getReviews(slug),
+    getMarketplaceData(slug),
+    getClientNav(slug),
   ]);
 
   return (
     <main className="flex-1 bg-stone-50 dark:bg-zinc-950">
-      <TenantProfileHeader tenant={tenant} rating={reviewsData?.rating ?? null} />
+      <TenantProfileHeader
+        tenant={tenant}
+        rating={marketplaceData?.rating ?? null}
+        categories={marketplaceData?.categories ?? []}
+        client={client}
+        servicesCount={services.length}
+        teamCount={team.length}
+      />
       {/* Ordem por prioridade real de decisão do cliente, não pela ordem em que os
           dados foram implementados: 1) prova visual do trabalho (o que mais pesa
           pra negócio de beleza) 2) o que tem e quanto custa 3) prova social
           reforçando a decisão 4) quem vai atender 5) logística de "como chegar",
           que só importa depois que a pessoa já decidiu marcar. */}
       {tenant.showGallery ? <GallerySection images={tenant.galleryImages} /> : null}
-      {tenant.showServices ? <ServicesSection services={services} /> : null}
-      {reviewsData ? (
-        <ReviewsSection rating={reviewsData.rating} reviews={reviewsData.reviews} />
+      {tenant.showServices ? <ServicesSection slug={slug} services={services} /> : null}
+      {marketplaceData ? (
+        <ReviewsSection rating={marketplaceData.rating} reviews={marketplaceData.reviews} />
       ) : null}
-      {tenant.showTeam ? <TeamSection team={team} /> : null}
+      {tenant.showTeam ? <TeamSection slug={slug} team={team} /> : null}
       {tenant.showContact ? <ContactSection tenant={tenant} /> : null}
     </main>
   );
