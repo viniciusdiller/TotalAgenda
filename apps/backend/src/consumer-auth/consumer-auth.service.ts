@@ -13,8 +13,6 @@ import { LOCKOUT_THRESHOLD, lockoutDurationMs } from "../common/utils/lockout.ut
 import {
   ChangeConsumerPasswordDto,
   ConsumerLoginDto,
-  ConsumerLoginStartDto,
-  ConsumerSetPasswordMigrationDto,
   RegisterConsumerDto,
   UpdateConsumerProfileDto,
 } from "./dto/consumer-dtos";
@@ -31,8 +29,6 @@ const DUMMY_PASSWORD_HASH = bcrypt.hashSync("timing-attack-mitigation", BCRYPT_R
 
 type Db = Prisma.TransactionClient | PrismaService;
 
-export type LoginStartStatus = "register" | "needs_password_setup" | "password_required";
-
 @Injectable()
 export class ConsumerAuthService {
   constructor(
@@ -40,59 +36,49 @@ export class ConsumerAuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  // Primeira etapa do login: só decide qual formulário mostrar (senha / criar senha /
-  // cadastro). Trade-off consciente de UX vs. segurança: isto revela se um telefone tem conta
-  // e se já tem senha. É um sinal mais estreito que o bug anterior (404 vs. sucesso NO MEIO de
-  // uma tentativa de credencial), pois aqui nenhuma credencial é testada — o telefone é o
-  // "usuário" do produto, não um segredo — e é o mesmo tipo de sinal que qualquer fluxo de
-  // "esqueci a senha" expõe. O que a regra de enumeração protege de verdade (não vazar
-  // existência enquanto uma senha está sendo adivinhada) fica intacto: o passo que roda
-  // bcrypt.compare (login) devolve sempre o mesmo 401 genérico, e tem rate limit + lockout.
-  async loginStart(dto: ConsumerLoginStartDto): Promise<{ status: LoginStartStatus }> {
-    const phone = this.normalize(dto.phone);
-    const consumer = await this.prisma.consumer.findUnique({
-      where: { phone },
-      select: { passwordHash: true },
-    });
-    if (consumer) {
-      return { status: consumer.passwordHash ? "password_required" : "needs_password_setup" };
-    }
-
-    // Checagem cross-tenant deliberada e estreita (exceção documentada à regra "sempre
-    // filtrar por tenantId"): só decide "novo de verdade" vs. "já é cliente de algum salão,
-    // só nunca criou a identidade global". Devolve um boolean, nunca qual tenant.
-    const hasHistory = await this.prisma.client.findFirst({ where: { phone }, select: { id: true } });
-    return { status: hasHistory ? "needs_password_setup" : "register" };
-  }
-
+  // Cadastro E reivindicação de conta antiga, no mesmo formulário: se o telefone já tinha
+  // cadastro sem senha (Consumer do fluxo antigo) ou só histórico de Client em algum salão, a
+  // conta é reivindicada e o backfill liga os agendamentos antigos. Quem já tem senha recebe
+  // 409 — nunca sobrescreve a senha de outra pessoa. Trade-off consciente (UX vs. segurança):
+  // o cadastro revela se telefone/e-mail já têm conta; isso é aceito AQUI e não no login, onde
+  // toda falha devolve o mesmo 401. Sem OTP (v1), possuir o telefone basta pra reivindicar.
   async register(dto: RegisterConsumerDto) {
     if (!dto.consent) {
       throw new BadRequestException("É necessário aceitar os termos e a política de privacidade.");
     }
     const phone = this.normalize(dto.phone);
-    const existing = await this.prisma.consumer.findUnique({ where: { phone }, select: { id: true } });
-    if (existing) {
-      throw new ConflictException("Já existe uma conta com esse telefone. Faça login.");
-    }
+    const email = dto.email.trim().toLowerCase();
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
-    const consumer = await this.prisma.consumer.create({
-      data: {
-        phone,
-        name: dto.name.trim(),
-        email: dto.email.trim().toLowerCase(),
-        passwordHash,
-        consentedAt: new Date(),
-      },
+
+    const consumer = await this.prisma.$transaction(async (tx) => {
+      const byPhone = await tx.consumer.findUnique({ where: { phone } });
+      if (byPhone?.passwordHash) {
+        throw new ConflictException("Já existe uma conta com esse telefone. Faça login.");
+      }
+
+      const emailOwner = await tx.consumer.findUnique({ where: { email }, select: { id: true } });
+      if (emailOwner && emailOwner.id !== byPhone?.id) {
+        throw new ConflictException("Este e-mail já está em uso.");
+      }
+
+      const target = byPhone
+        ? await tx.consumer.update({ where: { id: byPhone.id }, data: { passwordHash, email } })
+        : await tx.consumer.create({
+            data: { phone, name: dto.name.trim(), email, passwordHash, consentedAt: new Date() },
+          });
+
+      await this.backfillCrossTenantLinks(tx, target.id, phone);
+      return target;
     });
+
     return this.session(consumer);
   }
 
-  // Única etapa que confere credencial. Conta inexistente, conta sem senha (ainda não
-  // migrada), conta travada e senha errada são indistinguíveis por mensagem, status e tempo —
-  // só o loginStart pode sugerir "crie sua senha".
+  // Única etapa que confere credencial. Identificador inválido, conta inexistente, conta sem
+  // senha (ainda não reivindicada), conta travada e senha errada são indistinguíveis por
+  // mensagem, status e tempo.
   async login(dto: ConsumerLoginDto) {
-    const phone = this.normalize(dto.phone);
-    const consumer = await this.prisma.consumer.findUnique({ where: { phone } });
+    const consumer = await this.findByIdentifier(dto.identifier);
 
     if (!consumer || !consumer.passwordHash) {
       await bcrypt.compare(dto.password, DUMMY_PASSWORD_HASH);
@@ -116,52 +102,6 @@ export class ConsumerAuthService {
         data: { failedLoginAttempts: 0, lockedUntil: null },
       });
     }
-
-    return this.session(consumer);
-  }
-
-  // Migração de conta do fluxo antigo (só telefone): a pessoa acabou de digitar o telefone no
-  // loginStart e agora cria a senha. Sem token de convite — o fluxo é síncrono e o modelo de
-  // confiança ("v1 sem OTP": possuir o telefone basta) é o mesmo já aceito no resto do
-  // projeto. Nunca sobrescreve uma senha existente: isso seria trocar a senha de outra pessoa
-  // provando só posse do telefone.
-  async setPasswordForMigration(dto: ConsumerSetPasswordMigrationDto) {
-    if (!dto.consent) {
-      throw new BadRequestException("É necessário aceitar os termos e a política de privacidade.");
-    }
-    const phone = this.normalize(dto.phone);
-    const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
-    const email = dto.email.trim().toLowerCase();
-
-    const consumer = await this.prisma.$transaction(async (tx) => {
-      const existing = await tx.consumer.findUnique({ where: { phone } });
-
-      if (existing?.passwordHash) {
-        throw new ConflictException("Esta conta já tem senha definida. Faça login.");
-      }
-
-      let target = existing;
-      if (existing) {
-        target = await tx.consumer.update({ where: { id: existing.id }, data: { passwordHash, email } });
-      } else {
-        // Nome vem do Client mais recentemente atualizado com este telefone (heurística
-        // deliberada: não há "tenant certo" pra preferir aqui).
-        const source = await tx.client.findFirst({
-          where: { phone },
-          orderBy: { updatedAt: "desc" },
-          select: { name: true },
-        });
-        if (!source) {
-          throw new BadRequestException("Nenhum histórico encontrado para este telefone. Crie uma conta.");
-        }
-        target = await tx.consumer.create({
-          data: { phone, name: source.name, email, passwordHash, consentedAt: new Date() },
-        });
-      }
-
-      await this.backfillCrossTenantLinks(tx, target.id, phone);
-      return target;
-    });
 
     return this.session(consumer);
   }
@@ -277,6 +217,18 @@ export class ConsumerAuthService {
       accessToken: this.jwtService.sign(payload, { expiresIn: CONSUMER_TOKEN_EXPIRES_IN }),
       consumer: { id: consumer.id, name: consumer.name, phone: consumer.phone, email: consumer.email },
     };
+  }
+
+  // E-mail (tem "@") ou telefone. Telefone implausível não lança 400: devolve null e cai no
+  // mesmo caminho de "conta inexistente" (compare dummy + 401 genérico).
+  private async findByIdentifier(identifier: string) {
+    const value = identifier.trim();
+    if (value.includes("@")) {
+      return this.prisma.consumer.findUnique({ where: { email: value.toLowerCase() } });
+    }
+    const phone = normalizePhone(value);
+    if (!isPlausibleBrazilianPhone(phone)) return null;
+    return this.prisma.consumer.findUnique({ where: { phone } });
   }
 
   private normalize(raw: string) {

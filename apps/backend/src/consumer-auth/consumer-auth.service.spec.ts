@@ -59,52 +59,49 @@ function build(initialConsumer: Record<string, unknown> | null = null, over: Rec
   return { service: new ConsumerAuthService(prisma as unknown as PrismaService, jwt), prisma: prisma as any };
 }
 
-describe("ConsumerAuthService.loginStart", () => {
-  it("devolve 'register' quando não há Consumer nem Client com o telefone", async () => {
-    const { service } = build(null);
-    await expect(service.loginStart({ phone: PHONE })).resolves.toEqual({ status: "register" });
-  });
-
-  it("devolve 'needs_password_setup' quando só existe Client (em qualquer tenant)", async () => {
-    const { service, prisma } = build(null);
-    prisma.client.findFirst.mockResolvedValue({ id: "cl-9" });
-    await expect(service.loginStart({ phone: PHONE })).resolves.toEqual({ status: "needs_password_setup" });
-    // Cross-tenant de propósito: sem filtro de tenantId.
-    expect(prisma.client.findFirst).toHaveBeenCalledWith({ where: { phone: PHONE }, select: { id: true } });
-  });
-
-  it("devolve 'needs_password_setup' para Consumer sem senha e 'password_required' com senha", async () => {
-    const semSenha = build({ ...BASE_CONSUMER, passwordHash: null });
-    await expect(semSenha.service.loginStart({ phone: PHONE })).resolves.toEqual({
-      status: "needs_password_setup",
-    });
-    const comSenha = build({ ...BASE_CONSUMER });
-    await expect(comSenha.service.loginStart({ phone: PHONE })).resolves.toEqual({
-      status: "password_required",
-    });
-  });
-});
-
 describe("ConsumerAuthService.login", () => {
   it("rejeita telefone inexistente com a mesma UnauthorizedException genérica de senha errada", async () => {
     const { service } = build(null);
-    await expect(service.login({ phone: PHONE, password: "qualquer" })).rejects.toThrow(
+    await expect(service.login({ identifier: PHONE, password: "qualquer" })).rejects.toThrow(
       new UnauthorizedException("Credenciais inválidas."),
     );
   });
 
-  // Regressão: só o loginStart pode sugerir "crie sua senha". No login, conta sem senha tem que
-  // ser indistinguível de conta inexistente.
+  it("aceita e-mail (case-insensitive) como identificador", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER });
+    const result = await service.login({ identifier: " ANA@Example.com ", password: CORRECT_PASSWORD });
+    expect(result.accessToken).toBe("tok");
+    expect(prisma.consumer.findUnique).toHaveBeenCalledWith({ where: { email: "ana@example.com" } });
+  });
+
+  it("aceita telefone formatado como identificador", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER });
+    await service.login({ identifier: "(11) 98888-7777", password: CORRECT_PASSWORD });
+    expect(prisma.consumer.findUnique).toHaveBeenCalledWith({ where: { phone: PHONE } });
+  });
+
+  // Regressão: um telefone implausível virar 400 "telefone inválido" diferenciaria esse caso de
+  // "senha errada"/"conta inexistente" — o login unificado tem que devolver sempre o mesmo 401.
+  it("identificador malformado cai no mesmo 401 genérico (nunca 400)", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER });
+    await expect(service.login({ identifier: "123", password: "qualquer" })).rejects.toThrow(
+      new UnauthorizedException("Credenciais inválidas."),
+    );
+    expect(prisma.consumer.findUnique).not.toHaveBeenCalled();
+  });
+
+  // Regressão: conta sem senha (ainda não reivindicada) tem que ser indistinguível de conta
+  // inexistente no login; quem reivindica é o cadastro.
   it("rejeita conta sem senha (não migrada) com o mesmo 401 genérico", async () => {
     const { service } = build({ ...BASE_CONSUMER, passwordHash: null });
-    await expect(service.login({ phone: PHONE, password: "qualquer" })).rejects.toThrow(
+    await expect(service.login({ identifier: PHONE, password: "qualquer" })).rejects.toThrow(
       new UnauthorizedException("Credenciais inválidas."),
     );
   });
 
   it("rejeita senha errada e incrementa failedLoginAttempts atomicamente", async () => {
     const { service, prisma } = build({ ...BASE_CONSUMER });
-    await expect(service.login({ phone: PHONE, password: "errada" })).rejects.toThrow(UnauthorizedException);
+    await expect(service.login({ identifier: PHONE, password: "errada" })).rejects.toThrow(UnauthorizedException);
     expect(prisma.consumer.update).toHaveBeenCalledWith({
       where: { id: "c-1" },
       data: { failedLoginAttempts: { increment: 1 } },
@@ -114,7 +111,7 @@ describe("ConsumerAuthService.login", () => {
 
   it("trava a conta na 5ª tentativa errada seguida", async () => {
     const { service, prisma } = build({ ...BASE_CONSUMER, failedLoginAttempts: 4 });
-    await expect(service.login({ phone: PHONE, password: "errada" })).rejects.toThrow(UnauthorizedException);
+    await expect(service.login({ identifier: PHONE, password: "errada" })).rejects.toThrow(UnauthorizedException);
     const calls = prisma.consumer.update.mock.calls;
     expect(calls[0][0].data).toEqual({ failedLoginAttempts: { increment: 1 } });
     expect(calls[1][0].data.lockedUntil.getTime()).toBeGreaterThan(Date.now());
@@ -125,8 +122,8 @@ describe("ConsumerAuthService.login", () => {
   it("incrementa corretamente sob duas tentativas concorrentes", async () => {
     const { service, prisma } = build({ ...BASE_CONSUMER });
     await Promise.all([
-      service.login({ phone: PHONE, password: "errada-1" }).catch(() => {}),
-      service.login({ phone: PHONE, password: "errada-2" }).catch(() => {}),
+      service.login({ identifier: PHONE, password: "errada-1" }).catch(() => {}),
+      service.login({ identifier: PHONE, password: "errada-2" }).catch(() => {}),
     ]);
     const finalState = await prisma.consumer.findUnique();
     expect(finalState.failedLoginAttempts).toBe(2);
@@ -138,7 +135,7 @@ describe("ConsumerAuthService.login", () => {
       failedLoginAttempts: 6,
       lockedUntil: new Date(Date.now() + 5 * 60_000),
     });
-    await expect(service.login({ phone: PHONE, password: CORRECT_PASSWORD })).rejects.toThrow(
+    await expect(service.login({ identifier: PHONE, password: CORRECT_PASSWORD })).rejects.toThrow(
       UnauthorizedException,
     );
     // Senão um atacante mantém a conta bloqueada pra sempre martelando durante a janela.
@@ -151,7 +148,7 @@ describe("ConsumerAuthService.login", () => {
       failedLoginAttempts: 5,
       lockedUntil: new Date(Date.now() - 1000),
     });
-    const result = await service.login({ phone: PHONE, password: CORRECT_PASSWORD });
+    const result = await service.login({ identifier: PHONE, password: CORRECT_PASSWORD });
     expect(result.accessToken).toBe("tok");
     expect(prisma.consumer.update).toHaveBeenCalledWith({
       where: { id: "c-1" },
@@ -161,12 +158,12 @@ describe("ConsumerAuthService.login", () => {
 
   it("login bem-sucedido sem falhas anteriores não chama update à toa", async () => {
     const { service, prisma } = build({ ...BASE_CONSUMER });
-    await service.login({ phone: PHONE, password: CORRECT_PASSWORD });
+    await service.login({ identifier: PHONE, password: CORRECT_PASSWORD });
     expect(prisma.consumer.update).not.toHaveBeenCalled();
   });
 });
 
-describe("ConsumerAuthService.register", () => {
+describe("ConsumerAuthService.register (cadastro e reivindicação)", () => {
   const dto = {
     name: "Ana",
     phone: PHONE,
@@ -180,9 +177,19 @@ describe("ConsumerAuthService.register", () => {
     await expect(service.register({ ...dto, consent: false })).rejects.toThrow(BadRequestException);
   });
 
-  it("telefone já existente lança Conflict", async () => {
-    const { service } = build({ ...BASE_CONSUMER });
+  it("conta que já tem senha lança Conflict e não altera nada", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER });
     await expect(service.register(dto)).rejects.toThrow(ConflictException);
+    expect(prisma.consumer.update).not.toHaveBeenCalled();
+  });
+
+  it("e-mail já usado por OUTRO consumidor lança Conflict", async () => {
+    const { service, prisma } = build(null);
+    prisma.consumer.findUnique.mockImplementation(({ where }: { where: Record<string, string> }) =>
+      Promise.resolve(where.email ? { id: "outro" } : null),
+    );
+    await expect(service.register(dto)).rejects.toThrow(ConflictException);
+    expect(prisma.consumer.create).not.toHaveBeenCalled();
   });
 
   it("normaliza telefone/e-mail, grava só o HASH da senha e o consentimento", async () => {
@@ -196,43 +203,30 @@ describe("ConsumerAuthService.register", () => {
     expect(data.consentedAt).toBeInstanceOf(Date);
     expect(result.accessToken).toBe("tok");
   });
-});
 
-describe("ConsumerAuthService.setPasswordForMigration", () => {
-  const dto = { phone: PHONE, password: CORRECT_PASSWORD, email: "ana@example.com", consent: true };
-
-  // Regressão: sem essa checagem, qualquer um que soubesse o telefone poderia RESETAR a senha
-  // de uma conta já protegida por este endpoint.
-  it("recusa quando a conta já tem senha, sem alterar nada", async () => {
-    const { service, prisma } = build({ ...BASE_CONSUMER });
-    await expect(service.setPasswordForMigration(dto)).rejects.toThrow(ConflictException);
-    expect(prisma.consumer.update).not.toHaveBeenCalled();
-  });
-
-  it("define a senha de um Consumer existente sem senha e faz o backfill", async () => {
-    const { service, prisma } = build({ ...BASE_CONSUMER, passwordHash: null });
+  it("reivindica um Consumer antigo sem senha (mantém o nome) e faz o backfill", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER, passwordHash: null, email: null });
     prisma.client.findMany.mockResolvedValue([
       { id: "cl-a", tenantId: "t-a" },
       { id: "cl-b", tenantId: "t-b" },
     ]);
-    const result = await service.setPasswordForMigration(dto);
-    expect(result.accessToken).toBe("tok");
+    await service.register({ ...dto, name: "Outro Nome" });
+    const data = prisma.consumer.update.mock.calls[0][0].data;
+    expect(data).not.toHaveProperty("name");
+    expect(await bcrypt.compare(CORRECT_PASSWORD, data.passwordHash)).toBe(true);
     expect(prisma.consumerTenantLink.upsert).toHaveBeenCalledTimes(2);
+    expect(prisma.consumer.create).not.toHaveBeenCalled();
   });
 
-  it("cria o Consumer a partir do Client mais recente quando não existe", async () => {
+  it("reivindica histórico só de Client (sem Consumer): cria a conta e liga todos os salões", async () => {
     const { service, prisma } = build(null);
-    prisma.client.findFirst.mockResolvedValue({ name: "Ana Souza" });
-    await service.setPasswordForMigration(dto);
-    expect(prisma.client.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { phone: PHONE }, orderBy: { updatedAt: "desc" } }),
+    prisma.client.findMany.mockResolvedValue([{ id: "cl-a", tenantId: "t-a" }]);
+    await service.register(dto);
+    expect(prisma.consumer.create).toHaveBeenCalled();
+    expect(prisma.client.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { phone: PHONE } }),
     );
-    expect(prisma.consumer.create.mock.calls[0][0].data.name).toBe("Ana Souza");
-  });
-
-  it("rejeita quando não há Consumer nem histórico de Client", async () => {
-    const { service } = build(null);
-    await expect(service.setPasswordForMigration(dto)).rejects.toThrow(BadRequestException);
+    expect(prisma.consumerTenantLink.upsert).toHaveBeenCalledTimes(1);
   });
 
   // Regressão de escopo: o backfill é em lote, entre vários tenants — não pode sobrescrever o
@@ -240,16 +234,9 @@ describe("ConsumerAuthService.setPasswordForMigration", () => {
   it("o backfill nunca altera Client.name de nenhum tenant", async () => {
     const { service, prisma } = build({ ...BASE_CONSUMER, passwordHash: null });
     prisma.client.findMany.mockResolvedValue([{ id: "cl-a", tenantId: "t-a" }]);
-    await service.setPasswordForMigration(dto);
+    await service.register(dto);
     expect(prisma.client.update).not.toHaveBeenCalled();
     expect(prisma.client.upsert).not.toHaveBeenCalled();
-  });
-
-  it("exige consentimento", async () => {
-    const { service } = build(null);
-    await expect(service.setPasswordForMigration({ ...dto, consent: false })).rejects.toThrow(
-      BadRequestException,
-    );
   });
 });
 

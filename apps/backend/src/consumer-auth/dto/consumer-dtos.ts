@@ -25,48 +25,24 @@ export class RegisterConsumerDto {
   @MaxLength(PASSWORD_MAX)
   password!: string;
 
-  // Aceite explícito dos termos/privacidade — obrigatório (LGPD).
+  // Aceite explícito dos termos/privacidade — obrigatório (LGPD). Este DTO também reivindica
+  // conta antiga (telefone que já tinha cadastro sem senha): ver ConsumerAuthService.register.
   @IsBoolean()
   consent!: boolean;
 }
 
-export class ConsumerLoginStartDto {
-  @IsString()
-  @MinLength(8)
-  @MaxLength(20)
-  phone!: string;
-}
-
+// Telefone ou e-mail. Sem @IsEmail/regra de telefone de propósito: um formato inválido tem que
+// cair no mesmo 401 genérico de "senha errada", não num 400 que diferencia os casos.
 export class ConsumerLoginDto {
   @IsString()
-  @MinLength(8)
-  @MaxLength(20)
-  phone!: string;
+  @MinLength(3)
+  @MaxLength(254)
+  identifier!: string;
 
   @IsString()
   @MinLength(1)
   @MaxLength(PASSWORD_MAX)
   password!: string;
-}
-
-// Etapa de migração de conta antiga (só telefone): a pessoa cria a senha e informa e-mail.
-export class ConsumerSetPasswordMigrationDto {
-  @IsString()
-  @MinLength(8)
-  @MaxLength(20)
-  phone!: string;
-
-  @IsString()
-  @MinLength(PASSWORD_MIN)
-  @MaxLength(PASSWORD_MAX)
-  password!: string;
-
-  @IsEmail()
-  @MaxLength(254)
-  email!: string;
-
-  @IsBoolean()
-  consent!: boolean;
 }
 
 export class UpdateConsumerProfileDto {

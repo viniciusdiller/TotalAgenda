@@ -771,7 +771,10 @@ model Consumer {
   id            String   @id @default(uuid())
   phone         String   @unique // normalizado, sem DDI 55
   name          String
-  email         String?
+  // Único (minúsculo, normalizado no service) pra permitir login por e-mail. Sem verificação
+  // de posse ainda: o telefone segue sendo a chave de identidade cross-salão. NULL repetido é
+  // permitido pelo Postgres (contas antigas sem e-mail).
+  email         String?   @unique
   // null = conta do fluxo antigo (só telefone) ainda não migrada; preenchido no cadastro
   // novo e na etapa de "crie sua senha" do primeiro login (ver ConsumerAuthService). Sem
   // campos de token de convite como em User: aqui o fluxo é síncrono, não por link.

@@ -4,8 +4,6 @@ import { ConsumerAuthService } from "./consumer-auth.service";
 import {
   ChangeConsumerPasswordDto,
   ConsumerLoginDto,
-  ConsumerLoginStartDto,
-  ConsumerSetPasswordMigrationDto,
   RegisterConsumerDto,
   UpdateConsumerProfileDto,
 } from "./dto/consumer-dtos";
@@ -20,13 +18,6 @@ export class ConsumerAuthController {
 
   @Public()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  @Post("login/start")
-  loginStart(@Body() dto: ConsumerLoginStartDto) {
-    return this.consumerAuth.loginStart(dto);
-  }
-
-  @Public()
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post("register")
   register(@Body() dto: RegisterConsumerDto) {
     return this.consumerAuth.register(dto);
@@ -37,13 +28,6 @@ export class ConsumerAuthController {
   @Post("login")
   login(@Body() dto: ConsumerLoginDto) {
     return this.consumerAuth.login(dto);
-  }
-
-  @Public()
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  @Post("login/set-password")
-  setPassword(@Body() dto: ConsumerSetPasswordMigrationDto) {
-    return this.consumerAuth.setPasswordForMigration(dto);
   }
 
   @Public()
