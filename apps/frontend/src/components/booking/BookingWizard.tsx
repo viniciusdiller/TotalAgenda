@@ -282,7 +282,7 @@ export function BookingWizard({
                 ) : null}
                 {sessionExpired ? (
                   <Link
-                    href={`/minha-conta/entrar?next=${encodeURIComponent(`/${slug}/agendar`)}`}
+                    href={`/entrar?next=${encodeURIComponent(`/${slug}/agendar`)}`}
                     className="text-sm font-semibold text-(--tenant-accent)"
                   >
                     Entrar na minha conta

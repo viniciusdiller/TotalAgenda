@@ -88,7 +88,7 @@ export function TenantTopBar({
                 Descobrir
               </Link>
               <Link
-                href={`/minha-conta/entrar?next=${encodeURIComponent(`/${slug}`)}`}
+                href={`/entrar?next=${encodeURIComponent(`/${slug}`)}`}
                 className="rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-semibold text-zinc-900 transition-colors hover:border-(--tenant-accent)/40 dark:border-white/10 dark:bg-white/5 dark:text-white"
               >
                 Entrar

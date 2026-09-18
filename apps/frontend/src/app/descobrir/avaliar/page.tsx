@@ -16,7 +16,7 @@ export default async function AvaliarPage() {
     "/public/consumer/reviews/pending",
   ).catch(() => null);
   if (!pending) {
-    redirect("/minha-conta/entrar?next=/descobrir/avaliar");
+    redirect("/entrar?next=/descobrir/avaliar");
   }
 
   return (

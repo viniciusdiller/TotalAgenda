@@ -45,24 +45,28 @@ depois" (evita janela de IDOR).
   JWT via `AuthModule`. Guards globais: `JwtAuthGuard` → `RolesGuard` → `TenantBillingGuard`
   (`app.module.ts`). `@Public()` libera rota; `@Roles()` restringe. Login em `/entrar`.
 - **Cliente final** (`Consumer`, identidade **global** — um telefone = uma conta em todos os
-  salões): telefone + senha (bcrypt 12, lockout progressivo e hash dummy contra timing, mesma
-  política do staff via `common/utils/lockout.util.ts`), JWT próprio via `ConsumerAuthModule` /
-  `ConsumerJwtAuthGuard` (não passa pelos guards globais de staff). No frontend, um único
-  cookie httpOnly `ta_consumer` (`path: /`, `lib/consumer-session.ts`); login em
-  `/minha-conta/entrar`, perfil e histórico cross-salão em `/minha-conta`. O `Client` por
-  tenant continua existindo como registro de CRM do salão (ficha, notas, tags, anamnese) e é
-  ligado ao `Consumer` por `ConsumerTenantLink`; agendar e entrar na lista de espera **exigem
-  login** e derivam o `Client` do tenant via `ConsumerAuthService.ensureLink` — nome/telefone
-  nunca vêm do body. Posse de um atendimento = relação `client.consumerLink.consumerId` no
-  `WHERE` (nunca buscar por id e comparar depois).
-  - Migração de contas antigas (só telefone): `POST /public/consumer/login/start` diz qual
-    formulário mostrar; quem ainda não tem senha cria uma em `login/set-password`, e o backfill
-    liga os `Client` de todos os salões com aquele telefone (exceção deliberada à regra de
-    filtrar por `tenantId`, sem sobrescrever `Client.name`).
-  - **Trade-offs conscientes (UX vs. segurança):** `login/start` revela se um telefone tem
-    conta/senha (sinal estreito: nenhuma credencial é testada ali; o passo que confere senha
-    devolve sempre o mesmo 401 genérico). Posse do telefone ainda basta pra criar a senha de
-    uma conta antiga (sem OTP — v1); adicionar OTP/e-mail nesse passo é o próximo endurecimento
+  salões): entra com **telefone ou e-mail** + senha (bcrypt 12, lockout progressivo e hash dummy
+  contra timing, mesma política do staff via `common/utils/lockout.util.ts`), JWT próprio via
+  `ConsumerAuthModule` / `ConsumerJwtAuthGuard` (não passa pelos guards globais de staff). No
+  frontend, um único cookie httpOnly `ta_consumer` (`path: /`, `lib/consumer-session.ts`).
+  - **Uma tela de login pros dois** (`/entrar`, `app/entrar/actions.ts`): identificador com `@`
+    tenta staff primeiro (NextAuth) e depois cliente; telefone só tenta cliente (dono entra só
+    por e-mail). Toda falha devolve a mesma mensagem. São duas sessões independentes — o
+    formulário é compartilhado, as identidades não. A navbar da home (`lib/nav-session.ts`)
+    mostra "Minha loja" ao dono e o chip de perfil (`/minha-conta`) ao cliente.
+  - O `Client` por tenant continua sendo o registro de CRM do salão (ficha, notas, tags,
+    anamnese) ligado ao `Consumer` por `ConsumerTenantLink`. Agendar e entrar na lista de espera
+    **exigem login** e derivam o `Client` via `ConsumerAuthService.ensureLink` — nome/telefone
+    nunca vêm do body. Posse de um atendimento = relação `client.consumerLink.consumerId` no
+    `WHERE` (nunca buscar por id e comparar depois).
+  - **Cadastro reivindica conta antiga** (`POST /public/consumer/register`): telefone que já
+    tinha `Consumer` sem senha ou só `Client` em algum salão vira a conta, e o backfill liga os
+    `Client` de todos os salões (exceção deliberada à regra de filtrar por `tenantId`, sem
+    sobrescrever `Client.name`). `Consumer.email` é único (login por e-mail), sem verificação de
+    posse ainda — o telefone segue sendo a chave de identidade.
+  - **Trade-offs conscientes (UX vs. segurança):** o cadastro revela se telefone/e-mail já têm
+    conta (409) — aceito ali, não no login (sempre o mesmo 401). Sem OTP (v1), possuir o telefone
+    basta pra reivindicar uma conta antiga; OTP/e-mail nesse passo é o próximo endurecimento
     antes de abrir amplamente.
 
 ### Billing

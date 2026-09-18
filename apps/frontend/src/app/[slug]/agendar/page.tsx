@@ -31,7 +31,7 @@ export default async function AgendarPage({ params }: { params: Promise<{ slug: 
   // login e volta pra cá depois.
   const consumer = await consumerAuthedFetch<ConsumerMe>("/public/consumer/me").catch(() => null);
   if (!consumer) {
-    redirect(`/minha-conta/entrar?next=${encodeURIComponent(`/${slug}/agendar`)}`);
+    redirect(`/entrar?next=${encodeURIComponent(`/${slug}/agendar`)}`);
   }
 
   return (

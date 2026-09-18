@@ -8,6 +8,7 @@ import { RegisteredPlaces } from "@/components/marketing/RegisteredPlaces";
 import { Faq } from "@/components/marketing/Faq";
 import { FinalCta } from "@/components/marketing/FinalCta";
 import { Footer } from "@/components/marketing/Footer";
+import { getNavSession } from "@/lib/nav-session";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -26,11 +27,11 @@ async function getCities(): Promise<string[]> {
 // procurando um salão (Hero com busca), depois quem tem um salão e quer aparecer nessa
 // busca (OwnerCta) — só então o discurso de produto pro dono (ProblemSolution em diante).
 export default async function Home() {
-  const cities = await getCities();
+  const [cities, session] = await Promise.all([getCities(), getNavSession()]);
 
   return (
     <>
-      <Nav />
+      <Nav session={session} />
       <main>
         <Hero cities={cities} />
         <OwnerCta />

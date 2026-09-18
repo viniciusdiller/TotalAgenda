@@ -20,7 +20,7 @@ export default async function MinhaContaPage() {
   ]);
 
   if (!me || !bookings) {
-    redirect("/minha-conta/entrar?next=/minha-conta");
+    redirect("/entrar?next=/minha-conta");
   }
 
   const now = DateTime.now();

@@ -12,7 +12,7 @@ export interface FormState {
 
 export async function logoutConsumerAction() {
   await clearConsumerToken();
-  redirect("/minha-conta/entrar");
+  redirect("/entrar");
 }
 
 // Uma Server Action que deixa o erro estourar sem tratar perde a mensagem: o Next redige a

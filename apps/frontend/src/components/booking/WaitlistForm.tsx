@@ -59,7 +59,7 @@ export function WaitlistForm({
         {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
         {needsLogin ? (
           <Link
-            href={`/minha-conta/entrar?next=${encodeURIComponent(pathname)}`}
+            href={`/entrar?next=${encodeURIComponent(pathname)}`}
             className="text-sm font-semibold text-(--tenant-accent)"
           >
             Entrar na minha conta

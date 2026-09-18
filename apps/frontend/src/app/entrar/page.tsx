@@ -7,7 +7,13 @@ import { Footer } from "@/components/marketing/Footer";
 
 export const metadata: Metadata = { title: "Entrar - TotalAgenda" };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
+
   return (
     <div className="flex min-h-dvh flex-col">
       <main className="flex flex-1 items-center justify-center bg-stone-50 px-6 py-16 dark:bg-zinc-950">
@@ -26,11 +32,11 @@ export default function LoginPage() {
             Entrar
           </h1>
           <p className="mt-1 text-sm text-zinc-500 dark:text-stone-400">
-            Acesse a agenda do seu negócio.
+            Clientes e donos de salão entram por aqui.
           </p>
 
           <div className="mt-8">
-            <LoginForm />
+            <LoginForm next={next} />
           </div>
         </div>
       </main>
