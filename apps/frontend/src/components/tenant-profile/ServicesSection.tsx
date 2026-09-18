@@ -1,6 +1,7 @@
 import type { PublicService } from "@totalagenda/shared-types";
 import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
+import { SectionHeading } from "../ui/SectionHeading";
 
 function formatPrice(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -20,7 +21,7 @@ export function ServicesSection({ services }: { services: PublicService[] }) {
     <Reveal>
       <section className="border-t border-zinc-200 py-16 dark:border-white/10">
         <Container className="max-w-2xl">
-          <h2 className="font-display text-2xl font-bold text-zinc-900 dark:text-white">Serviços</h2>
+          <SectionHeading eyebrow="O que oferecemos" title="Serviços" />
 
           <ul className="mt-6 flex flex-col divide-y divide-zinc-200 dark:divide-white/10">
             {services.map((service) => (

@@ -1,6 +1,7 @@
 import type { PublicProfessional } from "@totalagenda/shared-types";
 import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
+import { SectionHeading } from "../ui/SectionHeading";
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/);
@@ -16,7 +17,7 @@ export function TeamSection({ team }: { team: PublicProfessional[] }) {
     <Reveal>
       <section className="border-t border-zinc-200 py-16 dark:border-white/10">
         <Container className="max-w-2xl">
-          <h2 className="font-display text-2xl font-bold text-zinc-900 dark:text-white">Equipe</h2>
+          <SectionHeading eyebrow="Quem cuida de você" title="Equipe" />
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             {team.map((professional) => (

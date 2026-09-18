@@ -3,6 +3,7 @@ import { Star } from "@phosphor-icons/react/dist/ssr";
 import type { MarketplaceEstablishment } from "@totalagenda/shared-types";
 import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
+import { SectionHeading } from "../ui/SectionHeading";
 
 export function ReviewsSection({
   rating,
@@ -17,18 +18,19 @@ export function ReviewsSection({
     <Reveal>
       <section className="border-t border-zinc-200 py-16 dark:border-white/10">
         <Container className="max-w-2xl">
-          <div className="flex items-center gap-3">
-            <h2 className="font-display text-2xl font-bold text-zinc-900 dark:text-white">
-              Avaliações
-            </h2>
-            {rating.average != null ? (
-              <span className="flex items-center gap-1 text-sm font-medium text-amber-600 dark:text-amber-400">
-                <Star size={14} weight="fill" />
-                {rating.average.toFixed(1)} · {rating.count}{" "}
-                {rating.count === 1 ? "avaliação" : "avaliações"}
-              </span>
-            ) : null}
-          </div>
+          <SectionHeading
+            eyebrow="Quem já passou por aqui"
+            title="Avaliações"
+            action={
+              rating.average != null ? (
+                <span className="flex items-center gap-1 text-sm font-medium text-amber-600 dark:text-amber-400">
+                  <Star size={14} weight="fill" />
+                  {rating.average.toFixed(1)} · {rating.count}{" "}
+                  {rating.count === 1 ? "avaliação" : "avaliações"}
+                </span>
+              ) : null
+            }
+          />
 
           <ul className="mt-6 space-y-4">
             {reviews.map((r) => (

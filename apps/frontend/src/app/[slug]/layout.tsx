@@ -1,11 +1,14 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { publicApi, ApiError } from "@/lib/api";
-import { Footer } from "@/components/marketing/Footer";
+import { TenantFooter } from "@/components/tenant-profile/TenantFooter";
 
 // Mesmo valor de --color-accent-500 em app/globals.css — usado quando o tenant não
-// escolheu uma cor de destaque própria.
-export const DEFAULT_TENANT_ACCENT = "#7c3aed";
+// escolheu uma cor de destaque própria. Precisa ficar em sync com o defaultValue do
+// input de cor em dashboard/configuracoes/TenantProfileSettingsForm.tsx: como
+// <input type="color"> sempre tem um valor, salvar o formulário sem mexer na cor
+// submete esse default de qualquer forma (não fica null) — os dois têm que bater.
+export const DEFAULT_TENANT_ACCENT = "#6c3bf4";
 
 // cache() dedupa chamadas repetidas dentro da mesma requisição: layout + page (e
 // agendar/entrar/conta) podem cada um chamar getTenant(slug) sem gerar fetches extras.
@@ -40,7 +43,7 @@ export default async function TenantLayout({
       className="flex min-h-dvh flex-col"
     >
       {children}
-      <Footer />
+      <TenantFooter tenant={tenant} />
     </div>
   );
 }
