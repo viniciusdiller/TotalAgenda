@@ -209,13 +209,12 @@ export function TenantProfileSettingsForm({ tenant }: { tenant: TenantProfile })
               type="color"
               id="accentColor"
               name="accentColor"
-              // Precisa bater com DEFAULT_TENANT_ACCENT em app/[slug]/layout.tsx — ver
-              // comentário lá.
               defaultValue={tenant.accentColor ?? "#6c3bf4"}
               className="h-10 w-14 cursor-pointer rounded-lg border border-zinc-300 dark:border-white/15"
             />
             <p className="text-sm text-zinc-500 dark:text-stone-400">
-              Usada nos botões e destaques da sua página pública.
+              Salva no seu cadastro, mas não é mais aplicada na página pública — ela segue
+              sempre a identidade visual do TotalAgenda.
             </p>
           </div>
         </div>
