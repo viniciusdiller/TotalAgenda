@@ -18,7 +18,9 @@ function instagramHandle(url: string): string | null {
 }
 
 export function InstagramCard({ tenant }: { tenant: PublicTenant }) {
-  if (!tenant.instagramUrl) return null;
+  // Defesa em profundidade: linhas antigas podem ter um valor salvo antes da validação de
+  // protocolo no backend; só http(s) vira link (javascript:/data: nunca chegam ao href).
+  if (!tenant.instagramUrl || !/^https?:\/\//i.test(tenant.instagramUrl)) return null;
   const handle = instagramHandle(tenant.instagramUrl);
 
   return (

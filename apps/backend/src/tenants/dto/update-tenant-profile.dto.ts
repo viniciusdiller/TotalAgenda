@@ -24,8 +24,11 @@ export class UpdateTenantProfileDto {
   @Matches(/^\d{10,15}$/, { message: "Telefone inválido. Use só dígitos, com DDI (ex: 5511912345678)." })
   whatsappNumber?: string;
 
+  // Vira href numa página PÚBLICA: só http(s) com protocolo explícito. Sem isso um esquema como
+  // javascript: virava XSS armazenado no perfil do salão.
   @IsOptional()
-  @IsUrl({ require_tld: false })
+  @IsUrl({ require_tld: false, protocols: ["http", "https"], require_protocol: true })
+  @MaxLength(300)
   instagramUrl?: string;
 
   @IsOptional()
