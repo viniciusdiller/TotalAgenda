@@ -2,11 +2,11 @@ import { join } from "path";
 import { mkdir, unlink } from "fs/promises";
 import { randomUUID } from "crypto";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import sharp from "sharp";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdateTenantProfileDto } from "./dto/update-tenant-profile.dto";
 import { UpdateMarketplaceDto } from "./dto/update-marketplace.dto";
 import { UPLOADS_DIR, UPLOADS_URL_PREFIX } from "../common/constants/uploads";
+import { convertToWebp } from "../common/utils/image.util";
 
 const ALLOWED_IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -18,10 +18,30 @@ const MAX_GALLERY_IMAGES = 12;
 export class TenantsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Campos explícitos: o painel (qualquer papel, inclusive PROFESSIONAL) recebe só o perfil do
+  // próprio negócio — nunca colunas de billing/integração (externalCustomerId, createdAt...).
   findById(tenantId: string) {
     return this.prisma.tenant.findUniqueOrThrow({
       where: { id: tenantId },
-      include: { galleryImages: { orderBy: { position: "asc" } } },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        trialEndsAt: true,
+        updatedAt: true,
+        description: true,
+        address: true,
+        businessHours: true,
+        logoUrl: true,
+        accentColor: true,
+        whatsappNumber: true,
+        instagramUrl: true,
+        showServices: true,
+        showTeam: true,
+        showGallery: true,
+        showContact: true,
+        galleryImages: { orderBy: { position: "asc" } },
+      },
     });
   }
 
@@ -140,18 +160,11 @@ export class TenantsService {
     await mkdir(tenantDir, { recursive: true });
 
     // Nome fixo por tenant: reupload sobrescreve o arquivo anterior, sem lixo acumulando.
-    const filePath = join(tenantDir, "logo.webp");
-    try {
-      await sharp(file.buffer)
-        .resize(LOGO_MAX_DIMENSION, LOGO_MAX_DIMENSION, {
-          fit: "inside",
-          withoutEnlargement: true,
-        })
-        .webp({ quality: 80 })
-        .toFile(filePath);
-    } catch {
-      throw new BadRequestException("Não foi possível processar a imagem enviada.");
-    }
+    await convertToWebp(file.buffer, {
+      maxDimension: LOGO_MAX_DIMENSION,
+      quality: 80,
+      outPath: join(tenantDir, "logo.webp"),
+    });
 
     const logoUrl = `${UPLOADS_URL_PREFIX}/tenants/${tenantId}/logo.webp`;
     return this.prisma.tenant.update({ where: { id: tenantId }, data: { logoUrl } });
@@ -175,17 +188,11 @@ export class TenantsService {
     await mkdir(galleryDir, { recursive: true });
 
     const filename = `${randomUUID()}.webp`;
-    try {
-      await sharp(file.buffer)
-        .resize(GALLERY_MAX_DIMENSION, GALLERY_MAX_DIMENSION, {
-          fit: "inside",
-          withoutEnlargement: true,
-        })
-        .webp({ quality: 82 })
-        .toFile(join(galleryDir, filename));
-    } catch {
-      throw new BadRequestException("Não foi possível processar a imagem enviada.");
-    }
+    await convertToWebp(file.buffer, {
+      maxDimension: GALLERY_MAX_DIMENSION,
+      quality: 82,
+      outPath: join(galleryDir, filename),
+    });
 
     const url = `${UPLOADS_URL_PREFIX}/tenants/${tenantId}/gallery/${filename}`;
     return this.prisma.tenantGalleryImage.create({
