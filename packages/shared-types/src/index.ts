@@ -1,3 +1,12 @@
+// Resposta padrão de qualquer listagem paginada (backend: common/pagination/paginate.ts).
+export interface Paginated<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+}
+
 export interface PublicGalleryImage {
   id: string;
   url: string;

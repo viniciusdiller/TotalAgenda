@@ -4,6 +4,7 @@ import { Role } from "@totalagenda/database";
 import { AppointmentsService } from "./appointments.service";
 import { CreateAppointmentDto } from "./dto/create-appointment.dto";
 import { CreateStaffAppointmentDto } from "./dto/create-staff-appointment.dto";
+import { ListConsumerBookingsQueryDto } from "./dto/list-consumer-bookings-query.dto";
 import { RescheduleAppointmentDto } from "./dto/reschedule-appointment.dto";
 import { UpdateAppointmentStatusDto } from "./dto/update-appointment-status.dto";
 import { Public } from "../common/decorators/public.decorator";
@@ -131,8 +132,11 @@ export class ConsumerAppointmentsController {
   @Public()
   @UseGuards(ConsumerJwtAuthGuard)
   @Get()
-  findMine(@CurrentConsumer() consumer: AuthenticatedConsumer) {
-    return this.appointments.findAllForConsumer(consumer);
+  findMine(
+    @CurrentConsumer() consumer: AuthenticatedConsumer,
+    @Query() query: ListConsumerBookingsQueryDto,
+  ) {
+    return this.appointments.findAllForConsumer(consumer, query);
   }
 
   @Public()

@@ -16,6 +16,8 @@ import { RescheduleAppointmentDto } from "./dto/reschedule-appointment.dto";
 import { UpdateAppointmentStatusDto } from "./dto/update-appointment-status.dto";
 import { AuthenticatedUser } from "../auth/types/auth-user";
 import { ClientsService } from "../clients/clients.service";
+import { resolvePagination, toPage } from "../common/pagination/paginate";
+import { ListConsumerBookingsQueryDto } from "./dto/list-consumer-bookings-query.dto";
 import { ConsumerAuthService } from "../consumer-auth/consumer-auth.service";
 import { AuthenticatedConsumer } from "../consumer-auth/types/consumer-auth-user";
 
@@ -356,21 +358,46 @@ export class AppointmentsService {
   // na cláusula WHERE (sem janela de IDOR).
   // ─────────────────────────────────────────────
 
-  // Histórico de todos os salões onde este Consumer já agendou.
-  async findAllForConsumer(consumer: AuthenticatedConsumer) {
+  // Agendamentos de todos os salões onde este Consumer já agendou, paginados no banco (nunca
+  // carrega o histórico inteiro): "upcoming" = confirmados de agora em diante, "past" = o resto.
+  async findAllForConsumer(
+    consumer: AuthenticatedConsumer,
+    query: ListConsumerBookingsQueryDto = {},
+  ) {
+    const pagination = resolvePagination(query);
+
     const links = await this.prisma.consumerTenantLink.findMany({
       where: { consumerId: consumer.consumerId },
       select: { clientId: true },
     });
-    if (links.length === 0) return [];
+    if (links.length === 0) return toPage([], 0, pagination);
 
-    const appointments = await this.prisma.appointment.findMany({
-      where: { clientId: { in: links.map((l) => l.clientId) } },
-      include: APPOINTMENT_INCLUDE,
-      orderBy: { startAt: "desc" },
-      take: 200,
-    });
-    return appointments.map((appointment) => this.serialize(appointment));
+    const isUpcoming: Prisma.AppointmentWhereInput = {
+      status: AppointmentStatus.CONFIRMED,
+      startAt: { gte: new Date() },
+    };
+    const where: Prisma.AppointmentWhereInput = {
+      clientId: { in: links.map((l) => l.clientId) },
+      ...(query.scope === "upcoming" ? isUpcoming : {}),
+      ...(query.scope === "past" ? { NOT: isUpcoming } : {}),
+      ...(query.tenantSlug ? { tenant: { slug: query.tenantSlug } } : {}),
+    };
+
+    const [total, appointments] = await Promise.all([
+      this.prisma.appointment.count({ where }),
+      this.prisma.appointment.findMany({
+        where,
+        include: APPOINTMENT_INCLUDE,
+        orderBy: { startAt: query.scope === "upcoming" ? "asc" : "desc" },
+        skip: pagination.skip,
+        take: pagination.take,
+      }),
+    ]);
+    return toPage(
+      appointments.map((appointment) => this.serialize(appointment)),
+      total,
+      pagination,
+    );
   }
 
   async cancelForConsumer(appointmentId: string, consumer: AuthenticatedConsumer) {

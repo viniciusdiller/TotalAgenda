@@ -104,6 +104,7 @@ function buildPrismaMock(tx: ReturnType<typeof buildTxMock>) {
       findUnique: jest.fn(),
       findFirst: jest.fn(),
       findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(1),
       update: jest.fn().mockImplementation(({ data }) => hydratedAppointment(data)),
     },
     $transaction: jest.fn().mockImplementation(async (cb: (tx: unknown) => unknown) => cb(tx)),
@@ -502,7 +503,12 @@ describe("AppointmentsService", () => {
       (prisma.consumerTenantLink.findMany as jest.Mock).mockResolvedValue([]);
       const service = new AppointmentsService(prisma, clientsService, consumerAuth);
 
-      await expect(service.findAllForConsumer(consumer)).resolves.toEqual([]);
+      await expect(service.findAllForConsumer(consumer)).resolves.toMatchObject({
+        items: [],
+        total: 0,
+        page: 1,
+        pageCount: 1,
+      });
       expect(prisma.appointment.findMany).not.toHaveBeenCalled();
     });
 
@@ -520,7 +526,40 @@ describe("AppointmentsService", () => {
       expect(prisma.appointment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ where: { clientId: { in: ["client-a", "client-b"] } } }),
       );
-      expect(result[0].tenant).toEqual({ slug: "slug", name: "Salão Teste" });
+      expect(result.items[0].tenant).toEqual({ slug: "slug", name: "Salão Teste" });
+    });
+
+    // Regressão: a listagem já foi "findMany take: 200" sem paginação — histórico grande era
+    // carregado inteiro a cada abertura da conta. Agora skip/take e o total vêm do banco.
+    it("findAllForConsumer pagina no banco (skip/take) e devolve total e pageCount", async () => {
+      const prisma = buildPrismaMock(buildTxMock());
+      (prisma.appointment as unknown as { count: jest.Mock }).count = jest.fn().mockResolvedValue(23);
+      (prisma.appointment.findMany as jest.Mock).mockResolvedValue([hydratedAppointment()]);
+      const service = new AppointmentsService(prisma, clientsService, consumerAuth);
+
+      const result = await service.findAllForConsumer(consumer, { page: 3, pageSize: 10 });
+
+      expect(prisma.appointment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 20, take: 10 }),
+      );
+      expect(result).toMatchObject({ total: 23, page: 3, pageSize: 10, pageCount: 3 });
+    });
+
+    it("scope=upcoming filtra confirmados futuros em ordem crescente; past é o complemento", async () => {
+      const prisma = buildPrismaMock(buildTxMock());
+      (prisma.appointment as unknown as { count: jest.Mock }).count = jest.fn().mockResolvedValue(0);
+      const service = new AppointmentsService(prisma, clientsService, consumerAuth);
+
+      await service.findAllForConsumer(consumer, { scope: "upcoming" });
+      const upcoming = (prisma.appointment.findMany as jest.Mock).mock.calls[0][0];
+      expect(upcoming.where.status).toBe(AppointmentStatus.CONFIRMED);
+      expect(upcoming.orderBy).toEqual({ startAt: "asc" });
+
+      await service.findAllForConsumer(consumer, { scope: "past", tenantSlug: "salao-x" });
+      const past = (prisma.appointment.findMany as jest.Mock).mock.calls[1][0];
+      expect(past.where.NOT).toMatchObject({ status: AppointmentStatus.CONFIRMED });
+      expect(past.where.tenant).toEqual({ slug: "salao-x" });
+      expect(past.orderBy).toEqual({ startAt: "desc" });
     });
 
     it("createFromPublicLink deriva nome/telefone do Client de ensureLink, nunca do body", async () => {
