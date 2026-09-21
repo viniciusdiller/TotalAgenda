@@ -15,6 +15,9 @@ interface PaginationProps {
   paramName?: string;
   label?: string;
   className?: string;
+  // Troca a entrada do histórico em vez de empilhar uma nova (páginas de uma mesma tela não
+  // devem virar passos do botão Voltar).
+  replace?: boolean;
 }
 
 const BASE =
@@ -30,6 +33,7 @@ export function Pagination({
   paramName = "pagina",
   label = "Paginação",
   className,
+  replace = false,
 }: PaginationProps) {
   if (pageCount <= 1) return null;
 
@@ -50,6 +54,7 @@ export function Pagination({
         aria-disabled={page <= 1}
         tabIndex={page <= 1 ? -1 : undefined}
         scroll={false}
+        replace={replace}
         className={arrow(page <= 1)}
       >
         <CaretLeft size={16} weight="bold" />
@@ -67,6 +72,7 @@ export function Pagination({
             aria-label={`Página ${item}`}
             aria-current={item === page ? "page" : undefined}
             scroll={false}
+            replace={replace}
             className={clsx(
               BASE,
               item === page
@@ -85,6 +91,7 @@ export function Pagination({
         aria-disabled={page >= pageCount}
         tabIndex={page >= pageCount ? -1 : undefined}
         scroll={false}
+        replace={replace}
         className={arrow(page >= pageCount)}
       >
         <CaretRight size={16} weight="bold" />

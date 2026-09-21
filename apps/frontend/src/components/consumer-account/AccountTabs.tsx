@@ -32,6 +32,7 @@ export function AccountTabs({
             key={tab.id}
             href={tab.id === "agenda" ? "/minha-conta" : `/minha-conta?aba=${tab.id}`}
             aria-current={isActive ? "page" : undefined}
+            replace
             className={clsx(
               "relative -mb-px flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-colors",
               isActive

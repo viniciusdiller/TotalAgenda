@@ -11,6 +11,7 @@ import type {
 import { consumerAuthedFetch } from "@/lib/consumer-session";
 import { formatPhoneBR } from "@/lib/masks";
 import { parsePageParam, type SearchParams } from "@/lib/pagination";
+import { BackButton } from "@/components/ui/BackButton";
 import { Pagination } from "@/components/ui/Pagination";
 import { AccountTabs, parseTab } from "@/components/consumer-account/AccountTabs";
 import { AppointmentTicket } from "@/components/consumer-account/AppointmentTicket";
@@ -93,6 +94,9 @@ export default async function MinhaContaPage({
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-6 pt-10 pb-20">
+      <div className="mb-6">
+        <BackButton fallbackHref="/descobrir" />
+      </div>
       <header className="flex flex-wrap items-start justify-between gap-6">
         <div className="flex items-center gap-5">
           <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-(--tenant-accent) font-brand text-2xl font-bold text-white">
@@ -170,6 +174,7 @@ export default async function MinhaContaPage({
                 </div>
               )}
               <Pagination
+              replace
                 className="mt-6"
                 label="Paginação dos próximos horários"
                 page={upcoming.page}
@@ -189,6 +194,7 @@ export default async function MinhaContaPage({
                   <HistoryTimeline bookings={history.items} />
                 </div>
                 <Pagination
+              replace
                   className="mt-6"
                   label="Paginação do histórico"
                   page={history.page}
@@ -217,6 +223,7 @@ export default async function MinhaContaPage({
               </div>
             )}
             <Pagination
+              replace
               className="mt-6"
               label="Paginação dos salões"
               page={establishments.page}
