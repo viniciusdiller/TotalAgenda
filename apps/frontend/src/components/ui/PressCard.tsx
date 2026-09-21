@@ -5,6 +5,7 @@ import Link from "next/link";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "motion/react";
 import { CircleNotch } from "@phosphor-icons/react/dist/ssr";
+import { RippleFill } from "./RippleFill";
 
 const MotionLink = motion.create(Link);
 
@@ -46,13 +47,7 @@ export function PressCard({
       <AnimatePresence>
         {opening ? (
           <>
-            <motion.span
-              aria-hidden
-              className="pointer-events-none absolute inset-0 bg-accent-500/12 dark:bg-accent-500/20"
-              initial={{ clipPath: `circle(0px at ${opening.x}px ${opening.y}px)` }}
-              animate={{ clipPath: `circle(220% at ${opening.x}px ${opening.y}px)` }}
-              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            />
+            <RippleFill x={opening.x} y={opening.y} />
             <motion.span
               aria-hidden
               className="pointer-events-none absolute top-3 right-3 flex items-center gap-1 rounded-full bg-accent-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-lg shadow-accent-500/30"

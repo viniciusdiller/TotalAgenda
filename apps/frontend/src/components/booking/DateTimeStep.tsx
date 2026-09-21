@@ -2,6 +2,7 @@
 
 import { DateTime } from "luxon";
 import clsx from "clsx";
+import { motion } from "motion/react";
 import type { AvailableSlot } from "@totalagenda/shared-types";
 
 const TIMEZONE = "America/Sao_Paulo";
@@ -46,10 +47,13 @@ export function DateTimeStep({
             const iso = day.toISODate()!;
             const isSelected = iso === selectedDate;
             return (
-              <button
+              <motion.button
                 key={iso}
                 type="button"
                 onClick={() => onSelectDate(iso)}
+                whileTap={{ scale: 0.92 }}
+                animate={{ scale: isSelected ? 1.06 : 1 }}
+                transition={{ type: "spring", stiffness: 500, damping: 24 }}
                 className={clsx(
                   "flex w-16 shrink-0 flex-col items-center gap-0.5 rounded-2xl border py-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-(--tenant-accent)/40",
                   isSelected
@@ -61,7 +65,7 @@ export function DateTimeStep({
                   {day.setLocale("pt-BR").toFormat("ccc")}
                 </span>
                 <span className="font-display text-lg font-bold">{day.toFormat("dd")}</span>
-              </button>
+              </motion.button>
             );
           })}
         </div>
@@ -111,14 +115,19 @@ export function DateTimeStep({
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {slots.map((slot) => {
+            {slots.map((slot, i) => {
               const isSelected = slot.startAt === selectedSlot?.startAt;
               return (
-                <button
+                <motion.button
                   key={slot.startAt}
                   type="button"
                   onClick={() => onSelectSlot(slot)}
+                  whileTap={{ scale: 0.92 }}
+                  animate={{ scale: isSelected ? 1.07 : 1 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 24 }}
+                  style={{ "--i": Math.min(i, 10) } as React.CSSProperties}
                   className={clsx(
+                    "animate-rise-in",
                     "rounded-xl border py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-(--tenant-accent)/40",
                     isSelected
                       ? "border-(--tenant-accent) bg-(--tenant-accent) text-white"
@@ -126,7 +135,7 @@ export function DateTimeStep({
                   )}
                 >
                   {DateTime.fromISO(slot.startAt).setZone(TIMEZONE).toFormat("HH:mm")}
-                </button>
+                </motion.button>
               );
             })}
           </div>

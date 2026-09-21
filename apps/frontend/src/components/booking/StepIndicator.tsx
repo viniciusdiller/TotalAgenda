@@ -1,4 +1,7 @@
+"use client";
+
 import clsx from "clsx";
+import { motion } from "motion/react";
 
 const STEP_LABELS = ["Serviço", "Profissional", "Horário", "Seus dados"];
 
@@ -30,12 +33,14 @@ export function StepIndicator({
                 clickable && "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-(--tenant-accent)/40",
               )}
             >
-              <div
-                className={clsx(
-                  "h-1.5 rounded-full transition-colors",
-                  state === "upcoming" ? "bg-zinc-200 dark:bg-white/10" : "bg-(--tenant-accent)",
-                )}
-              />
+              <div className="h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-white/10">
+                <motion.div
+                  className="h-full origin-left rounded-full bg-(--tenant-accent)"
+                  initial={false}
+                  animate={{ scaleX: state === "upcoming" ? 0 : 1 }}
+                  transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                />
+              </div>
               <span
                 className={clsx(
                   "hidden text-xs font-medium sm:block",
