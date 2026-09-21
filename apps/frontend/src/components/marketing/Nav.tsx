@@ -95,12 +95,17 @@ export function Nav({ session }: { session: NavSession }) {
 
       {open ? (
         <div className="border-b border-zinc-900/8 bg-stone-50/95 backdrop-blur-md lg:hidden dark:border-white/10 dark:bg-zinc-950/95">
-          <Container className="flex flex-col gap-1 py-4">
+          <Container className="py-4">
+           <div
+            className="flex flex-col gap-1"
+            onClick={(event) => {
+              if ((event.target as HTMLElement).closest("a")) setOpen(false);
+            }}
+           >
             {links.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                onClick={() => setOpen(false)}
                 className="rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-900/5 dark:text-stone-200 dark:hover:bg-white/5"
               >
                 {link.label}
@@ -114,10 +119,8 @@ export function Nav({ session }: { session: NavSession }) {
               {session?.kind === "consumer" ? (
                 <>
                   <Button href="/minha-conta" variant="ghost" className="w-full">
-                    Compromissos{session.upcomingCount > 0 ? ` (${session.upcomingCount})` : ""}
-                  </Button>
-                  <Button href="/minha-conta?aba=conta" variant="ghost" className="w-full">
-                    Meu cadastro ({session.name.split(" ")[0]})
+                    Minha conta ({session.name.split(" ")[0]})
+                    {session.upcomingCount > 0 ? ` · ${session.upcomingCount} compromisso${session.upcomingCount > 1 ? "s" : ""}` : ""}
                   </Button>
                 </>
               ) : session?.kind === "staff" ? null : (
@@ -135,6 +138,7 @@ export function Nav({ session }: { session: NavSession }) {
                 </Button>
               )}
             </div>
+           </div>
           </Container>
         </div>
       ) : null}
