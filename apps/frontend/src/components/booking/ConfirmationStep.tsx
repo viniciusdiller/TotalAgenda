@@ -57,10 +57,10 @@ export function ConfirmationStep({ booking }: { booking: PublicBooking }) {
         style={at(6)}
         className="animate-rise-in mt-6 max-w-sm text-sm text-zinc-500 dark:text-stone-400"
       >
-        Guarde o link abaixo para cancelar ou remarcar quando precisar.
+        Você pode cancelar ou remarcar quando precisar, na sua agenda.
       </p>
       <div style={at(7)} className="animate-rise-in">
-        <Button href={`/agendamento/${booking.manageToken}`} variant="ghost" className="mt-3">
+        <Button href="/minha-conta" variant="ghost" className="mt-3">
           Gerenciar agendamento
         </Button>
       </div>
