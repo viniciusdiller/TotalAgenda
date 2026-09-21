@@ -5,7 +5,7 @@ import { Moon, Sun } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
 import { useTheme } from "../ThemeProvider";
 
-export function ThemeToggle({ className }: { className?: string }) {
+export function ThemeToggle({ className, iconSize = 18 }: { className?: string; iconSize?: number }) {
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
 
@@ -33,7 +33,7 @@ export function ThemeToggle({ className }: { className?: string }) {
           transition={{ duration: 0.25 }}
           className="inline-flex"
         >
-          {isDark ? <Sun size={18} weight="bold" /> : <Moon size={18} weight="bold" />}
+          {isDark ? <Sun size={iconSize} weight="bold" /> : <Moon size={iconSize} weight="bold" />}
         </motion.span>
       </AnimatePresence>
     </motion.button>
