@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, Manrope, Outfit } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { FloatingThemeToggle } from "@/components/ui/FloatingThemeToggle";
 
 const display = Bricolage_Grotesque({
   variable: "--font-display",
@@ -61,7 +62,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-dvh bg-stone-50 font-body text-zinc-900 antialiased dark:bg-zinc-950 dark:text-stone-100">
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <FloatingThemeToggle />
+        </ThemeProvider>
       </body>
     </html>
   );

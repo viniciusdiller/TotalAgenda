@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { motion, useMotionValueEvent, useScroll } from "motion/react";
+import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "motion/react";
 import { List, X } from "@phosphor-icons/react/dist/ssr";
 import { Container } from "../ui/Container";
 import { Button } from "../ui/Button";
-import { ThemeToggle } from "../ui/ThemeToggle";
 import { Logo } from "../brand/Logo";
 import type { NavSession } from "@/lib/nav-session";
 import { AccountNav } from "../account/AccountNav";
@@ -62,7 +61,6 @@ export function Nav({ session }: { session: NavSession }) {
             </ul>
 
             <div className="hidden items-center gap-3 lg:flex">
-              <ThemeToggle />
               {session?.kind === "consumer" ? (
                 <AccountNav session={session} />
               ) : session?.kind === "staff" ? null : (
@@ -93,8 +91,15 @@ export function Nav({ session }: { session: NavSession }) {
         </Container>
       </div>
 
-      {open ? (
-        <div className="border-b border-zinc-900/8 bg-stone-50/95 backdrop-blur-md lg:hidden dark:border-white/10 dark:bg-zinc-950/95">
+      <AnimatePresence>
+        {open ? (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+          className="overflow-hidden border-b border-zinc-900/8 bg-stone-50/95 backdrop-blur-md lg:hidden dark:border-white/10 dark:bg-zinc-950/95"
+        >
           <Container className="py-4">
            <div
             className="flex flex-col gap-1"
@@ -111,10 +116,6 @@ export function Nav({ session }: { session: NavSession }) {
                 {link.label}
               </a>
             ))}
-            <div className="mt-2 flex items-center justify-between px-3">
-              <span className="text-sm font-medium text-zinc-600 dark:text-stone-300">Tema</span>
-              <ThemeToggle />
-            </div>
             <div className="mt-2 flex flex-col gap-2 px-3">
               {session?.kind === "consumer" ? (
                 <>
@@ -140,8 +141,9 @@ export function Nav({ session }: { session: NavSession }) {
             </div>
            </div>
           </Container>
-        </div>
-      ) : null}
+        </motion.div>
+        ) : null}
+      </AnimatePresence>
     </header>
   );
 }
