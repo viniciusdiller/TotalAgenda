@@ -147,6 +147,14 @@ export class FinanceService {
     if (entry.source !== FinancialEntrySource.MANUAL) {
       throw new BadRequestException("Lançamento gerado pelo sistema não pode ser editado.");
     }
+    // categoryId vem do body: sem checar o tenant, dava pra apontar o lançamento pra categoria
+    // de OUTRO negócio e ler o nome dela de volta em listEntries (include category.name).
+    if (dto.categoryId) {
+      const category = await this.getCategoryOrThrow(tenantId, dto.categoryId);
+      if (category.direction !== entry.direction) {
+        throw new BadRequestException("Categoria não corresponde ao tipo do lançamento.");
+      }
+    }
     return this.prisma.financialEntry.update({
       where: { id },
       data: {
