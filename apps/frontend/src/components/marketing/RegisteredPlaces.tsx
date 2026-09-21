@@ -3,6 +3,7 @@ import { MapPin, Star } from "@phosphor-icons/react/dist/ssr";
 import type { MarketplaceResult } from "@totalagenda/shared-types";
 import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
+import { PressCard } from "../ui/PressCard";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 const MAX_PLACES = 8;
@@ -49,7 +50,7 @@ export async function RegisteredPlaces() {
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {places.map((place, i) => (
             <Reveal key={place.id} delay={i * 0.05}>
-              <Link
+              <PressCard
                 href={`/${place.slug}`}
                 className="flex h-full flex-col rounded-2xl border border-zinc-200 p-5 transition-colors hover:border-accent-300 dark:border-white/10"
               >
@@ -83,7 +84,7 @@ export async function RegisteredPlaces() {
                     <span className="text-xs text-zinc-400">({place.rating.count})</span>
                   </span>
                 ) : null}
-              </Link>
+              </PressCard>
             </Reveal>
           ))}
         </div>
