@@ -28,6 +28,20 @@
   --brand-wordmark: #b9a0ff;
 }
 
+/* Troca de tema: a revelação circular é feita em JS (ThemeProvider); aqui só desliga o
+   cross-fade padrão do navegador, que brigaria com o clip-path. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 2;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

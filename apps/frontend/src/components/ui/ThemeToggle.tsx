@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { Moon, Sun } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
 import { useTheme } from "../ThemeProvider";
@@ -12,7 +12,10 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <motion.button
       type="button"
-      onClick={toggleTheme}
+      onClick={(event) => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        toggleTheme({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+      }}
       whileHover={{ y: -1 }}
       whileTap={{ scale: 0.9 }}
       aria-label={isDark ? "Mudar para tema claro" : "Mudar para tema escuro"}
@@ -21,7 +24,18 @@ export function ThemeToggle({ className }: { className?: string }) {
         className,
       )}
     >
-      {isDark ? <Sun size={18} weight="bold" /> : <Moon size={18} weight="bold" />}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={isDark ? "sun" : "moon"}
+          initial={{ opacity: 0, scale: 0.55, rotate: isDark ? 25 : -25 }}
+          animate={{ opacity: 1, scale: 1, rotate: 0 }}
+          exit={{ opacity: 0, scale: 0.55 }}
+          transition={{ duration: 0.25 }}
+          className="inline-flex"
+        >
+          {isDark ? <Sun size={18} weight="bold" /> : <Moon size={18} weight="bold" />}
+        </motion.span>
+      </AnimatePresence>
     </motion.button>
   );
 }
