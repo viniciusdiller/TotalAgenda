@@ -483,7 +483,6 @@ export interface PublicBooking {
   status: AppointmentStatus;
   source?: "PUBLIC" | "STAFF";
   notes?: string | null;
-  manageToken: string;
   rescheduledCount: number;
   items?: AppointmentItem[];
   service?: { name: string };

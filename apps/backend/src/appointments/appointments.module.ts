@@ -3,7 +3,6 @@ import { AppointmentsService } from "./appointments.service";
 import {
   AppointmentsController,
   PublicAppointmentsController,
-  PublicAppointmentManageController,
   ConsumerAppointmentsController,
 } from "./appointments.controller";
 import { ClientsModule } from "../clients/clients.module";
@@ -14,8 +13,7 @@ import { ConsumerAuthModule } from "../consumer-auth/consumer-auth.module";
   controllers: [
     AppointmentsController,
     PublicAppointmentsController,
-    PublicAppointmentManageController,
-    ConsumerAppointmentsController,
+      ConsumerAppointmentsController,
   ],
   providers: [AppointmentsService],
   exports: [AppointmentsService],

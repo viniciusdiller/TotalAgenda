@@ -361,7 +361,6 @@ model Appointment {
   status      AppointmentStatus @default(CONFIRMED)
   source      AppointmentSource @default(PUBLIC)
   notes       String?
-  manageToken String            @unique
   canceledAt  DateTime?         @db.Timestamptz(6)
   noShowAt    DateTime?         @db.Timestamptz(6)
   rescheduledCount Int          @default(0)

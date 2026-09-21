@@ -75,9 +75,6 @@ importers:
       luxon:
         specifier: ^3.5.0
         version: 3.7.2
-      nanoid:
-        specifier: ^3.3.8
-        version: 3.3.18
       passport:
         specifier: ^0.7.0
         version: 0.7.0

@@ -39,7 +39,6 @@ function hydratedAppointment(overrides: Record<string, unknown> = {}) {
     status: AppointmentStatus.CONFIRMED,
     source: "PUBLIC",
     notes: null,
-    manageToken: "token-1",
     canceledAt: null,
     noShowAt: null,
     rescheduledCount: 0,
@@ -131,7 +130,6 @@ describe("AppointmentsService", () => {
       const result = await service.createFromPublicLink("slug", baseDto, consumer);
 
       expect(tx.appointment.create).toHaveBeenCalledTimes(1);
-      expect(result.manageToken).toBeDefined();
       expect(result.priceCentsSnapshot).toBe(8000);
       expect(result.items).toHaveLength(1);
     });
@@ -294,60 +292,60 @@ describe("AppointmentsService", () => {
     });
   });
 
-  describe("cancelByToken", () => {
+  describe("cancelForConsumer", () => {
     it("cancela um atendimento CONFIRMED", async () => {
       const prisma = buildPrismaMock(buildTxMock());
-      (prisma.appointment.findUnique as jest.Mock).mockResolvedValue(hydratedAppointment());
+      (prisma.appointment.findFirst as jest.Mock).mockResolvedValue(hydratedAppointment());
       const service = new AppointmentsService(prisma, clientsService, consumerAuth);
 
-      const result = await service.cancelByToken("token-1");
+      const result = await service.cancelForConsumer("appt-1", consumer);
 
       expect(result.status).toBe(AppointmentStatus.CANCELED);
     });
 
     it("lança BadRequestException se já estiver cancelado", async () => {
       const prisma = buildPrismaMock(buildTxMock());
-      (prisma.appointment.findUnique as jest.Mock).mockResolvedValue(
+      (prisma.appointment.findFirst as jest.Mock).mockResolvedValue(
         hydratedAppointment({ status: AppointmentStatus.CANCELED }),
       );
       const service = new AppointmentsService(prisma, clientsService, consumerAuth);
 
-      await expect(service.cancelByToken("token-1")).rejects.toThrow(BadRequestException);
+      await expect(service.cancelForConsumer("appt-1", consumer)).rejects.toThrow(BadRequestException);
     });
 
-    it("lança NotFoundException se o token não existe", async () => {
+    it("lança NotFoundException se o atendimento não existe (ou é de outro cliente)", async () => {
       const prisma = buildPrismaMock(buildTxMock());
-      (prisma.appointment.findUnique as jest.Mock).mockResolvedValue(null);
+      (prisma.appointment.findFirst as jest.Mock).mockResolvedValue(null);
       const service = new AppointmentsService(prisma, clientsService, consumerAuth);
 
-      await expect(service.cancelByToken("nao-existe")).rejects.toThrow(NotFoundException);
+      await expect(service.cancelForConsumer("nao-existe", consumer)).rejects.toThrow(NotFoundException);
     });
 
-    // Regressão: applyCancel só bloqueava CANCELED/COMPLETED, então um cliente com o link
-    // público conseguia cancelar um atendimento IN_SERVICE (profissional atendendo agora)
+    // Regressão: applyCancel só bloqueava CANCELED/COMPLETED, então um cliente logado
+    // conseguia cancelar um atendimento IN_SERVICE (profissional atendendo agora)
     // ou já marcado NO_SHOW — diferente de applyReschedule, que já restringia a
     // SCHEDULED/CONFIRMED. A recepção (cancelByStaff) continua podendo cancelar em
     // qualquer estado não-terminal, só a ação iniciada pelo cliente ficou restrita.
     it.each([AppointmentStatus.IN_SERVICE, AppointmentStatus.NO_SHOW])(
-      "lança BadRequestException ao tentar cancelar um atendimento %s pelo link público",
+      "lança BadRequestException ao tentar cancelar um atendimento %s pela conta do cliente",
       async (status) => {
         const prisma = buildPrismaMock(buildTxMock());
-        (prisma.appointment.findUnique as jest.Mock).mockResolvedValue(hydratedAppointment({ status }));
+        (prisma.appointment.findFirst as jest.Mock).mockResolvedValue(hydratedAppointment({ status }));
         const service = new AppointmentsService(prisma, clientsService, consumerAuth);
 
-        await expect(service.cancelByToken("token-1")).rejects.toThrow(BadRequestException);
+        await expect(service.cancelForConsumer("appt-1", consumer)).rejects.toThrow(BadRequestException);
       },
     );
   });
 
-  describe("rescheduleByToken", () => {
+  describe("rescheduleForConsumer", () => {
     it("reagenda e incrementa rescheduledCount quando não há conflito", async () => {
       const tx = buildTxMock();
       const prisma = buildPrismaMock(tx);
-      (prisma.appointment.findUnique as jest.Mock).mockResolvedValue(hydratedAppointment());
+      (prisma.appointment.findFirst as jest.Mock).mockResolvedValue(hydratedAppointment());
       const service = new AppointmentsService(prisma, clientsService, consumerAuth);
 
-      await service.rescheduleByToken("token-1", { startAt: FUTURE_DATE });
+      await service.rescheduleForConsumer("appt-1", { startAt: FUTURE_DATE }, consumer);
 
       expect(tx.appointment.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -364,22 +362,22 @@ describe("AppointmentsService", () => {
         },
       });
       const prisma = buildPrismaMock(tx);
-      (prisma.appointment.findUnique as jest.Mock).mockResolvedValue(hydratedAppointment());
+      (prisma.appointment.findFirst as jest.Mock).mockResolvedValue(hydratedAppointment());
       const service = new AppointmentsService(prisma, clientsService, consumerAuth);
 
-      await expect(service.rescheduleByToken("token-1", { startAt: FUTURE_DATE })).rejects.toThrow(
+      await expect(service.rescheduleForConsumer("appt-1", { startAt: FUTURE_DATE }, consumer)).rejects.toThrow(
         ConflictException,
       );
     });
 
     it("lança BadRequestException se o atendimento estiver finalizado", async () => {
       const prisma = buildPrismaMock(buildTxMock());
-      (prisma.appointment.findUnique as jest.Mock).mockResolvedValue(
+      (prisma.appointment.findFirst as jest.Mock).mockResolvedValue(
         hydratedAppointment({ status: AppointmentStatus.COMPLETED }),
       );
       const service = new AppointmentsService(prisma, clientsService, consumerAuth);
 
-      await expect(service.rescheduleByToken("token-1", { startAt: FUTURE_DATE })).rejects.toThrow(
+      await expect(service.rescheduleForConsumer("appt-1", { startAt: FUTURE_DATE }, consumer)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -390,13 +388,13 @@ describe("AppointmentsService", () => {
     it("busca o vínculo profissional↔serviço de destino já filtrando pelo tenantId do agendamento", async () => {
       const tx = buildTxMock();
       const prisma = buildPrismaMock(tx);
-      (prisma.appointment.findUnique as jest.Mock).mockResolvedValue(hydratedAppointment());
+      (prisma.appointment.findFirst as jest.Mock).mockResolvedValue(hydratedAppointment());
       const service = new AppointmentsService(prisma, clientsService, consumerAuth);
 
-      await service.rescheduleByToken("token-1", {
+      await service.rescheduleForConsumer("appt-1", {
         startAt: FUTURE_DATE,
         professionalId: "prof-2",
-      });
+      }, consumer);
 
       expect(prisma.professionalService.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
