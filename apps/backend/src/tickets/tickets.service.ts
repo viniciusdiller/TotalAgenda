@@ -110,7 +110,6 @@ export class TicketsService {
   }
 
   async addItem(tenantId: string, id: string, dto: AddTicketItemDto) {
-    const ticket = await this.requireOpen(tenantId, id);
     const quantity = dto.quantity ?? 1;
 
     // Preço de item de catálogo nunca vem do cliente — só CUSTOM (sem catálogo pra
@@ -126,105 +125,109 @@ export class TicketsService {
       );
     }
 
-    let data: Prisma.TicketItemCreateWithoutTicketInput;
-    if (dto.kind === "SERVICE") {
-      const service = await this.prisma.service.findFirst({
-        where: { id: dto.serviceId, tenantId },
-      });
-      if (!service) throw new NotFoundException("Serviço não encontrado.");
-      data = {
-        kind: TicketItemKind.SERVICE,
-        service: { connect: { id: service.id } },
-        description: service.name,
-        quantity,
-        unitPriceCents: service.priceCents,
-      };
-    } else if (dto.kind === "PRODUCT") {
-      const product = await this.products.getOrThrow(tenantId, dto.productId!);
-      data = {
-        kind: TicketItemKind.PRODUCT,
-        product: { connect: { id: product.id } },
-        description: product.name,
-        quantity,
-        unitPriceCents: product.priceCents,
-      };
-    } else {
-      data = {
-        kind: TicketItemKind.CUSTOM,
-        description: dto.description!.trim(),
-        quantity,
-        unitPriceCents: dto.unitPriceCents!,
-      };
-    }
+    await this.lockedOpenTicket(tenantId, id, async (tx, ticket) => {
+      let data: Prisma.TicketItemCreateWithoutTicketInput;
+      if (dto.kind === "SERVICE") {
+        const service = await this.prisma.service.findFirst({
+          where: { id: dto.serviceId, tenantId },
+        });
+        if (!service) throw new NotFoundException("Serviço não encontrado.");
+        data = {
+          kind: TicketItemKind.SERVICE,
+          service: { connect: { id: service.id } },
+          description: service.name,
+          quantity,
+          unitPriceCents: service.priceCents,
+        };
+      } else if (dto.kind === "PRODUCT") {
+        const product = await this.products.getOrThrow(tenantId, dto.productId!);
+        data = {
+          kind: TicketItemKind.PRODUCT,
+          product: { connect: { id: product.id } },
+          description: product.name,
+          quantity,
+          unitPriceCents: product.priceCents,
+        };
+      } else {
+        data = {
+          kind: TicketItemKind.CUSTOM,
+          description: dto.description!.trim(),
+          quantity,
+          unitPriceCents: dto.unitPriceCents!,
+        };
+      }
 
-    if (dto.professionalId) {
-      const professional = await this.prisma.professional.findFirst({
-        where: { id: dto.professionalId, tenantId },
-        select: { id: true },
-      });
-      if (!professional) throw new NotFoundException("Profissional não encontrado.");
-      data.professional = { connect: { id: dto.professionalId } };
-    }
+      if (dto.professionalId) {
+        const professional = await this.prisma.professional.findFirst({
+          where: { id: dto.professionalId, tenantId },
+          select: { id: true },
+        });
+        if (!professional) throw new NotFoundException("Profissional não encontrado.");
+        data.professional = { connect: { id: dto.professionalId } };
+      }
 
-    await this.prisma.ticketItem.create({ data: { ...data, ticket: { connect: { id: ticket.id } } } });
+      await tx.ticketItem.create({ data: { ...data, ticket: { connect: { id: ticket.id } } } });
+    });
     return this.serialize(await this.getOpenOrAny(tenantId, id));
   }
 
   async removeItem(tenantId: string, id: string, itemId: string) {
-    await this.requireOpen(tenantId, id);
-    const item = await this.prisma.ticketItem.findFirst({ where: { id: itemId, ticketId: id } });
-    if (!item) throw new NotFoundException("Item não encontrado.");
-    await this.prisma.ticketItem.delete({ where: { id: itemId } });
+    await this.lockedOpenTicket(tenantId, id, async (tx) => {
+      const item = await tx.ticketItem.findFirst({ where: { id: itemId, ticketId: id } });
+      if (!item) throw new NotFoundException("Item não encontrado.");
+      await tx.ticketItem.delete({ where: { id: itemId } });
+    });
     return this.serialize(await this.getOpenOrAny(tenantId, id));
   }
 
   async setDiscount(tenantId: string, id: string, dto: SetTicketDiscountDto) {
-    const ticket = await this.requireOpen(tenantId, id);
-    const subtotal = this.subtotalCents(ticket);
-    if (dto.discountCents > subtotal) {
-      throw new BadRequestException("Desconto maior que o subtotal.");
-    }
-    await this.prisma.ticket.update({ where: { id }, data: { discountCents: dto.discountCents } });
+    await this.lockedOpenTicket(tenantId, id, async (tx, ticket) => {
+      const subtotal = this.subtotalCents(ticket);
+      if (dto.discountCents > subtotal) {
+        throw new BadRequestException("Desconto maior que o subtotal.");
+      }
+      await tx.ticket.update({ where: { id }, data: { discountCents: dto.discountCents } });
+    });
     return this.serialize(await this.getOpenOrAny(tenantId, id));
   }
 
   async addPayment(tenantId: string, id: string, dto: AddPaymentDto) {
-    const ticket = await this.requireOpen(tenantId, id);
-    const total = this.totalCents(ticket);
-    const paid = ticket.payments.reduce((sum, p) => sum + p.amountCents, 0);
-    if (paid + dto.amountCents > total) {
-      throw new BadRequestException(
-        `Pagamento excede o restante da comanda (${total - paid}).`,
-      );
-    }
+    await this.lockedOpenTicket(tenantId, id, async (tx, ticket) => {
+      const total = this.totalCents(ticket);
+      const paid = ticket.payments.reduce((sum, p) => sum + p.amountCents, 0);
+      if (paid + dto.amountCents > total) {
+        throw new BadRequestException(
+          `Pagamento excede o restante da comanda (${total - paid}).`,
+        );
+      }
 
-    const openRegister =
-      dto.method === "CASH" ? await this.cashRegister.currentOpen(tenantId) : null;
+      const openRegister =
+        dto.method === "CASH" ? await this.cashRegister.currentOpen(tenantId, tx) : null;
 
-    await this.prisma.payment.create({
-      data: {
-        tenantId,
-        ticketId: id,
-        method: dto.method as PaymentMethod,
-        amountCents: dto.amountCents,
-        cashRegisterId: openRegister?.id ?? null,
-      },
+      await tx.payment.create({
+        data: {
+          tenantId,
+          ticketId: id,
+          method: dto.method as PaymentMethod,
+          amountCents: dto.amountCents,
+          cashRegisterId: openRegister?.id ?? null,
+        },
+      });
     });
     return this.serialize(await this.getOpenOrAny(tenantId, id));
   }
 
   async close(tenantId: string, userId: string, id: string) {
-    const ticket = await this.requireOpen(tenantId, id);
-    if (ticket.items.length === 0) {
-      throw new BadRequestException("Comanda sem itens.");
-    }
-    const total = this.totalCents(ticket);
-    const paid = ticket.payments.reduce((sum, p) => sum + p.amountCents, 0);
-    if (paid < total) {
-      throw new BadRequestException(`Faltam ${total - paid} centavos em pagamento.`);
-    }
+    return this.lockedOpenTicket(tenantId, id, async (tx, ticket) => {
+      if (ticket.items.length === 0) {
+        throw new BadRequestException("Comanda sem itens.");
+      }
+      const total = this.totalCents(ticket);
+      const paid = ticket.payments.reduce((sum, p) => sum + p.amountCents, 0);
+      if (paid < total) {
+        throw new BadRequestException(`Faltam ${total - paid} centavos em pagamento.`);
+      }
 
-    return this.prisma.$transaction(async (tx) => {
       const closed = await tx.ticket.update({
         where: { id },
         data: { status: TicketStatus.CLOSED, closedAt: new Date() },
@@ -265,21 +268,26 @@ export class TicketsService {
   }
 
   async cancel(tenantId: string, id: string) {
-    const ticket = await this.requireOpen(tenantId, id);
-    if (ticket.payments.length > 0) {
-      throw new BadRequestException("Estorne os pagamentos antes de cancelar a comanda.");
-    }
-    await this.prisma.ticket.update({
-      where: { id },
-      data: { status: TicketStatus.CANCELED, canceledAt: new Date() },
+    await this.lockedOpenTicket(tenantId, id, async (tx, ticket) => {
+      if (ticket.payments.length > 0) {
+        throw new BadRequestException("Estorne os pagamentos antes de cancelar a comanda.");
+      }
+      await tx.ticket.update({
+        where: { id },
+        data: { status: TicketStatus.CANCELED, canceledAt: new Date() },
+      });
     });
     return this.serialize(await this.getOpenOrAny(tenantId, id));
   }
 
   // ─────────────────────────────────────────────
 
-  private async getOpenOrAny(tenantId: string, id: string) {
-    const ticket = await this.prisma.ticket.findFirst({
+  private async getOpenOrAny(
+    tenantId: string,
+    id: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const ticket = await db.ticket.findFirst({
       where: { id, tenantId },
       include: TICKET_INCLUDE,
     });
@@ -287,12 +295,33 @@ export class TicketsService {
     return ticket;
   }
 
-  private async requireOpen(tenantId: string, id: string) {
-    const ticket = await this.getOpenOrAny(tenantId, id);
+  private async requireOpen(
+    tenantId: string,
+    id: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const ticket = await this.getOpenOrAny(tenantId, id, db);
     if (ticket.status !== TicketStatus.OPEN) {
       throw new ConflictException("Comanda não está aberta.");
     }
     return ticket;
+  }
+
+  // Toda mutação de uma comanda roda serializada por um advisory lock da própria comanda e
+  // relê o status DENTRO da transação. Ler "está aberta?" fora e escrever depois deixava duas
+  // requisições concorrentes (duplo clique, retry, dois caixas) passarem juntas pela checagem:
+  // fechar duas vezes gerava receita, comissão e baixa de estoque em dobro, e dois pagamentos
+  // simultâneos ultrapassavam o total. O lock é por comanda — não bloqueia as demais.
+  private lockedOpenTicket<T>(
+    tenantId: string,
+    id: string,
+    fn: (tx: Prisma.TransactionClient, ticket: TicketWithRelations) => Promise<T>,
+  ): Promise<T> {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${id})::bigint)`;
+      const ticket = await this.requireOpen(tenantId, id, tx);
+      return fn(tx, ticket);
+    });
   }
 
   private subtotalCents(ticket: TicketWithRelations) {
