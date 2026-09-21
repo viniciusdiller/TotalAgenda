@@ -162,6 +162,19 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
   corrigido com `FindWaitlistQueryDto` (`@Query() query: FindWaitlistQueryDto`), mesmo
   padrão de `GetAvailabilityQueryDto`/`SearchMarketplaceQueryDto`.
 
+### Concorrência (dinheiro) e uploads
+- Mutação de comanda (`TicketsService`) roda em `lockedOpenTicket`: advisory lock por comanda +
+  status relido DENTRO da transação. "Checar aberta fora, escrever depois" deixava dois `close`
+  concorrentes gerarem receita/comissão/estoque em dobro e dois pagamentos estourarem o total.
+- Upload de imagem (`common/utils/image.util.ts`): formato vem dos BYTES (só JPEG/PNG/WEBP — nunca
+  o mimetype do multipart), teto de pixels decodificados e reencode pra WebP. O sharp abre SVG
+  (referência externa/XML entities), então não se pode confiar no Content-Type.
+- FK vinda do body (categoryId, clientId, professionalId...) só entra depois de validada no
+  tenant (`findFirst({ id, tenantId })`) — inclusive em PATCH (`updateEntry` já vazou categoria de
+  outro tenant por isso). `PROFESSIONAL` só age sobre o que é dele (ficha de anamnese exige
+  atendimento próprio).
+- Valor salvo que vira `href` em página pública (ex.: `instagramUrl`) só aceita `http(s)://`.
+
 ### DoS / abuso
 - `ThrottlerModule` global (100 req/min por IP). Rotas públicas sensíveis a spam têm
   `@Throttle` mais estrito (ex.: criação de agendamento público: 10/min).
@@ -176,6 +189,18 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
   `paramName` pra várias listagens na mesma tela) — ver `app/minha-conta/page.tsx`.
 
 ### Auth / sessão
+- **Staff**: `JwtStrategy.validate` relê o usuário no banco a cada request (tenantId/role/
+  professionalId vêm do BANCO, não das claims; `isActive=false` → 401). O token só prova quem é —
+  desativar/rebaixar vale na hora, não em até 12h. Convite de "definir senha" também recusa
+  usuário desativado.
+- **Cliente (Consumer)**: o JWT carrega `pv` (prefixo do sha256 do `passwordHash`) e o
+  `ConsumerJwtAuthGuard` confere no banco que a conta existe e que `pv` bate. Trocar a senha ou
+  excluir a conta derruba as sessões antigas; a troca devolve sessão nova (a Server Action grava
+  no cookie).
+- `JWT_SECRET` exige 32+ caracteres (boot falha se menor). `helmet` ativo (CORP `cross-origin`
+  porque `/uploads` é carregado do frontend em outra origem). Atrás de proxy, definir
+  `TRUST_PROXY_HOPS` (nº de proxies confiáveis, nunca `true`) — senão o throttle por IP limita
+  todos os clientes juntos.
 - Senhas com bcrypt (rounds 12). Nunca logar senha, token, hash ou `Authorization`.
 - JWT: validar assinatura + expiração (`passport-jwt`); `JWT_SECRET` obrigatório no
   `env.validation` (fail closed). Não confiar em claim sem revalidar o recurso no banco.
@@ -202,6 +227,15 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
   - Exceção consciente: `GHSA-36xv-jgw5-4q75` (`@nestjs/core`, injeção em `SseStream`) está em
     `pnpm.auditConfig.ignoreGhsas` porque só a v11 corrige (major: Express 5) e o app **não usa**
     `@Sse()`. Rever ao migrar pro Nest 11 ou se algum endpoint SSE for criado.
+
+### Riscos conhecidos (aceitos por ora)
+- Refresh token de staff sem rotação/revogação (30d); só `isActive` o derruba.
+- Lockout por conta permite travar a conta alheia (DoS) — mitigado por throttle por IP.
+- Abrir caixa não é atômico (dois `open` simultâneos podem criar dois caixas abertos); estoque
+  pode ficar negativo (regra de negócio, não checada).
+- Cadastro do cliente revela se telefone/e-mail já têm conta (decisão de UX); sem OTP.
+- Backend não faz requisição HTTP de saída hoje (sem superfície de SSRF): se surgir fetch de
+  URL controlada por usuário, validar host contra allowlist e bloquear IP privado/metadata.
 
 ## Convenções
 
