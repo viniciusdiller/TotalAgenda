@@ -58,7 +58,7 @@ export function HistoryTimeline({ bookings }: { bookings: PublicBooking[] }) {
               const dt = DateTime.fromISO(booking.startAt).setZone(TIMEZONE).setLocale("pt-BR");
               const status = statusOf(booking.status);
               return (
-                <li key={booking.id} className="relative flex items-center gap-4 py-3 pl-6">
+                <li key={booking.id} className="animate-rise-in relative flex items-center gap-4 py-3 pl-6">
                   <span
                     aria-hidden
                     className="absolute top-1/2 left-0 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-zinc-300 dark:bg-white/20"

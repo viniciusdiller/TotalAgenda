@@ -9,8 +9,8 @@ import { formatPhoneBR } from "@/lib/masks";
 const initial: FormState = {};
 
 function Feedback({ state }: { state: FormState | undefined }) {
-  if (state?.error) return <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p>;
-  if (state?.success) return <p className="text-sm text-emerald-600 dark:text-emerald-400">{state.success}</p>;
+  if (state?.error) return <p role="alert" className="animate-rise-in text-sm text-red-600 dark:text-red-400">{state.error}</p>;
+  if (state?.success) return <p role="status" className="animate-rise-in text-sm text-emerald-600 dark:text-emerald-400">{state.success}</p>;
   return null;
 }
 

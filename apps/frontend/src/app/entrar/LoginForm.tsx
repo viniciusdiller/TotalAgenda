@@ -111,7 +111,7 @@ export function LoginForm({ next }: { next?: string }) {
             required
           />
 
-          {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
+          {error ? <p role="alert" className="animate-rise-in text-sm text-red-600 dark:text-red-400">{error}</p> : null}
 
           <Button type="submit" disabled={pending} className="mt-2 w-full disabled:opacity-60">
             {pending ? "Entrando..." : "Entrar"}
@@ -188,7 +188,7 @@ export function LoginForm({ next }: { next?: string }) {
             identificar minha conta, meus agendamentos e avaliações.
           </label>
 
-          {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
+          {error ? <p role="alert" className="animate-rise-in text-sm text-red-600 dark:text-red-400">{error}</p> : null}
 
           <Button type="submit" disabled={pending} className="mt-2 w-full disabled:opacity-60">
             {pending ? "Criando..." : "Criar conta"}

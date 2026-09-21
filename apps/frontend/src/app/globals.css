@@ -42,6 +42,32 @@
   z-index: 2;
 }
 
+/* Movimento com função: entrada de página, entrada escalonada de listas (--i = posição) e
+   shimmer de carregamento. O bloco de prefers-reduced-motion abaixo neutraliza todos. */
+@keyframes page-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@utility animate-page-in {
+  animation: page-in 240ms ease-out backwards;
+}
+@utility animate-rise-in {
+  animation: rise-in 460ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

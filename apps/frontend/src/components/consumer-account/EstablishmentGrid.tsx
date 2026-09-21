@@ -6,10 +6,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 export function EstablishmentGrid({ establishments }: { establishments: ConsumerEstablishment[] }) {
   return (
     <ul className="grid gap-4 sm:grid-cols-2">
-      {establishments.map((establishment) => (
+      {establishments.map((establishment, i) => (
         <li
           key={establishment.slug}
-          className="flex flex-col gap-5 rounded-3xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-900"
+          style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
+          className="animate-rise-in flex flex-col gap-5 rounded-3xl transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-zinc-900/5 border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-900"
         >
           <div className="flex items-center gap-4">
             {establishment.logoUrl ? (

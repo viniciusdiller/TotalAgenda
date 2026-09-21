@@ -102,11 +102,15 @@ export function DiscoverSearch({
         </p>
       ) : (
         <ul className="mt-6 grid gap-4 sm:grid-cols-2">
-          {results.map((r) => (
-            <li key={r.id}>
+          {results.map((r, i) => (
+            <li
+              key={r.id}
+              className="animate-rise-in"
+              style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
+            >
               <Link
                 href={`/${r.slug}`}
-                className="block rounded-2xl border border-zinc-200 p-4 transition-colors hover:border-accent-300 dark:border-white/10"
+                className="block rounded-2xl border border-zinc-200 p-4 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-accent-300 hover:shadow-lg hover:shadow-accent-500/10 dark:border-white/10"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
