@@ -11,7 +11,7 @@ import type {
 import { consumerAuthedFetch } from "@/lib/consumer-session";
 import { formatPhoneBR } from "@/lib/masks";
 import { parsePageParam, type SearchParams } from "@/lib/pagination";
-import { BackButton } from "@/components/ui/BackButton";
+import { BackLink } from "@/components/ui/BackLink";
 import { Pagination } from "@/components/ui/Pagination";
 import { AccountTabs, parseTab } from "@/components/consumer-account/AccountTabs";
 import { AppointmentTicket } from "@/components/consumer-account/AppointmentTicket";
@@ -95,7 +95,7 @@ export default async function MinhaContaPage({
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-6 pt-10 pb-20">
       <div className="mb-6">
-        <BackButton fallbackHref="/descobrir" />
+        <BackLink href="/" />
       </div>
       <header className="flex flex-wrap items-start justify-between gap-6">
         <div className="flex items-center gap-5">
