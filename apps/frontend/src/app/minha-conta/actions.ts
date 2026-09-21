@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ApiError } from "@/lib/api";
-import { clearConsumerToken, consumerAuthedFetch } from "@/lib/consumer-session";
+import { clearConsumerToken, consumerAuthedFetch, setConsumerToken } from "@/lib/consumer-session";
 
 export interface FormState {
   error?: string;
@@ -50,10 +50,13 @@ export async function changePasswordAction(_prev: FormState | undefined, formDat
   if (newPassword !== confirm) return { error: "As senhas não conferem." };
 
   try {
-    await consumerAuthedFetch("/public/consumer/password", {
+    // Trocar a senha derruba todas as sessões antigas no backend; a resposta traz uma sessão nova
+    // (pra quem trocou continuar logado aqui) e é ela que vai pro cookie.
+    const result = await consumerAuthedFetch<{ accessToken: string }>("/public/consumer/password", {
       method: "PATCH",
       body: JSON.stringify({ currentPassword, newPassword }),
     });
+    await setConsumerToken(result.accessToken);
   } catch (error) {
     return { error: messageFor(error, "Não foi possível trocar a senha.") };
   }

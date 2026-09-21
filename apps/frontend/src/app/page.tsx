@@ -34,8 +34,8 @@ export default async function Home() {
       <Nav session={session} />
       <main>
         <Hero cities={cities} />
-        <OwnerCta />
         <RegisteredPlaces />
+        <OwnerCta />
         <ProblemSolution />
         <HowItWorks />
         <Features />
