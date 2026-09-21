@@ -11,6 +11,7 @@ import {
 import { Role } from "@totalagenda/database";
 import { TimeBlocksService } from "./time-blocks.service";
 import { CreateTimeBlockDto } from "./dto/create-time-block.dto";
+import { TimeBlocksQueryDto } from "../common/dto/query-dtos";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { AuthenticatedUser } from "../auth/types/auth-user";
 
@@ -27,10 +28,10 @@ export class TimeBlocksController {
   @Get()
   findByProfessional(
     @CurrentUser() user: AuthenticatedUser,
-    @Query("professionalId") professionalId: string,
+    @Query() query: TimeBlocksQueryDto,
   ) {
-    this.assertOwnsOrIsOwner(user, professionalId);
-    return this.timeBlocksService.findByProfessional(user.tenantId, professionalId);
+    this.assertOwnsOrIsOwner(user, query.professionalId);
+    return this.timeBlocksService.findByProfessional(user.tenantId, query.professionalId);
   }
 
   @Delete(":id")

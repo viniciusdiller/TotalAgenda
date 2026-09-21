@@ -3,6 +3,7 @@ import { Role } from "@totalagenda/database";
 import { ClientsService } from "./clients.service";
 import { CreateClientDto } from "./dto/create-client.dto";
 import { UpdateClientDto } from "./dto/update-client.dto";
+import { ClientSearchQueryDto } from "../common/dto/query-dtos";
 import { Roles } from "../common/decorators/roles.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { AuthenticatedUser } from "../auth/types/auth-user";
@@ -14,8 +15,8 @@ export class ClientsController {
   constructor(private readonly clientsService: ClientsService) {}
 
   @Get()
-  list(@CurrentUser() user: AuthenticatedUser, @Query("search") search?: string) {
-    return this.clientsService.list(user.tenantId, search);
+  list(@CurrentUser() user: AuthenticatedUser, @Query() query: ClientSearchQueryDto) {
+    return this.clientsService.list(user.tenantId, query.search);
   }
 
   @Get(":id")

@@ -8,6 +8,8 @@ import {
 import { PrismaService } from "../prisma/prisma.service";
 import { UpsertCommissionRuleDto } from "./dto/upsert-commission-rule.dto";
 
+const MAX_REPORT_RANGE_MS = 366 * 24 * 60 * 60 * 1000;
+
 type RuleForMatch = {
   id: string;
   professionalId: string;
@@ -77,6 +79,10 @@ export class CommissionsService {
     const toDate = new Date(to);
     if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
       throw new BadRequestException("Intervalo inválido.");
+    }
+    // Sem teto, "1970 → 2100" materializava todas as comissões do tenant numa resposta só.
+    if (toDate.getTime() - fromDate.getTime() > MAX_REPORT_RANGE_MS) {
+      throw new BadRequestException("Intervalo máximo do relatório é de 366 dias.");
     }
 
     const entries = await this.prisma.commissionEntry.findMany({

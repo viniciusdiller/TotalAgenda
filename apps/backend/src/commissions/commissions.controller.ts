@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common
 import { Role } from "@totalagenda/database";
 import { CommissionsService } from "./commissions.service";
 import { UpsertCommissionRuleDto } from "./dto/upsert-commission-rule.dto";
+import { RangeByProfessionalQueryDto } from "../common/dto/query-dtos";
 import { Roles } from "../common/decorators/roles.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { AuthenticatedUser } from "../auth/types/auth-user";
@@ -36,11 +37,9 @@ export class CommissionsController {
   @Get("report")
   report(
     @CurrentUser() user: AuthenticatedUser,
-    @Query("from") from: string,
-    @Query("to") to: string,
-    @Query("professionalId") professionalId?: string,
+    @Query() query: RangeByProfessionalQueryDto,
   ) {
-    const scoped = user.role === Role.PROFESSIONAL ? user.professionalId : professionalId;
-    return this.commissions.report(user.tenantId, from, to, scoped);
+    const scoped = user.role === Role.PROFESSIONAL ? user.professionalId : query.professionalId;
+    return this.commissions.report(user.tenantId, query.from, query.to, scoped);
   }
 }

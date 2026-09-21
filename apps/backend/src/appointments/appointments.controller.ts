@@ -11,6 +11,7 @@ import { Public } from "../common/decorators/public.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { AuthenticatedUser } from "../auth/types/auth-user";
+import { DateRangeQueryDto, RangeByProfessionalQueryDto } from "../common/dto/query-dtos";
 import { ConsumerJwtAuthGuard } from "../consumer-auth/guards/consumer-jwt-auth.guard";
 import { CurrentConsumer } from "../consumer-auth/decorators/current-consumer.decorator";
 import { AuthenticatedConsumer } from "../consumer-auth/types/consumer-auth-user";
@@ -43,20 +44,17 @@ export class AppointmentsController {
   @Get()
   findAll(
     @CurrentUser() user: AuthenticatedUser,
-    @Query("from") from?: string,
-    @Query("to") to?: string,
+    @Query() query: DateRangeQueryDto,
   ) {
-    return this.appointments.findForAdmin(user, from, to);
+    return this.appointments.findForAdmin(user, query.from, query.to);
   }
 
   @Get("calendar")
   calendar(
     @CurrentUser() user: AuthenticatedUser,
-    @Query("from") from: string,
-    @Query("to") to: string,
-    @Query("professionalId") professionalId?: string,
+    @Query() query: RangeByProfessionalQueryDto,
   ) {
-    return this.appointments.getCalendar(user, from, to, professionalId);
+    return this.appointments.getCalendar(user, query.from, query.to, query.professionalId);
   }
 
   @Roles(Role.OWNER, Role.RECEPTIONIST, Role.PROFESSIONAL)
