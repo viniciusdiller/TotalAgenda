@@ -4,7 +4,7 @@ import { BRAND } from "../brand/palette";
 import { AccountMenu } from "./AccountMenu";
 
 // Bloco de conta da barra superior, o mesmo em todas as páginas: cliente logado vê
-// "Compromissos" (com o total de horários futuros) e o menu do perfil (dropdown); dono/staff vê o acesso à
+// o menu do perfil (dropdown, com o total de horários futuros em "Minha agenda"); dono/staff vê o acesso à
 // própria loja; deslogado vê "Entrar". Sem hooks, então serve tanto em Server quanto em Client
 // Components. Define a paleta da marca aqui pra funcionar fora de /[slug] e /minha-conta.
 export function AccountNav({
@@ -43,19 +43,8 @@ export function AccountNav({
   }
 
   return (
-    <div style={scope} className="flex items-center gap-2.5">
-      <Link
-        href="/minha-conta"
-        className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-semibold text-zinc-900 transition-colors hover:border-(--tenant-accent)/40 dark:border-white/10 dark:bg-white/5 dark:text-white"
-      >
-        Compromissos
-        {session.upcomingCount > 0 ? (
-          <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-(--tenant-accent-secondary) px-1 text-[11px] font-bold text-white">
-            {session.upcomingCount}
-          </span>
-        ) : null}
-      </Link>
-      <AccountMenu name={session.name} />
+    <div style={scope}>
+      <AccountMenu name={session.name} upcomingCount={session.upcomingCount} />
     </div>
   );
 }

@@ -119,10 +119,8 @@ export function Nav({ session }: { session: NavSession }) {
               {session?.kind === "consumer" ? (
                 <>
                   <Button href="/minha-conta" variant="ghost" className="w-full">
-                    Compromissos{session.upcomingCount > 0 ? ` (${session.upcomingCount})` : ""}
-                  </Button>
-                  <Button href="/minha-conta?aba=conta" variant="ghost" className="w-full">
-                    Meu cadastro ({session.name.split(" ")[0]})
+                    Minha conta ({session.name.split(" ")[0]})
+                    {session.upcomingCount > 0 ? ` · ${session.upcomingCount} compromisso${session.upcomingCount > 1 ? "s" : ""}` : ""}
                   </Button>
                 </>
               ) : session?.kind === "staff" ? null : (

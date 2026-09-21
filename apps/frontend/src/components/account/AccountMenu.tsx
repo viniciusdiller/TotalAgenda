@@ -32,7 +32,7 @@ const ITEM_CLASS =
 // Chip do perfil que abre um menu com as opções da conta. Padrão "disclosure" (botão com
 // aria-expanded + lista de links), sem role="menu" — não exige navegação por setas. Fecha ao
 // clicar fora, com Escape (devolvendo o foco ao botão) e ao navegar.
-export function AccountMenu({ name }: { name: string }) {
+export function AccountMenu({ name, upcomingCount = 0 }: { name: string; upcomingCount?: number }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -113,12 +113,17 @@ export function AccountMenu({ name }: { name: string }) {
           <ul>
             {ITEMS.map(({ href, label, hint, Icon }) => (
               <li key={href}>
-                <Link href={href} className={ITEM_CLASS}>
+                <Link href={href} onClick={() => setOpen(false)} className={ITEM_CLASS}>
                   <Icon size={20} className="shrink-0 text-(--tenant-accent)" />
                   <span className="min-w-0">
                     <span className="block text-sm font-semibold text-zinc-900 dark:text-white">{label}</span>
                     <span className="block text-xs text-zinc-500 dark:text-stone-400">{hint}</span>
                   </span>
+                  {href === "/minha-conta" && upcomingCount > 0 ? (
+                    <span className="ml-auto flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-(--tenant-accent-secondary) px-1 text-[11px] font-bold text-white">
+                      {upcomingCount}
+                    </span>
+                  ) : null}
                 </Link>
               </li>
             ))}
