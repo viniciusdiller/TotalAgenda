@@ -9,6 +9,8 @@ import * as bcrypt from "bcrypt";
 import { Prisma } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
 import { isPlausibleBrazilianPhone, normalizePhone } from "../common/utils/phone.util";
+import { resolvePagination, toPage } from "../common/pagination/paginate";
+import { PaginationQueryDto } from "../common/pagination/pagination-query.dto";
 import { LOCKOUT_THRESHOLD, lockoutDurationMs } from "../common/utils/lockout.util";
 import {
   ChangeConsumerPasswordDto,
@@ -109,19 +111,31 @@ export class ConsumerAuthService {
   async me(auth: AuthenticatedConsumer) {
     const consumer = await this.prisma.consumer.findUniqueOrThrow({
       where: { id: auth.consumerId },
-      include: {
-        tenantLinks: {
-          include: { tenant: { select: { name: true, slug: true, logoUrl: true } } },
-        },
-      },
+      select: { id: true, name: true, phone: true, email: true },
     });
-    return {
-      id: consumer.id,
-      name: consumer.name,
-      phone: consumer.phone,
-      email: consumer.email,
-      establishments: consumer.tenantLinks.map((link) => link.tenant),
-    };
+    return consumer;
+  }
+
+  // Salões onde este consumidor já agendou (um vínculo por salão), paginados no banco — o
+  // "me" não devolve mais essa lista inteira, que crescia sem teto.
+  async listEstablishments(auth: AuthenticatedConsumer, query: PaginationQueryDto) {
+    const pagination = resolvePagination(query);
+    const where = { consumerId: auth.consumerId };
+    const [total, links] = await Promise.all([
+      this.prisma.consumerTenantLink.count({ where }),
+      this.prisma.consumerTenantLink.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: pagination.skip,
+        take: pagination.take,
+        select: { tenant: { select: { name: true, slug: true, logoUrl: true } } },
+      }),
+    ]);
+    return toPage(
+      links.map((link) => link.tenant),
+      total,
+      pagination,
+    );
   }
 
   // Telefone não é editável aqui: é a chave de identidade usada pra ligar Client de tenants

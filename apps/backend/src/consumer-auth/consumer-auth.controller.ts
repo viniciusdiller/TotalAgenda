@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { ConsumerAuthService } from "./consumer-auth.service";
 import {
@@ -10,6 +10,7 @@ import {
 import { ConsumerJwtAuthGuard } from "./guards/consumer-jwt-auth.guard";
 import { CurrentConsumer } from "./decorators/current-consumer.decorator";
 import { AuthenticatedConsumer } from "./types/consumer-auth-user";
+import { PaginationQueryDto } from "../common/pagination/pagination-query.dto";
 import { Public } from "../common/decorators/public.decorator";
 
 @Controller("public/consumer")
@@ -35,6 +36,16 @@ export class ConsumerAuthController {
   @Get("me")
   me(@CurrentConsumer() consumer: AuthenticatedConsumer) {
     return this.consumerAuth.me(consumer);
+  }
+
+  @Public()
+  @UseGuards(ConsumerJwtAuthGuard)
+  @Get("establishments")
+  establishments(
+    @CurrentConsumer() consumer: AuthenticatedConsumer,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.consumerAuth.listEstablishments(consumer, query);
   }
 
   @Public()

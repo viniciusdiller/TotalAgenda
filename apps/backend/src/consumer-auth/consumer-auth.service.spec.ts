@@ -269,6 +269,30 @@ describe("ConsumerAuthService.changePassword / updateProfile", () => {
   });
 });
 
+describe("ConsumerAuthService.listEstablishments", () => {
+  // Regressão: o "me" devolvia todos os salões do consumidor de uma vez. Agora a lista é
+  // paginada no banco e restrita ao consumerId autenticado.
+  it("pagina os vínculos do próprio consumidor e devolve só os dados públicos do salão", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER });
+    prisma.consumerTenantLink.count = jest.fn().mockResolvedValue(25);
+    prisma.consumerTenantLink.findMany = jest
+      .fn()
+      .mockResolvedValue([{ tenant: { name: "Salão A", slug: "a", logoUrl: null } }]);
+
+    const result = await service.listEstablishments({ consumerId: "c-1" }, { page: 2, pageSize: 12 });
+
+    expect(prisma.consumerTenantLink.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { consumerId: "c-1" }, skip: 12, take: 12 }),
+    );
+    expect(result).toMatchObject({
+      items: [{ name: "Salão A", slug: "a", logoUrl: null }],
+      total: 25,
+      page: 2,
+      pageCount: 3,
+    });
+  });
+});
+
 describe("ConsumerAuthService.ensureLink", () => {
   it("faz upsert de client e vínculo usando o client recebido (participa da transação de quem chama)", async () => {
     const { service, prisma } = build({ ...BASE_CONSUMER });

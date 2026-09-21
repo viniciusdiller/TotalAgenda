@@ -164,7 +164,11 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
 - Uploads: limite de tamanho e content-type no Multer; imagens reprocessadas com `sharp`
   (descarta payload malicioso embutido). Sem upload de SVG (XSS via `<script>` em SVG).
 - Paginação/limite em toda listagem que possa crescer sem teto (adicionar ao criar
-  endpoints de histórico/relatório).
+  endpoints de histórico/relatório). Padrão: `@Query() query` estende `PaginationQueryDto`
+  (`common/pagination`, `pageSize` com teto de 50), o service usa `resolvePagination` (skip/take
+  no banco) e devolve `toPage(...)` = `Paginated<T>` (`shared-types`). No frontend a página vive
+  na URL: `parsePageParam` + `<Pagination>` (`components/ui/Pagination.tsx`, por links, com
+  `paramName` pra várias listagens na mesma tela) — ver `app/minha-conta/page.tsx`.
 
 ### Auth / sessão
 - Senhas com bcrypt (rounds 12). Nunca logar senha, token, hash ou `Authorization`.

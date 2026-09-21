@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { DateTime } from "luxon";
-import type { ConsumerMe, PublicBooking } from "@totalagenda/shared-types";
+import type { ConsumerMe, Paginated, PublicBooking } from "@totalagenda/shared-types";
 import { getTenant } from "./layout";
 import { publicApi } from "@/lib/api";
 import { marketplaceApi } from "@/lib/marketplace-api";
@@ -34,24 +33,21 @@ async function getMarketplaceData(slug: string) {
 
 // Dados do chip de perfil e do badge de "Compromissos" na navbar (ver TenantTopBar) — só
 // existem quando o visitante está logado (conta global, cookie único, ver
-// lib/consumer-session.ts). A lista de agendamentos cruza todos os salões, então o contador
-// filtra pelos deste. Falha (token expirado, backend fora) degrada pra "deslogado" em vez de
-// quebrar a página pública inteira por causa de uma conveniência de navbar.
+// lib/consumer-session.ts). O backend já filtra por este salão e devolve só o total (pageSize=1),
+// sem trazer os agendamentos. Falha (token expirado, backend fora) degrada pra "deslogado" em
+// vez de quebrar a página pública inteira por causa de uma conveniência de navbar.
 async function getClientNav(slug: string) {
   const token = await getConsumerToken();
   if (!token) return null;
 
   try {
-    const [me, bookings] = await Promise.all([
+    const [me, upcoming] = await Promise.all([
       consumerAuthedFetch<ConsumerMe>("/public/consumer/me"),
-      consumerAuthedFetch<PublicBooking[]>("/public/consumer/bookings"),
+      consumerAuthedFetch<Paginated<PublicBooking>>(
+        `/public/consumer/bookings?scope=upcoming&tenantSlug=${encodeURIComponent(slug)}&pageSize=1`,
+      ),
     ]);
-    const now = DateTime.now();
-    const upcomingCount = bookings.filter(
-      (b) =>
-        b.tenant?.slug === slug && b.status === "CONFIRMED" && DateTime.fromISO(b.startAt) >= now,
-    ).length;
-    return { name: me.name, upcomingCount };
+    return { name: me.name, upcomingCount: upcoming.total };
   } catch {
     return null;
   }

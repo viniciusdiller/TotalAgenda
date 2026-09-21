@@ -190,8 +190,12 @@ export interface ConsumerProfile {
   email: string | null;
 }
 
-export interface ConsumerMe extends ConsumerProfile {
-  establishments: Array<{ name: string; slug: string; logoUrl: string | null }>;
+export type ConsumerMe = ConsumerProfile;
+
+export interface ConsumerEstablishment {
+  name: string;
+  slug: string;
+  logoUrl: string | null;
 }
 
 export interface ConsumerSession {
