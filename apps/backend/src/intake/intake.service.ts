@@ -1,8 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma } from "@totalagenda/database";
+import { Prisma, Role } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
 import { IntakeFieldDto, UpsertIntakeFormDto } from "./dto/upsert-intake-form.dto";
 import { SubmitIntakeResponseDto } from "./dto/submit-intake-response.dto";
+import { AuthenticatedUser } from "../auth/types/auth-user";
 
 @Injectable()
 export class IntakeService {
@@ -40,7 +41,19 @@ export class IntakeService {
     });
   }
 
-  async submitResponse(tenantId: string, dto: SubmitIntakeResponseDto) {
+  // `actor` restringe PROFESSIONAL: ele não enxerga a base de clientes (rota de clientes é
+  // OWNER/RECEPTIONIST), então só pode preencher a ficha de um cliente que ELE atende — provado
+  // por um atendimento próprio (professionalId no WHERE). Sem isso, qualquer id de cliente do
+  // tenant (visível em qualquer atendimento do calendário) recebia ficha de qualquer profissional.
+  async submitResponse(
+    tenantId: string,
+    dto: SubmitIntakeResponseDto,
+    actor?: Pick<AuthenticatedUser, "role" | "professionalId">,
+  ) {
+    const scopedToOwnAppointments = actor?.role === Role.PROFESSIONAL;
+    if (scopedToOwnAppointments && (!dto.appointmentId || !actor.professionalId)) {
+      throw new BadRequestException("Informe o atendimento do cliente para registrar a ficha.");
+    }
     const [form, client] = await Promise.all([
       this.getFormOrThrow(tenantId, dto.formId),
       this.prisma.client.findFirst({
@@ -54,7 +67,12 @@ export class IntakeService {
 
     if (dto.appointmentId) {
       const appointment = await this.prisma.appointment.findFirst({
-        where: { id: dto.appointmentId, tenantId, clientId: dto.clientId },
+        where: {
+          id: dto.appointmentId,
+          tenantId,
+          clientId: dto.clientId,
+          ...(scopedToOwnAppointments ? { professionalId: actor.professionalId } : {}),
+        },
         select: { id: true },
       });
       if (!appointment) {

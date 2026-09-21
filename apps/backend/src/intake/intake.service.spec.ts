@@ -1,6 +1,7 @@
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { IntakeService } from "./intake.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { Role } from "@totalagenda/database";
 
 const FIELDS = [
   { key: "alergia", label: "Alergias", type: "textarea", required: true },
@@ -89,5 +90,46 @@ describe("IntakeService (M2)", () => {
     await expect(
       service.submitResponse("t-1", { formId: "f-9", clientId: "c-1", answers: {} }),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  // Regressão (IDOR horizontal): PROFESSIONAL podia registrar ficha pra QUALQUER cliente do
+  // tenant. Agora só pra cliente que ele atende, provado por atendimento próprio no WHERE.
+  describe("escopo do PROFESSIONAL", () => {
+    const professional = { role: Role.PROFESSIONAL, professionalId: "prof-1" };
+    const dto = { formId: "f-1", clientId: "c-1", answers: { alergia: "nenhuma" } };
+
+    it("exige o atendimento (sem ele não dá pra provar que atende o cliente)", async () => {
+      const prisma = buildPrisma();
+      const service = new IntakeService(prisma);
+      await expect(service.submitResponse("t-1", dto, professional)).rejects.toThrow(BadRequestException);
+      expect(prisma.intakeResponse.create).not.toHaveBeenCalled();
+    });
+
+    it("filtra o atendimento pelo próprio professionalId no WHERE", async () => {
+      const prisma = buildPrisma();
+      const service = new IntakeService(prisma);
+      await service.submitResponse("t-1", { ...dto, appointmentId: "a-1" }, professional);
+      expect(prisma.appointment.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: "a-1", tenantId: "t-1", clientId: "c-1", professionalId: "prof-1" }),
+        }),
+      );
+    });
+
+    it("atendimento de outro profissional é recusado", async () => {
+      const prisma = buildPrisma({ appointment: { findFirst: jest.fn().mockResolvedValue(null) } });
+      const service = new IntakeService(prisma);
+      await expect(
+        service.submitResponse("t-1", { ...dto, appointmentId: "a-de-outro" }, professional),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.intakeResponse.create).not.toHaveBeenCalled();
+    });
+
+    it("OWNER/RECEPTIONIST seguem sem exigir atendimento", async () => {
+      const prisma = buildPrisma();
+      const service = new IntakeService(prisma);
+      await service.submitResponse("t-1", dto, { role: Role.RECEPTIONIST });
+      expect(prisma.intakeResponse.create).toHaveBeenCalled();
+    });
   });
 });
