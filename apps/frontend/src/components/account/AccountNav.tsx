@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { CalendarCheck } from "@phosphor-icons/react/dist/ssr";
 import type { NavSession } from "@/lib/nav-session";
 import { BRAND } from "../brand/palette";
 import { AccountMenu } from "./AccountMenu";
@@ -49,8 +48,7 @@ export function AccountNav({
         href="/minha-conta"
         className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-semibold text-zinc-900 transition-colors hover:border-(--tenant-accent)/40 dark:border-white/10 dark:bg-white/5 dark:text-white"
       >
-        <CalendarCheck size={17} className="text-(--tenant-accent)" />
-        <span className="hidden sm:inline">Compromissos</span>
+        Compromissos
         {session.upcomingCount > 0 ? (
           <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-(--tenant-accent-secondary) px-1 text-[11px] font-bold text-white">
             {session.upcomingCount}

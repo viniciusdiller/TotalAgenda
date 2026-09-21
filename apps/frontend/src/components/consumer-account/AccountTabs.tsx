@@ -24,7 +24,7 @@ export function AccountTabs({
   upcomingCount: number;
 }) {
   return (
-    <nav aria-label="Seções da conta" className="flex gap-1 overflow-x-auto border-b border-zinc-200 dark:border-white/10">
+    <nav aria-label="Seções da conta" className="flex border-b border-zinc-200 dark:border-white/10">
       {ACCOUNT_TABS.map((tab) => {
         const isActive = tab.id === active;
         return (
@@ -34,7 +34,7 @@ export function AccountTabs({
             aria-current={isActive ? "page" : undefined}
             replace
             className={clsx(
-              "relative -mb-px flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-colors",
+              "relative -mb-px flex min-w-0 flex-auto items-center justify-center gap-1.5 border-b-2 px-1.5 py-3 text-[13px] font-semibold whitespace-nowrap transition-colors sm:flex-none sm:gap-2 sm:px-4 sm:text-sm",
               isActive
                 ? "border-(--tenant-accent) text-zinc-900 dark:text-white"
                 : "border-transparent text-zinc-500 hover:text-zinc-900 dark:text-stone-400 dark:hover:text-white",
