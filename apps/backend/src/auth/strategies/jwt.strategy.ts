@@ -3,13 +3,17 @@ import { PassportStrategy } from "@nestjs/passport";
 import { ConfigService } from "@nestjs/config";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import { Role } from "@totalagenda/database";
+import { PrismaService } from "../../prisma/prisma.service";
 import { JwtPayload, AuthenticatedUser } from "../types/auth-user";
 
 const STAFF_ROLES = new Set<string>(Object.values(Role));
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(configService: ConfigService) {
+  constructor(
+    configService: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -17,7 +21,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  validate(payload: JwtPayload): AuthenticatedUser {
+  async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
     // Tokens de cliente (consumer-auth/) são assinados com o mesmo JWT_SECRET mas têm um
     // payload diferente (sem `role`, com `type: "consumer"`) — sem essa checagem, um token
     // de cliente passaria despercebido por qualquer rota de staff sem @Roles() explícito,
@@ -26,11 +30,22 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException();
     }
 
+    // Nunca confiar nas claims do token (tenantId/role/professionalId) por até 12h: usuário
+    // desativado, removido ou rebaixado continuaria com o acesso antigo. A identidade e as
+    // permissões vêm SEMPRE do banco (leitura por PK, barata); o token só prova quem é.
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { tenantId: true, role: true, isActive: true, professional: { select: { id: true } } },
+    });
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException();
+    }
+
     return {
       userId: payload.sub,
-      tenantId: payload.tenantId,
-      role: payload.role,
-      professionalId: payload.professionalId,
+      tenantId: user.tenantId,
+      role: user.role,
+      professionalId: user.professional?.id,
     };
   }
 }

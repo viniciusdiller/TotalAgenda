@@ -158,7 +158,14 @@ export class AuthService {
       where: { passwordSetTokenHash: tokenHash },
     });
 
-    if (!user || !user.passwordSetTokenExpiresAt || user.passwordSetTokenExpiresAt < new Date()) {
+    // Usuário desativado não resgata convite: setPassword devolve tokens de sessão, então isso
+    // seria uma porta de volta pra uma conta que o dono já desligou.
+    if (
+      !user ||
+      !user.isActive ||
+      !user.passwordSetTokenExpiresAt ||
+      user.passwordSetTokenExpiresAt < new Date()
+    ) {
       throw new BadRequestException("Link de definição de senha inválido ou expirado.");
     }
 
