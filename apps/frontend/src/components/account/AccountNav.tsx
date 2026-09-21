@@ -1,17 +1,11 @@
 import Link from "next/link";
-import { CalendarCheck, CaretDown } from "@phosphor-icons/react/dist/ssr";
+import { CalendarCheck } from "@phosphor-icons/react/dist/ssr";
 import type { NavSession } from "@/lib/nav-session";
 import { BRAND } from "../brand/palette";
-
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/);
-  const first = parts[0]?.[0] ?? "";
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
-  return (first + last).toUpperCase();
-}
+import { AccountMenu } from "./AccountMenu";
 
 // Bloco de conta da barra superior, o mesmo em todas as páginas: cliente logado vê
-// "Compromissos" (com o total de horários futuros) e o chip de perfil; dono/staff vê o acesso à
+// "Compromissos" (com o total de horários futuros) e o menu do perfil (dropdown); dono/staff vê o acesso à
 // própria loja; deslogado vê "Entrar". Sem hooks, então serve tanto em Server quanto em Client
 // Components. Define a paleta da marca aqui pra funcionar fora de /[slug] e /minha-conta.
 export function AccountNav({
@@ -63,21 +57,7 @@ export function AccountNav({
           </span>
         ) : null}
       </Link>
-      <Link
-        href="/minha-conta?aba=conta"
-        className="flex items-center gap-2.5 rounded-full border border-zinc-200 py-1.5 pr-3 pl-1.5 transition-colors hover:border-(--tenant-accent)/40 dark:border-white/10"
-      >
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-(--tenant-accent) font-brand text-[13px] font-bold text-white">
-          {initials(session.name)}
-        </span>
-        <span className="hidden flex-col leading-tight sm:flex">
-          <span className="text-[13px] font-semibold text-zinc-900 dark:text-white">
-            {session.name.split(" ")[0]}
-          </span>
-          <span className="text-[11px] text-zinc-500 dark:text-stone-400">Meu Cadastro</span>
-        </span>
-        <CaretDown size={13} className="hidden text-zinc-400 sm:block" />
-      </Link>
+      <AccountMenu name={session.name} />
     </div>
   );
 }
