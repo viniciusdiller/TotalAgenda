@@ -194,6 +194,11 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
   por URL — validar host contra allowlist, bloquear IP privado/metadata).
 - Sem `eval` / deserialização de payload arbitrário. JSON via parser padrão.
 - `pnpm audit` no CI; dependência com CVE conhecido bloqueia merge.
+  - Correções de CVE transitiva vão em `pnpm.overrides` (package.json raiz), sempre dentro da
+    mesma major. `bcrypt` está na v6 (binário pré-compilado, sem a cadeia `node-pre-gyp`/`tar`).
+  - Exceção consciente: `GHSA-36xv-jgw5-4q75` (`@nestjs/core`, injeção em `SseStream`) está em
+    `pnpm.auditConfig.ignoreGhsas` porque só a v11 corrige (major: Express 5) e o app **não usa**
+    `@Sse()`. Rever ao migrar pro Nest 11 ou se algum endpoint SSE for criado.
 
 ## Convenções
 
