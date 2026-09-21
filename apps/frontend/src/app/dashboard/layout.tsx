@@ -7,7 +7,6 @@ import { authedFetch } from "@/lib/api-server";
 import { SidebarNav } from "./SidebarNav";
 import { signOutAction } from "./actions";
 import { Logo } from "@/components/brand/Logo";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 interface TenantMe {
   name: string;
@@ -116,7 +115,6 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <ThemeToggle />
             <form action={signOutAction}>
               <button
                 type="submit"

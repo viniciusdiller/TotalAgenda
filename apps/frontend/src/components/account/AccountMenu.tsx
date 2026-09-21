@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
+import { AnimatePresence, motion } from "motion/react";
 import {
   CalendarCheck,
   CaretDown,
@@ -93,9 +94,15 @@ export function AccountMenu({ name, upcomingCount = 0 }: { name: string; upcomin
         />
       </button>
 
+      <AnimatePresence>
       {open ? (
-        <div
+        <motion.div
           id="account-menu"
+          initial={{ opacity: 0, scale: 0.95, y: -6 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.97, y: -4 }}
+          transition={{ type: "spring", stiffness: 520, damping: 34, mass: 0.7 }}
+          style={{ transformOrigin: "top right" }}
           className="absolute top-full right-0 z-50 mt-2 w-72 rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl shadow-zinc-900/10 dark:border-white/10 dark:bg-zinc-900 dark:shadow-black/40"
         >
           <div className="flex items-center gap-3 px-3 py-2.5">
@@ -137,8 +144,9 @@ export function AccountMenu({ name, upcomingCount = 0 }: { name: string; upcomin
               <span className="text-sm font-semibold text-zinc-700 dark:text-stone-200">Sair</span>
             </button>
           </form>
-        </div>
+        </motion.div>
       ) : null}
+      </AnimatePresence>
     </div>
   );
 }

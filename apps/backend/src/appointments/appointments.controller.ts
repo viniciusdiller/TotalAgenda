@@ -34,37 +34,6 @@ export class PublicAppointmentsController {
   }
 }
 
-@Controller("public/bookings/:token")
-export class PublicAppointmentManageController {
-  constructor(private readonly appointments: AppointmentsService) {}
-
-  // manageToken (nanoid 24) já é a credencial em si — devolve nome/telefone do cliente,
-  // então precisa do mesmo throttle das ações de escrita abaixo, senão nada impede
-  // tentar adivinhar/força-bruta em cima do espaço de tokens só de leitura.
-  @Public()
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  @Get()
-  getByToken(@Param("token") token: string) {
-    return this.appointments.findByToken(token);
-  }
-
-  // manageToken (nanoid 24) já é a credencial em si, mas sem throttle nada impede tentar
-  // adivinhar/força-bruta em cima do espaço de tokens — mesmo limite usado na criação.
-  @Public()
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  @Patch("cancel")
-  cancel(@Param("token") token: string) {
-    return this.appointments.cancelByToken(token);
-  }
-
-  @Public()
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  @Patch("reschedule")
-  reschedule(@Param("token") token: string, @Body() dto: RescheduleAppointmentDto) {
-    return this.appointments.rescheduleByToken(token, dto);
-  }
-}
-
 // Painel do dono/recepção. OWNER e RECEPTIONIST enxergam a agenda inteira;
 // PROFESSIONAL só a própria (filtro aplicado no service).
 @Controller("appointments")

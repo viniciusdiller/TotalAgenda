@@ -28,6 +28,75 @@
   --brand-wordmark: #b9a0ff;
 }
 
+/* Troca de tema: a revelação circular é feita em JS (ThemeProvider); aqui só desliga o
+   cross-fade padrão do navegador, que brigaria com o clip-path. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 2;
+}
+
+/* Movimento com função: entrada de página, entrada escalonada de listas (--i = posição) e
+   shimmer de carregamento. O bloco de prefers-reduced-motion abaixo neutraliza todos. */
+@keyframes page-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes ring-out {
+  from {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+@utility animate-pop-in {
+  animation: pop-in 560ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+@utility animate-ring-out {
+  animation: ring-out 900ms ease-out 200ms backwards;
+}
+@utility animate-page-in {
+  animation: page-in 240ms ease-out backwards;
+}
+@utility animate-rise-in {
+  animation: rise-in 460ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -5,7 +5,6 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { nanoid } from "nanoid";
 import { DateTime } from "luxon";
 import { AppointmentStatus, Prisma, Role } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
@@ -21,7 +20,6 @@ import { ListConsumerBookingsQueryDto } from "./dto/list-consumer-bookings-query
 import { ConsumerAuthService } from "../consumer-auth/consumer-auth.service";
 import { AuthenticatedConsumer } from "../consumer-auth/types/consumer-auth-user";
 
-const MANAGE_TOKEN_LENGTH = 24;
 
 // Mesmo fuso fixo usado por AvailabilityService — datetime sem offset explícito (ex.:
 // vindo de um datetime-local de formulário) é interpretado neste fuso, não no do processo.
@@ -108,7 +106,6 @@ export class AppointmentsService {
           endAt: endAt.toJSDate(),
           status: AppointmentStatus.CONFIRMED,
           source: "PUBLIC",
-          manageToken: nanoid(MANAGE_TOKEN_LENGTH),
           items: {
             create: {
               serviceId: dto.serviceId,
@@ -171,7 +168,6 @@ export class AppointmentsService {
               : AppointmentStatus.SCHEDULED,
           source: "STAFF",
           notes: dto.notes,
-          manageToken: nanoid(MANAGE_TOKEN_LENGTH),
           items: {
             create: resolvedItems.map((item, position) => ({
               serviceId: item.serviceId,
@@ -190,10 +186,6 @@ export class AppointmentsService {
   // ─────────────────────────────────────────────
   // Leitura
   // ─────────────────────────────────────────────
-
-  async findByToken(token: string) {
-    return this.serialize(await this.getByTokenOrThrow(token));
-  }
 
   async findForAdmin(user: AuthenticatedUser, from?: string, to?: string) {
     const where: Prisma.AppointmentWhereInput = { tenantId: user.tenantId };
@@ -293,18 +285,6 @@ export class AppointmentsService {
       appointments: appointments.map((appointment) => this.serialize(appointment)),
       timeBlocks,
     };
-  }
-
-  // ─────────────────────────────────────────────
-  // Ações por token (link enviado ao cliente)
-  // ─────────────────────────────────────────────
-
-  async cancelByToken(token: string) {
-    return this.applyCancel(await this.getByTokenOrThrow(token), { clientInitiated: true });
-  }
-
-  async rescheduleByToken(token: string, dto: RescheduleAppointmentDto) {
-    return this.applyReschedule(await this.getByTokenOrThrow(token), dto);
   }
 
   // ─────────────────────────────────────────────
@@ -428,7 +408,7 @@ export class AppointmentsService {
 
   // TenantBillingGuard só cobre rotas autenticadas — o link público de agendamento é
   // @Public() e passa direto pelo guard, então um tenant com trial vencido continuava
-  // recebendo agendamentos novos. Cancelar/remarcar/consultar por token não passa por
+  // recebendo agendamentos novos. Cancelar/remarcar pela conta do cliente não passa por
   // aqui de propósito: quem já tem um agendamento não pode ficar preso sem conseguir
   // geri-lo só porque o dono não pagou.
   private async assertTenantAcceptsBookings(tenantId: string) {
@@ -440,17 +420,6 @@ export class AppointmentsService {
     if (!hasBillingAccess(status)) {
       throw new ForbiddenException("Este negócio não está aceitando novos agendamentos no momento.");
     }
-  }
-
-  private async getByTokenOrThrow(token: string) {
-    const appointment = await this.prisma.appointment.findUnique({
-      where: { manageToken: token },
-      include: APPOINTMENT_INCLUDE,
-    });
-    if (!appointment) {
-      throw new NotFoundException("Agendamento não encontrado.");
-    }
-    return appointment;
   }
 
   private async findOwnedByStaff(user: AuthenticatedUser, id: string) {
@@ -729,7 +698,6 @@ export class AppointmentsService {
       status: appointment.status,
       source: appointment.source,
       notes: appointment.notes,
-      manageToken: appointment.manageToken,
       canceledAt: appointment.canceledAt,
       noShowAt: appointment.noShowAt,
       rescheduledCount: appointment.rescheduledCount,

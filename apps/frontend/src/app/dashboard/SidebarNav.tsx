@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
+import { motion } from "motion/react";
 import {
   CalendarBlank,
   CashRegister,
@@ -47,14 +48,22 @@ export function SidebarNav() {
             key={link.href}
             href={link.href}
             className={clsx(
-              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+              "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
               isActive
-                ? "bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-300"
+                ? "text-accent-700 dark:text-accent-300"
                 : "text-zinc-600 hover:bg-zinc-900/5 dark:text-stone-300 dark:hover:bg-white/5",
             )}
           >
-            <link.icon size={18} weight={isActive ? "fill" : "regular"} />
-            {link.label}
+            {isActive ? (
+              <motion.span
+                layoutId="sidebar-active"
+                aria-hidden
+                className="absolute inset-0 rounded-xl bg-accent-50 dark:bg-accent-500/10"
+                transition={{ type: "spring", stiffness: 500, damping: 38 }}
+              />
+            ) : null}
+            <link.icon size={18} weight={isActive ? "fill" : "regular"} className="relative" />
+            <span className="relative">{link.label}</span>
           </Link>
         );
       })}

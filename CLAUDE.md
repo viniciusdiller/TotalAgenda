@@ -85,8 +85,11 @@ para aplicar limites de plano (`PlanLimitService`) e liberar/bloquear acesso
 - Anti-overlap: constraint `EXCLUDE` (GiST) na migration SQL **+** checagem defensiva em
   `assertNoConflict` dentro de `$transaction` com `pg_advisory_xact_lock` por profissional.
 - Timezone: America/Sao_Paulo assumido; datas trafegam ISO-8601, cálculo com Luxon.
-- `manageToken` (nanoid) dá acesso não-autenticado ao gerenciamento de um agendamento
-  específico (link enviado ao cliente).
+- Gerenciar (cancelar/remarcar) um agendamento exige login do cliente: `/minha-conta` (aba
+  Agenda) → `PATCH public/consumer/bookings/:id/cancel|reschedule`, com a posse no `WHERE`. Não
+  existe mais link público por token (`manageToken` foi removido — migration
+  `remove_appointment_manage_token`): capability não autenticada num link circulável era
+  superfície de IDOR/vazamento (nome e telefone) sem ganho, já que agendar também exige login.
 
 ### Uploads
 Arquivos de tenant (logo, galeria) em `apps/backend/uploads/` (gitignored), servidos por
@@ -106,8 +109,8 @@ nunca são cortados por simplicidade. Ao escrever ou revisar código, varrer ati
   quando `role === PROFESSIONAL` (ver `AppointmentsService.findOwnedByStaff`).
 - Nunca aceitar `tenantId` / `professionalId` "de dono" vindo do body/query como fonte de
   autorização — só como filtro adicional, sempre cruzado com o JWT.
-- `manageToken` (nanoid 24) é capability aleatória e não-enumerável para o fluxo público
-  sem login — não substituível por `id` sequencial/uuid exposto.
+- Nenhum recurso é acessível por "capability" sem login: o cliente só enxerga/altera o que é
+  dele via relação no `WHERE` (`client.consumerLink.consumerId`), 404 igual pra "não existe".
 
 ### Confiança no cliente (frontend nunca é fonte de verdade)
 Todo valor que o cliente HTTP envia e que afeta dinheiro, papel/permissão ou estado de

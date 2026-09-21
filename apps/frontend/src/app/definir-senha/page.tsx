@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { SetPasswordForm } from "./SetPasswordForm";
 import { Logo } from "@/components/brand/Logo";
 import { Footer } from "@/components/marketing/Footer";
+import { BackLink } from "@/components/ui/BackLink";
 
 export const metadata: Metadata = { title: "Definir senha - TotalAgenda" };
 
@@ -28,7 +29,8 @@ export default async function DefinirSenhaPage({
     <div className="flex min-h-dvh flex-col">
       <main className="flex flex-1 items-center justify-center bg-stone-50 px-6 py-16 dark:bg-zinc-950">
         <div className="w-full max-w-sm">
-          <Link href="/" className="inline-block">
+          <BackLink href="/entrar" label="Voltar ao login" />
+          <Link href="/" className="mt-4 block">
             <Logo />
           </Link>
           <h1 className="mt-6 font-display text-2xl font-bold text-zinc-900 dark:text-white">

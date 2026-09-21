@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { DateTime } from "luxon";
-import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
+import { ArrowLeft, CircleNotch } from "@phosphor-icons/react/dist/ssr";
 import type {
   AvailableSlot,
   PublicBooking,
@@ -125,14 +125,32 @@ export function BookingWizard({
     [slug],
   );
 
+  // Pausa curta antes de trocar de passo: dá tempo da animação do card escolhido (onda de
+  // cor + selo) aparecer. Os dados do próximo passo já começam a carregar nesse intervalo.
+  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+    },
+    [],
+  );
+  function cancelPendingAdvance() {
+    if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+  }
+  function advanceTo(next: Step) {
+    cancelPendingAdvance();
+    advanceTimerRef.current = setTimeout(() => setStep(next), 420);
+  }
+
   function goBack() {
+    cancelPendingAdvance();
     if (step > 1) setStep((s) => (s - 1) as Step);
   }
 
   function handleSelectService(service: PublicService) {
     setSelectedService(service);
     setSelectedProfessional(null);
-    setStep(2);
+    advanceTo(2);
     loadProfessionals(service);
   }
 
@@ -140,7 +158,7 @@ export function BookingWizard({
     setSelectedProfessional(professional);
     setSelectedSlot(null);
     setShowWaitlist(false);
-    setStep(3);
+    advanceTo(3);
     if (selectedService) loadSlots(professional, selectedService, selectedDate);
   }
 
@@ -197,7 +215,10 @@ export function BookingWizard({
       </h1>
 
       <div className="mt-6">
-        <StepIndicator currentStep={step} onStepClick={(s) => setStep(s as Step)} />
+        <StepIndicator currentStep={step} onStepClick={(s) => {
+            cancelPendingAdvance();
+            setStep(s as Step);
+          }} />
       </div>
 
       <div className="mt-8">
@@ -278,7 +299,7 @@ export function BookingWizard({
                 />
 
                 {submitError ? (
-                  <p className="text-sm text-red-600 dark:text-red-400">{submitError}</p>
+                  <p role="alert" className="animate-rise-in text-sm text-red-600 dark:text-red-400">{submitError}</p>
                 ) : null}
                 {sessionExpired ? (
                   <Link
@@ -295,7 +316,14 @@ export function BookingWizard({
                   disabled={submitting}
                   className="w-full disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {submitting ? "Confirmando..." : "Confirmar agendamento"}
+                  {submitting ? (
+                    <>
+                      <CircleNotch size={18} weight="bold" className="animate-spin" />
+                      Confirmando...
+                    </>
+                  ) : (
+                    "Confirmar agendamento"
+                  )}
                 </Button>
               </div>
             ) : null}

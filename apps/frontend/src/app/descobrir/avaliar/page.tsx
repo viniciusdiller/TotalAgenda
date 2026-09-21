@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CaretLeft } from "@phosphor-icons/react/dist/ssr";
 import type { ReviewablePastAppointment } from "@totalagenda/shared-types";
 import { consumerAuthedFetch } from "@/lib/consumer-session";
 import { Footer } from "@/components/marketing/Footer";
 import { SiteHeader } from "@/components/account/SiteHeader";
+import { BackLink } from "@/components/ui/BackLink";
 import { ReviewList } from "./ReviewList";
 
 export const metadata: Metadata = { title: "Avaliar visitas - TotalAgenda" };
@@ -24,13 +23,7 @@ export default async function AvaliarPage() {
     <>
       <SiteHeader />
       <main className="mx-auto max-w-md px-4 py-10">
-        <Link
-          href="/descobrir"
-          className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900 dark:text-stone-400 dark:hover:text-white"
-        >
-          <CaretLeft size={14} />
-          Descobrir
-        </Link>
+        <BackLink href="/descobrir" />
         <h1 className="mt-3 font-display text-2xl font-bold text-zinc-900 dark:text-white">
           Avaliar visitas
         </h1>

@@ -168,8 +168,14 @@ export default async function MinhaContaPage({
                 </div>
               ) : (
                 <div className="mt-5 flex flex-col gap-4">
-                  {upcoming.items.map((booking) => (
-                    <AppointmentTicket key={booking.id} booking={booking} />
+                  {upcoming.items.map((booking, i) => (
+                    <div
+                      key={booking.id}
+                      className="animate-rise-in"
+                      style={{ "--i": Math.min(i, 6) } as React.CSSProperties}
+                    >
+                      <AppointmentTicket booking={booking} />
+                    </div>
                   ))}
                 </div>
               )}

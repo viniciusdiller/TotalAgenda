@@ -40,10 +40,11 @@ export function TenantTopBar({ slug, session }: { slug: string; session: NavSess
           <div className="flex items-center gap-5">
             <Link
               href="/descobrir"
-              className="hidden items-center gap-1.5 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900 sm:inline-flex dark:text-stone-300 dark:hover:text-white"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-stone-300 dark:hover:text-white"
             >
               <ArrowLeft size={16} />
-              Descobrir
+              <span className="sm:hidden">Voltar</span>
+              <span className="hidden sm:inline">Descobrir</span>
             </Link>
             <AccountNav session={session} loginNext={`/${slug}`} />
           </div>

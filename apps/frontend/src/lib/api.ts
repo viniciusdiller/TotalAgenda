@@ -1,7 +1,6 @@
 import type {
   ApiErrorBody,
   AvailableSlot,
-  PublicBooking,
   PublicProfessional,
   PublicService,
   PublicTenant,
@@ -55,15 +54,4 @@ export const publicApi = {
         serviceId,
       )}&date=${date}`,
     ),
-
-  getBookingByToken: (token: string) => request<PublicBooking>(`/public/bookings/${token}`),
-
-  cancelBooking: (token: string) =>
-    request<PublicBooking>(`/public/bookings/${token}/cancel`, { method: "PATCH" }),
-
-  rescheduleBooking: (token: string, startAt: string, professionalId?: string) =>
-    request<PublicBooking>(`/public/bookings/${token}/reschedule`, {
-      method: "PATCH",
-      body: JSON.stringify({ startAt, professionalId }),
-    }),
 };

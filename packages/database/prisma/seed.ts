@@ -360,7 +360,6 @@ async function seedDemoTenant() {
         status: item.status,
         source: item.source,
         canceledAt: item.status === AppointmentStatus.CANCELED ? now : null,
-        manageToken: randomBytes(16).toString("hex"),
         items: {
           create: {
             serviceId: service.id,
@@ -712,7 +711,6 @@ async function seedMarketplaceDemoTenant(def: MarketplaceDemoDef, consumerId: st
       endAt: new Date(startAt.getTime() + firstService.durationMinutes * 60_000),
       status: AppointmentStatus.COMPLETED,
       source: "PUBLIC",
-      manageToken: randomBytes(16).toString("hex"),
       items: {
         create: {
           serviceId: firstService.id,

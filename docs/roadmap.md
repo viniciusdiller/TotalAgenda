@@ -68,7 +68,7 @@ Refactor que todo o resto depende. Fazer e **revisar antes** de construir M1–M
   não mexe em billing/config.
 - Endpoint de criação manual pela recepção (walk-in): cliente opcional / cadastro rápido.
 - Anti-overlap continua por `EXCLUDE` + advisory lock, agora no nível do item.
-- `manageToken` continua no `Appointment`.
+- (`manageToken` foi removido depois: gerenciar agendamento passou a exigir login em /minha-conta.)
 
 ## M1 — Agenda Pro
 
