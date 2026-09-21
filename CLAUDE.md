@@ -52,8 +52,10 @@ depois" (evita janela de IDOR).
   - **Uma tela de login pros dois** (`/entrar`, `app/entrar/actions.ts`): identificador com `@`
     tenta staff primeiro (NextAuth) e depois cliente; telefone só tenta cliente (dono entra só
     por e-mail). Toda falha devolve a mesma mensagem. São duas sessões independentes — o
-    formulário é compartilhado, as identidades não. A navbar da home (`lib/nav-session.ts`)
-    mostra "Minha loja" ao dono e o chip de perfil (`/minha-conta`) ao cliente.
+    formulário é compartilhado, as identidades não. Toda página tem o mesmo bloco de conta
+    (`components/account/AccountNav.tsx`, alimentado por `lib/nav-session.ts`): "Compromissos" +
+    perfil pro cliente, "Minha loja" pro dono, "Entrar" deslogado. Páginas sem barra própria usam
+    `SiteHeader`; a home e o salão usam o `AccountNav` dentro das suas barras.
   - O `Client` por tenant continua sendo o registro de CRM do salão (ficha, notas, tags,
     anamnese) ligado ao `Consumer` por `ConsumerTenantLink`. Agendar e entrar na lista de espera
     **exigem login** e derivam o `Client` via `ConsumerAuthService.ensureLink` — nome/telefone

@@ -10,6 +10,7 @@ import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
 import { TenantTopBar } from "./TenantTopBar";
 import { BRAND } from "../brand/palette";
+import type { NavSession } from "@/lib/nav-session";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -17,14 +18,14 @@ export function TenantProfileHeader({
   tenant,
   rating,
   categories,
-  client,
+  session,
   servicesCount,
   teamCount,
 }: {
   tenant: PublicTenant;
   rating: MarketplaceRating | null;
   categories: Array<{ name: string; slug: string }>;
-  client: { name: string; upcomingCount: number } | null;
+  session: NavSession;
   servicesCount: number;
   teamCount: number;
 }) {
@@ -37,7 +38,7 @@ export function TenantProfileHeader({
     <>
       {/* Barra fixa própria (TenantTopBar) — mesmo peso visual que a marca tem no site
           principal (ver Nav.tsx), não um selo pequeno num canto. */}
-      <TenantTopBar slug={tenant.slug} client={client} />
+      <TenantTopBar slug={tenant.slug} session={session} />
 
       <section className="pt-16">
         <Container className="pt-8">

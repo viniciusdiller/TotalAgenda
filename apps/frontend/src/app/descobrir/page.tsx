@@ -4,6 +4,7 @@ import { CaretLeft } from "@phosphor-icons/react/dist/ssr";
 import type { MarketplaceCategory } from "@totalagenda/shared-types";
 import { DiscoverSearch } from "./DiscoverSearch";
 import { Footer } from "@/components/marketing/Footer";
+import { SiteHeader } from "@/components/account/SiteHeader";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -35,6 +36,7 @@ export default async function DescobrirPage({
 
   return (
     <>
+      <SiteHeader loginNext="/descobrir" />
       <main className="mx-auto max-w-3xl px-4 py-10">
         <Link
           href="/"

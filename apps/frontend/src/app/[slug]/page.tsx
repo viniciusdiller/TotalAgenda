@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import type { ConsumerMe, Paginated, PublicBooking } from "@totalagenda/shared-types";
 import { getTenant } from "./layout";
 import { publicApi } from "@/lib/api";
 import { marketplaceApi } from "@/lib/marketplace-api";
 import { ApiError } from "@/lib/api";
-import { getConsumerToken, consumerAuthedFetch } from "@/lib/consumer-session";
+import { getNavSession } from "@/lib/nav-session";
 import { TenantProfileHeader } from "@/components/tenant-profile/TenantProfileHeader";
 import { ServicesSection } from "@/components/tenant-profile/ServicesSection";
 import { TeamSection } from "@/components/tenant-profile/TeamSection";
@@ -28,28 +27,6 @@ async function getMarketplaceData(slug: string) {
   } catch (err) {
     if (err instanceof ApiError && err.statusCode === 404) return null;
     throw err;
-  }
-}
-
-// Dados do chip de perfil e do badge de "Compromissos" na navbar (ver TenantTopBar) — só
-// existem quando o visitante está logado (conta global, cookie único, ver
-// lib/consumer-session.ts). O backend já filtra por este salão e devolve só o total (pageSize=1),
-// sem trazer os agendamentos. Falha (token expirado, backend fora) degrada pra "deslogado" em
-// vez de quebrar a página pública inteira por causa de uma conveniência de navbar.
-async function getClientNav(slug: string) {
-  const token = await getConsumerToken();
-  if (!token) return null;
-
-  try {
-    const [me, upcoming] = await Promise.all([
-      consumerAuthedFetch<ConsumerMe>("/public/consumer/me"),
-      consumerAuthedFetch<Paginated<PublicBooking>>(
-        `/public/consumer/bookings?scope=upcoming&tenantSlug=${encodeURIComponent(slug)}&pageSize=1`,
-      ),
-    ]);
-    return { name: me.name, upcomingCount: upcoming.total };
-  } catch {
-    return null;
   }
 }
 
@@ -77,11 +54,11 @@ export default async function TenantProfilePage({
     notFound();
   }
 
-  const [services, team, marketplaceData, client] = await Promise.all([
+  const [services, team, marketplaceData, session] = await Promise.all([
     tenant.showServices ? publicApi.getServices(slug) : Promise.resolve([]),
     tenant.showTeam ? publicApi.getTeam(slug) : Promise.resolve([]),
     getMarketplaceData(slug),
-    getClientNav(slug),
+    getNavSession(),
   ]);
 
   return (
@@ -90,7 +67,7 @@ export default async function TenantProfilePage({
         tenant={tenant}
         rating={marketplaceData?.rating ?? null}
         categories={marketplaceData?.categories ?? []}
-        client={client}
+        session={session}
         servicesCount={services.length}
         teamCount={team.length}
       />

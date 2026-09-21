@@ -5,6 +5,7 @@ import { CaretLeft } from "@phosphor-icons/react/dist/ssr";
 import type { ReviewablePastAppointment } from "@totalagenda/shared-types";
 import { consumerAuthedFetch } from "@/lib/consumer-session";
 import { Footer } from "@/components/marketing/Footer";
+import { SiteHeader } from "@/components/account/SiteHeader";
 import { ReviewList } from "./ReviewList";
 
 export const metadata: Metadata = { title: "Avaliar visitas - TotalAgenda" };
@@ -21,6 +22,7 @@ export default async function AvaliarPage() {
 
   return (
     <>
+      <SiteHeader />
       <main className="mx-auto max-w-md px-4 py-10">
         <Link
           href="/descobrir"

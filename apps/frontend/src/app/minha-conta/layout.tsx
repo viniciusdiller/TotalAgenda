@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { Logo } from "@/components/brand/Logo";
+import { SiteHeader } from "@/components/account/SiteHeader";
 import { BRAND } from "@/components/brand/palette";
 
 // Área do cliente final (conta global, fora de /[slug]). Reusa componentes que leem
@@ -16,17 +15,7 @@ export default function MinhaContaLayout({ children }: { children: React.ReactNo
       }
       className="flex min-h-dvh flex-col bg-stone-50 dark:bg-zinc-950"
     >
-      <header className="mx-auto flex w-full max-w-4xl items-center justify-between px-6 pt-6">
-        <Link href="/" className="inline-block">
-          <Logo markSize={28} />
-        </Link>
-        <Link
-          href="/descobrir"
-          className="text-sm font-semibold text-zinc-600 transition-colors hover:text-zinc-900 dark:text-stone-300 dark:hover:text-white"
-        >
-          Descobrir salões
-        </Link>
-      </header>
+      <SiteHeader narrow />
       {children}
     </div>
   );

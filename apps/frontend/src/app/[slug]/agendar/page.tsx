@@ -6,6 +6,7 @@ import { getTenant } from "../layout";
 import type { ConsumerMe } from "@totalagenda/shared-types";
 import { consumerAuthedFetch } from "@/lib/consumer-session";
 import { formatPhoneBR } from "@/lib/masks";
+import { SiteHeader } from "@/components/account/SiteHeader";
 import { BookingWizard } from "@/components/booking/BookingWizard";
 
 export async function generateMetadata({
@@ -35,7 +36,9 @@ export default async function AgendarPage({ params }: { params: Promise<{ slug: 
   }
 
   return (
-    <main className="flex-1 bg-stone-50 px-6 py-16 dark:bg-zinc-950">
+    <>
+    <SiteHeader />
+    <main className="flex-1 bg-stone-50 px-6 py-10 dark:bg-zinc-950">
       <div className="mx-auto w-full max-w-lg">
         <Link
           href={`/${tenant.slug}`}
@@ -54,5 +57,6 @@ export default async function AgendarPage({ params }: { params: Promise<{ slug: 
         />
       </div>
     </main>
+    </>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { motion, useMotionValueEvent, useScroll } from "motion/react";
 import { List, X } from "@phosphor-icons/react/dist/ssr";
 import { Container } from "../ui/Container";
@@ -9,6 +8,7 @@ import { Button } from "../ui/Button";
 import { ThemeToggle } from "../ui/ThemeToggle";
 import { Logo } from "../brand/Logo";
 import type { NavSession } from "@/lib/nav-session";
+import { AccountNav } from "../account/AccountNav";
 
 const LANDING_URL =
   process.env.NEXT_PUBLIC_LANDING_URL ??
@@ -19,13 +19,6 @@ const links = [
   { href: "#recursos", label: "Recursos" },
   { href: "#faq", label: "Perguntas" },
 ];
-
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/);
-  const first = parts[0]?.[0] ?? "";
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
-  return (first + last).toUpperCase();
-}
 
 // Dono/staff logado: "Entrar" some e o botão de vendas vira o acesso à própria loja. Cliente
 // logado: "Entrar" vira o chip do perfil (o botão de donos continua — é o público-alvo de
@@ -71,7 +64,7 @@ export function Nav({ session }: { session: NavSession }) {
             <div className="hidden items-center gap-3 lg:flex">
               <ThemeToggle />
               {session?.kind === "consumer" ? (
-                <ProfileChip name={session.name} />
+                <AccountNav session={session} />
               ) : session?.kind === "staff" ? null : (
                 <Button href="/entrar" variant="ghost" className="px-5 py-2.5 text-sm">
                   Entrar
@@ -119,9 +112,14 @@ export function Nav({ session }: { session: NavSession }) {
             </div>
             <div className="mt-2 flex flex-col gap-2 px-3">
               {session?.kind === "consumer" ? (
-                <Button href="/minha-conta" variant="ghost" className="w-full">
-                  Meu perfil ({session.name.split(" ")[0]})
-                </Button>
+                <>
+                  <Button href="/minha-conta" variant="ghost" className="w-full">
+                    Compromissos{session.upcomingCount > 0 ? ` (${session.upcomingCount})` : ""}
+                  </Button>
+                  <Button href="/minha-conta?aba=conta" variant="ghost" className="w-full">
+                    Meu cadastro ({session.name.split(" ")[0]})
+                  </Button>
+                </>
               ) : session?.kind === "staff" ? null : (
                 <Button href="/entrar" variant="ghost" className="w-full">
                   Entrar
@@ -141,19 +139,5 @@ export function Nav({ session }: { session: NavSession }) {
         </div>
       ) : null}
     </header>
-  );
-}
-
-function ProfileChip({ name }: { name: string }) {
-  return (
-    <Link
-      href="/minha-conta"
-      className="flex items-center gap-2.5 rounded-full border border-zinc-200 py-1.5 pr-4 pl-1.5 text-sm font-semibold text-zinc-900 transition-colors hover:border-accent-500/40 dark:border-white/15 dark:text-white"
-    >
-      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-500 font-brand text-[13px] font-bold text-white">
-        {initials(name)}
-      </span>
-      {name.split(" ")[0]}
-    </Link>
   );
 }
