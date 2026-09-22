@@ -53,6 +53,12 @@ function build(initialConsumer: Record<string, unknown> | null = null, over: Rec
       update: jest.fn(),
     },
     consumerTenantLink: { upsert: jest.fn() },
+    consumerSession: {
+      create: jest.fn().mockResolvedValue({ id: "session-new" }),
+      update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
     ...over,
   };
   prisma.$transaction = jest.fn().mockImplementation(async (cb: (tx: unknown) => unknown) => cb(prisma));
@@ -242,46 +248,143 @@ describe("ConsumerAuthService.register (cadastro e reivindicação)", () => {
 });
 
 describe("ConsumerAuthService.changePassword / updateProfile", () => {
+  const auth = { consumerId: "c-1", sessionId: "session-current" };
+
   it("recusa senha atual incorreta", async () => {
     const { service, prisma } = build({ ...BASE_CONSUMER });
     await expect(
-      service.changePassword({ consumerId: "c-1" }, { currentPassword: "errada", newPassword: "nova-senha-123" }),
+      service.changePassword(auth, { currentPassword: "errada", newPassword: "nova-senha-123" }),
     ).rejects.toThrow(BadRequestException);
     expect(prisma.consumer.update).not.toHaveBeenCalled();
+    expect(prisma.consumerSession.updateMany).not.toHaveBeenCalled();
   });
 
   it("troca a senha (só o hash) quando a atual confere", async () => {
     const { service, prisma } = build({ ...BASE_CONSUMER });
-    await service.changePassword(
-      { consumerId: "c-1" },
-      { currentPassword: CORRECT_PASSWORD, newPassword: "nova-senha-123" },
-    );
+    await service.changePassword(auth, { currentPassword: CORRECT_PASSWORD, newPassword: "nova-senha-123" });
     const hash = prisma.consumer.update.mock.calls[0][0].data.passwordHash;
     expect(hash).not.toBe("nova-senha-123");
     expect(await bcrypt.compare("nova-senha-123", hash)).toBe(true);
   });
 
-  // Regressão: token de 30 dias sobrevivia à troca de senha. Agora o token carrega a "versão"
-  // da senha; trocar devolve uma sessão nova (versão nova) pra quem trocou.
-  it("troca de senha devolve sessão nova com a versão da NOVA senha no token", async () => {
+  // Regressão: token de 30 dias sobrevivia à troca de senha. Agora, além da versão da senha no
+  // token, TODOS os dispositivos são revogados na tabela e um novo (para quem trocou) é criado.
+  it("troca de senha revoga todas as sessões e devolve uma sessão nova com a versão da NOVA senha", async () => {
     const { service, prisma, jwt } = build({ ...BASE_CONSUMER });
-    const result = await service.changePassword(
-      { consumerId: "c-1" },
-      { currentPassword: CORRECT_PASSWORD, newPassword: "nova-senha-123" },
-    );
+    const result = await service.changePassword(auth, {
+      currentPassword: CORRECT_PASSWORD,
+      newPassword: "nova-senha-123",
+    });
     const newHash = prisma.consumer.update.mock.calls[0][0].data.passwordHash;
     const payload = (jwt.sign as jest.Mock).mock.calls[0][0];
+
+    expect(prisma.consumerSession.updateMany).toHaveBeenCalledWith({
+      where: { consumerId: "c-1", revokedAt: null },
+      data: { revokedAt: expect.any(Date) },
+    });
+    // A sessão nova só pode ser criada DEPOIS da revogação em massa, senão ela mesma seria
+    // revogada (mesmo filtro revokedAt: null casaria com ela).
+    const revokeOrder = (prisma.consumerSession.updateMany as jest.Mock).mock.invocationCallOrder[0];
+    const createOrder = (prisma.consumerSession.create as jest.Mock).mock.invocationCallOrder[0];
+    expect(revokeOrder).toBeLessThan(createOrder);
+
     expect(result.accessToken).toBe("tok");
-    expect(payload).toEqual({ sub: "c-1", type: "consumer", pv: passwordVersion(newHash) });
+    expect(payload).toEqual({ sub: "c-1", type: "consumer", pv: passwordVersion(newHash), sid: "session-new" });
     expect(payload.pv).not.toBe(passwordVersion(BASE_CONSUMER.passwordHash as string));
   });
 
   it("updateProfile normaliza e-mail e nunca aceita telefone", async () => {
     const { service, prisma } = build({ ...BASE_CONSUMER });
-    await service.updateProfile({ consumerId: "c-1" }, { name: " Ana Maria ", email: "NOVA@Example.com" });
+    await service.updateProfile(auth, { name: " Ana Maria ", email: "NOVA@Example.com" });
     const data = prisma.consumer.update.mock.calls[0][0].data;
     expect(data).toEqual({ name: "Ana Maria", email: "nova@example.com" });
     expect(data).not.toHaveProperty("phone");
+  });
+});
+
+describe("ConsumerAuthService.refresh", () => {
+  const auth = { consumerId: "c-1", sessionId: "session-1" };
+
+  // Chamado pelo proxy.ts perto do vencimento do token — é o que faz a sessão "nunca sair"
+  // enquanto o cliente volta ao site dentro da janela.
+  it("estende expiresAt/lastSeenAt e assina um token novo com o MESMO sid", async () => {
+    const { service, prisma, jwt } = build({ ...BASE_CONSUMER });
+    (prisma.consumerSession.update as jest.Mock).mockResolvedValue({
+      id: "session-1",
+      consumer: BASE_CONSUMER,
+    });
+
+    const result = await service.refresh(auth);
+
+    expect(prisma.consumerSession.update).toHaveBeenCalledWith({
+      where: { id: "session-1" },
+      data: { lastSeenAt: expect.any(Date), expiresAt: expect.any(Date) },
+      include: { consumer: { select: { id: true, name: true, phone: true, email: true, passwordHash: true } } },
+    });
+    expect(result.accessToken).toBe("tok");
+    expect((jwt.sign as jest.Mock).mock.calls[0][0]).toEqual(
+      expect.objectContaining({ sub: "c-1", sid: "session-1" }),
+    );
+  });
+});
+
+describe("ConsumerAuthService.listSessions", () => {
+  it("lista só sessões ativas do próprio consumidor e marca a atual", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER });
+    (prisma.consumerSession.findMany as jest.Mock).mockResolvedValue([
+      { id: "session-1", userAgent: "Chrome", createdAt: new Date(), lastSeenAt: new Date() },
+      { id: "session-2", userAgent: "Safari", createdAt: new Date(), lastSeenAt: new Date() },
+    ]);
+
+    const result = await service.listSessions({ consumerId: "c-1", sessionId: "session-2" });
+
+    expect(prisma.consumerSession.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { consumerId: "c-1", revokedAt: null, expiresAt: { gt: expect.any(Date) } },
+      }),
+    );
+    expect(result).toEqual([
+      expect.objectContaining({ id: "session-1", current: false }),
+      expect.objectContaining({ id: "session-2", current: true }),
+    ]);
+  });
+});
+
+describe("ConsumerAuthService.revokeSession / revokeOtherSessions", () => {
+  const auth = { consumerId: "c-1", sessionId: "session-atual" };
+
+  // Regressão (IDOR): dono no WHERE, nunca busca por id e compara depois — sessão de outro
+  // consumidor cai no mesmo NotFoundException de "não existe".
+  it("revokeSession filtra por consumerId no WHERE e lança NotFound se não achar/não for dono", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER });
+    (prisma.consumerSession.updateMany as jest.Mock).mockResolvedValue({ count: 0 });
+
+    await expect(service.revokeSession(auth, "session-de-outro")).rejects.toThrow(
+      new Error("Sessão não encontrada."),
+    );
+    expect(prisma.consumerSession.updateMany).toHaveBeenCalledWith({
+      where: { id: "session-de-outro", consumerId: "c-1", revokedAt: null },
+      data: { revokedAt: expect.any(Date) },
+    });
+  });
+
+  it("revokeSession confirma quando a sessão pertence ao consumidor", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER });
+    (prisma.consumerSession.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
+    await expect(service.revokeSession(auth, "session-2")).resolves.toEqual({ revoked: true });
+  });
+
+  it("revokeOtherSessions nunca inclui a própria sessão em uso no WHERE", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER });
+    (prisma.consumerSession.updateMany as jest.Mock).mockResolvedValue({ count: 2 });
+
+    const result = await service.revokeOtherSessions(auth);
+
+    expect(prisma.consumerSession.updateMany).toHaveBeenCalledWith({
+      where: { consumerId: "c-1", revokedAt: null, id: { not: "session-atual" } },
+      data: { revokedAt: expect.any(Date) },
+    });
+    expect(result).toEqual({ revoked: 2 });
   });
 });
 
@@ -295,7 +398,10 @@ describe("ConsumerAuthService.listEstablishments", () => {
       .fn()
       .mockResolvedValue([{ tenant: { name: "Salão A", slug: "a", logoUrl: null } }]);
 
-    const result = await service.listEstablishments({ consumerId: "c-1" }, { page: 2, pageSize: 12 });
+    const result = await service.listEstablishments(
+      { consumerId: "c-1", sessionId: "session-1" },
+      { page: 2, pageSize: 12 },
+    );
 
     expect(prisma.consumerTenantLink.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { consumerId: "c-1" }, skip: 12, take: 12 }),

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
@@ -20,7 +21,12 @@ import {
 } from "./dto/consumer-dtos";
 import { AuthenticatedConsumer, ConsumerJwtPayload, passwordVersion } from "./types/consumer-auth-user";
 
-const CONSUMER_TOKEN_EXPIRES_IN = "30d";
+// Validade de cada sessão/token e também o que o JWT carrega em `exp`. Sozinho seria só um
+// prazo fixo mais curto que os 30 dias de antes — o que faz a sessão "nunca sair" é o
+// proxy.ts do frontend chamando refresh() perto do vencimento (ver ConsumerAuthService.refresh),
+// empurrando expiresAt mais 14 dias a cada uso. Quem some por mais de 14 dias precisa logar de
+// novo — isso é aceitável (ficar inativo, não estar usando o app).
+const SESSION_TTL_DAYS = 14;
 const BCRYPT_ROUNDS = 12;
 
 // Hash fixo (calculado uma vez, no boot) só pra rodar bcrypt.compare contra ele quando não há
@@ -44,7 +50,7 @@ export class ConsumerAuthService {
   // 409 — nunca sobrescreve a senha de outra pessoa. Trade-off consciente (UX vs. segurança):
   // o cadastro revela se telefone/e-mail já têm conta; isso é aceito AQUI e não no login, onde
   // toda falha devolve o mesmo 401. Sem OTP (v1), possuir o telefone basta pra reivindicar.
-  async register(dto: RegisterConsumerDto) {
+  async register(dto: RegisterConsumerDto, userAgent?: string) {
     if (!dto.consent) {
       throw new BadRequestException("É necessário aceitar os termos e a política de privacidade.");
     }
@@ -73,13 +79,13 @@ export class ConsumerAuthService {
       return target;
     });
 
-    return this.session(consumer);
+    return this.issueSession(consumer, userAgent);
   }
 
   // Única etapa que confere credencial. Identificador inválido, conta inexistente, conta sem
   // senha (ainda não reivindicada), conta travada e senha errada são indistinguíveis por
   // mensagem, status e tempo.
-  async login(dto: ConsumerLoginDto) {
+  async login(dto: ConsumerLoginDto, userAgent?: string) {
     const consumer = await this.findByIdentifier(dto.identifier);
 
     if (!consumer || !consumer.passwordHash) {
@@ -105,7 +111,7 @@ export class ConsumerAuthService {
       });
     }
 
-    return this.session(consumer);
+    return this.issueSession(consumer, userAgent);
   }
 
   async me(auth: AuthenticatedConsumer) {
@@ -152,7 +158,7 @@ export class ConsumerAuthService {
     });
   }
 
-  async changePassword(auth: AuthenticatedConsumer, dto: ChangeConsumerPasswordDto) {
+  async changePassword(auth: AuthenticatedConsumer, dto: ChangeConsumerPasswordDto, userAgent?: string) {
     const consumer = await this.prisma.consumer.findUniqueOrThrow({ where: { id: auth.consumerId } });
     const matches = consumer.passwordHash
       ? await bcrypt.compare(dto.currentPassword, consumer.passwordHash)
@@ -162,16 +168,68 @@ export class ConsumerAuthService {
     }
     const passwordHash = await bcrypt.hash(dto.newPassword, BCRYPT_ROUNDS);
     await this.prisma.consumer.update({ where: { id: consumer.id }, data: { passwordHash } });
-    // A troca invalida TODAS as sessões (versão da senha no token). Devolve uma sessão nova pra
-    // quem trocou continuar logado neste dispositivo; as demais (inclusive token roubado) caem.
-    return { updated: true, ...this.session({ ...consumer, passwordHash }) };
+    // Revoga TODOS os dispositivos (a senha pode ter vazado com a sessão junto) e emite uma
+    // sessão nova só pra quem trocou, pra continuar logado neste dispositivo sem precisar
+    // logar de novo. `pv` (derivado do hash) já invalidaria os tokens antigos por si só; revogar
+    // a linha explicitamente também é o que faz a lista de dispositivos refletir a troca.
+    await this.prisma.consumerSession.updateMany({
+      where: { consumerId: consumer.id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    return { updated: true, ...(await this.issueSession({ ...consumer, passwordHash }, userAgent)) };
   }
 
-  // LGPD: exclusão da conta global. Os Client por tenant permanecem (histórico do negócio),
-  // só o vínculo e a identidade global somem.
+  // LGPD: exclusão da conta global. Os Client por tenant permanecem (histórico do negócio); o
+  // vínculo, a identidade global e as sessões (onDelete: Cascade) somem.
   async deleteAccount(auth: AuthenticatedConsumer) {
     await this.prisma.consumer.delete({ where: { id: auth.consumerId } });
     return { deleted: true };
+  }
+
+  // Chamado pelo proxy.ts (frontend) perto do vencimento do token, em navegação normal — é o que
+  // faz a sessão parecer nunca expirar enquanto o cliente volta ao site dentro da janela. O
+  // guard já validou a sessão (existe, não revogada, não expirada) antes de chegar aqui.
+  async refresh(auth: AuthenticatedConsumer) {
+    const session = await this.prisma.consumerSession.update({
+      where: { id: auth.sessionId },
+      data: { lastSeenAt: new Date(), expiresAt: this.sessionExpiry() },
+      include: { consumer: { select: { id: true, name: true, phone: true, email: true, passwordHash: true } } },
+    });
+    return this.signSession(session.consumer, session.id);
+  }
+
+  // Sessões ativas (não revogadas, não expiradas) do consumidor logado, mais recente primeiro.
+  // Sem paginação de propósito: é a lista de dispositivos de UM usuário, naturalmente pequena —
+  // foge da convenção geral de paginação do projeto, mas não há necessidade real de tetos aqui.
+  async listSessions(auth: AuthenticatedConsumer) {
+    const sessions = await this.prisma.consumerSession.findMany({
+      where: { consumerId: auth.consumerId, revokedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { lastSeenAt: "desc" },
+      select: { id: true, userAgent: true, createdAt: true, lastSeenAt: true },
+    });
+    return sessions.map((session) => ({ ...session, current: session.id === auth.sessionId }));
+  }
+
+  // Dono no WHERE (nunca busca por id e compara depois) — sessão de outro consumidor cai no
+  // mesmo NotFoundException de "não existe", sem vazar se aquele id pertence a alguém.
+  async revokeSession(auth: AuthenticatedConsumer, sessionId: string) {
+    const result = await this.prisma.consumerSession.updateMany({
+      where: { id: sessionId, consumerId: auth.consumerId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    if (result.count === 0) {
+      throw new NotFoundException("Sessão não encontrada.");
+    }
+    return { revoked: true };
+  }
+
+  // "Sair de todos os outros dispositivos" — nunca revoga a própria sessão em uso.
+  async revokeOtherSessions(auth: AuthenticatedConsumer) {
+    const result = await this.prisma.consumerSession.updateMany({
+      where: { consumerId: auth.consumerId, revokedAt: null, id: { not: auth.sessionId } },
+      data: { revokedAt: new Date() },
+    });
+    return { revoked: result.count };
   }
 
   // Garante um Client no tenant e o vínculo com o consumidor. Chamado no agendamento e na
@@ -227,20 +285,36 @@ export class ConsumerAuthService {
     }
   }
 
-  private session(consumer: {
-    id: string;
-    name: string;
-    phone: string;
-    email: string | null;
-    passwordHash: string | null;
-  }) {
+  private sessionExpiry(): Date {
+    return new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
+  }
+
+  // Cria a linha ConsumerSession (um dispositivo/login) e assina o token com o `sid` dela.
+  // userAgent é só um rótulo de exibição na lista de dispositivos — nunca usado pra decisão de
+  // segurança (o navegador informa o valor, não é confiável como identidade).
+  private async issueSession(
+    consumer: { id: string; name: string; phone: string; email: string | null; passwordHash: string | null },
+    userAgent?: string,
+  ) {
+    const session = await this.prisma.consumerSession.create({
+      data: { consumerId: consumer.id, userAgent: userAgent?.slice(0, 300), expiresAt: this.sessionExpiry() },
+      select: { id: true },
+    });
+    return this.signSession(consumer, session.id);
+  }
+
+  private signSession(
+    consumer: { id: string; name: string; phone: string; email: string | null; passwordHash: string | null },
+    sessionId: string,
+  ) {
     const payload: ConsumerJwtPayload = {
       sub: consumer.id,
       type: "consumer",
       pv: passwordVersion(consumer.passwordHash),
+      sid: sessionId,
     };
     return {
-      accessToken: this.jwtService.sign(payload, { expiresIn: CONSUMER_TOKEN_EXPIRES_IN }),
+      accessToken: this.jwtService.sign(payload, { expiresIn: `${SESSION_TTL_DAYS}d` }),
       consumer: { id: consumer.id, name: consumer.name, phone: consumer.phone, email: consumer.email },
     };
   }
