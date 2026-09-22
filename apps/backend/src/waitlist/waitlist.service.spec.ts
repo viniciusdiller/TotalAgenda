@@ -37,7 +37,7 @@ function buildConsumerAuth() {
   } as unknown as ConsumerAuthService;
 }
 
-const consumer = { consumerId: "consumer-1" };
+const consumer = { consumerId: "consumer-1", sessionId: "session-1" };
 
 const baseDto = {
   serviceId: "svc-1",
