@@ -40,6 +40,6 @@ export class IntakeResponsesController {
 
   @Post()
   submit(@CurrentUser() user: AuthenticatedUser, @Body() dto: SubmitIntakeResponseDto) {
-    return this.intake.submitResponse(user.tenantId, dto);
+    return this.intake.submitResponse(user.tenantId, dto, user);
   }
 }

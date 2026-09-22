@@ -18,7 +18,7 @@ import {
   RegisterConsumerDto,
   UpdateConsumerProfileDto,
 } from "./dto/consumer-dtos";
-import { AuthenticatedConsumer, ConsumerJwtPayload } from "./types/consumer-auth-user";
+import { AuthenticatedConsumer, ConsumerJwtPayload, passwordVersion } from "./types/consumer-auth-user";
 
 const CONSUMER_TOKEN_EXPIRES_IN = "30d";
 const BCRYPT_ROUNDS = 12;
@@ -162,7 +162,9 @@ export class ConsumerAuthService {
     }
     const passwordHash = await bcrypt.hash(dto.newPassword, BCRYPT_ROUNDS);
     await this.prisma.consumer.update({ where: { id: consumer.id }, data: { passwordHash } });
-    return { updated: true };
+    // A troca invalida TODAS as sessões (versão da senha no token). Devolve uma sessão nova pra
+    // quem trocou continuar logado neste dispositivo; as demais (inclusive token roubado) caem.
+    return { updated: true, ...this.session({ ...consumer, passwordHash }) };
   }
 
   // LGPD: exclusão da conta global. Os Client por tenant permanecem (histórico do negócio),
@@ -225,8 +227,18 @@ export class ConsumerAuthService {
     }
   }
 
-  private session(consumer: { id: string; name: string; phone: string; email: string | null }) {
-    const payload: ConsumerJwtPayload = { sub: consumer.id, type: "consumer" };
+  private session(consumer: {
+    id: string;
+    name: string;
+    phone: string;
+    email: string | null;
+    passwordHash: string | null;
+  }) {
+    const payload: ConsumerJwtPayload = {
+      sub: consumer.id,
+      type: "consumer",
+      pv: passwordVersion(consumer.passwordHash),
+    };
     return {
       accessToken: this.jwtService.sign(payload, { expiresIn: CONSUMER_TOKEN_EXPIRES_IN }),
       consumer: { id: consumer.id, name: consumer.name, phone: consumer.phone, email: consumer.email },

@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, UnauthorizedException } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
 import { JwtService } from "@nestjs/jwt";
+import { passwordVersion } from "./types/consumer-auth-user";
 import { ConsumerAuthService } from "./consumer-auth.service";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -56,7 +57,7 @@ function build(initialConsumer: Record<string, unknown> | null = null, over: Rec
   };
   prisma.$transaction = jest.fn().mockImplementation(async (cb: (tx: unknown) => unknown) => cb(prisma));
   const jwt = { sign: jest.fn().mockReturnValue("tok") } as unknown as JwtService;
-  return { service: new ConsumerAuthService(prisma as unknown as PrismaService, jwt), prisma: prisma as any };
+  return { service: new ConsumerAuthService(prisma as unknown as PrismaService, jwt), prisma: prisma as any, jwt };
 }
 
 describe("ConsumerAuthService.login", () => {
@@ -258,6 +259,21 @@ describe("ConsumerAuthService.changePassword / updateProfile", () => {
     const hash = prisma.consumer.update.mock.calls[0][0].data.passwordHash;
     expect(hash).not.toBe("nova-senha-123");
     expect(await bcrypt.compare("nova-senha-123", hash)).toBe(true);
+  });
+
+  // Regressão: token de 30 dias sobrevivia à troca de senha. Agora o token carrega a "versão"
+  // da senha; trocar devolve uma sessão nova (versão nova) pra quem trocou.
+  it("troca de senha devolve sessão nova com a versão da NOVA senha no token", async () => {
+    const { service, prisma, jwt } = build({ ...BASE_CONSUMER });
+    const result = await service.changePassword(
+      { consumerId: "c-1" },
+      { currentPassword: CORRECT_PASSWORD, newPassword: "nova-senha-123" },
+    );
+    const newHash = prisma.consumer.update.mock.calls[0][0].data.passwordHash;
+    const payload = (jwt.sign as jest.Mock).mock.calls[0][0];
+    expect(result.accessToken).toBe("tok");
+    expect(payload).toEqual({ sub: "c-1", type: "consumer", pv: passwordVersion(newHash) });
+    expect(payload.pv).not.toBe(passwordVersion(BASE_CONSUMER.passwordHash as string));
   });
 
   it("updateProfile normaliza e-mail e nunca aceita telefone", async () => {

@@ -1,4 +1,4 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { FinanceService } from "./finance.service";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -82,6 +82,42 @@ describe("FinanceService", () => {
     await expect(service.updateEntry("t-1", "e1", { amountCents: 1 })).rejects.toThrow(
       BadRequestException,
     );
+  });
+
+  // Regressão (IDOR por FK no body): updateEntry aceitava categoryId de outro tenant.
+  it("updateEntry só aceita categoria do próprio tenant (senão NotFound, sem gravar)", async () => {
+    const { service, prisma } = build();
+    (prisma.financialEntry.findFirst as jest.Mock).mockResolvedValue({
+      id: "e1",
+      source: "MANUAL",
+      status: "PENDING",
+      direction: "EXPENSE",
+    });
+    (prisma.financialCategory.findFirst as jest.Mock).mockResolvedValue(null);
+
+    await expect(service.updateEntry("t-1", "e1", { categoryId: "cat-de-outro-tenant" })).rejects.toThrow(
+      NotFoundException,
+    );
+    expect(prisma.financialCategory.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ id: "cat-de-outro-tenant", tenantId: "t-1" }) }),
+    );
+    expect(prisma.financialEntry.update).not.toHaveBeenCalled();
+  });
+
+  it("updateEntry recusa categoria de direção divergente do lançamento", async () => {
+    const { service, prisma } = build();
+    (prisma.financialEntry.findFirst as jest.Mock).mockResolvedValue({
+      id: "e1",
+      source: "MANUAL",
+      status: "PENDING",
+      direction: "EXPENSE",
+    });
+    (prisma.financialCategory.findFirst as jest.Mock).mockResolvedValue({ id: "c1", direction: "INCOME" });
+
+    await expect(service.updateEntry("t-1", "e1", { categoryId: "c1" })).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(prisma.financialEntry.update).not.toHaveBeenCalled();
   });
 
   it("dre calcula receita - CMV - despesas", async () => {

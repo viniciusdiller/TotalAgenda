@@ -37,23 +37,25 @@ function ticket(over: Record<string, unknown> = {}) {
 }
 
 function build(over: Record<string, unknown> = {}) {
-  const prisma = {
+  const models = {
     ticket: {
       findFirst: jest.fn().mockResolvedValue(ticket()),
       create: jest.fn().mockResolvedValue(ticket()),
-      update: jest.fn().mockImplementation(({ data }) => ticket(data)),
+      update: jest.fn().mockImplementation(({ data }) => ticket({ ...data, items: ticket().items })),
     },
     ticketItem: { create: jest.fn(), delete: jest.fn(), findFirst: jest.fn() },
     payment: { create: jest.fn() },
     service: { findFirst: jest.fn() },
+    professional: { findFirst: jest.fn() },
+  };
+  // A transação enxerga os MESMOS modelos (mesmos jest.fn) + o lock por comanda, então os
+  // testes configuram/inspecionam tudo por prisma.* e valem também dentro do lock.
+  const prismaTx = { ...models, $executeRaw: jest.fn().mockResolvedValue(1) };
+  const prisma = {
+    ...models,
     $transaction: jest.fn().mockImplementation(async (cb) => cb(prismaTx)),
     ...over,
   } as unknown as PrismaService;
-  const prismaTx = {
-    ticket: {
-      update: jest.fn().mockImplementation(({ data }) => ticket({ ...data, items: ticket().items })),
-    },
-  };
   const products = { registerSale: jest.fn(), getOrThrow: jest.fn() } as unknown as ProductsService;
   const commissions = { computeForTicket: jest.fn() } as unknown as CommissionsService;
   const cash = { currentOpen: jest.fn().mockResolvedValue(null) } as unknown as CashRegisterService;
@@ -168,5 +170,52 @@ describe("TicketsService", () => {
       ticket({ payments: [{ id: "p1", method: "PIX", amountCents: 100, createdAt: new Date() }] }),
     );
     await expect(service.cancel("t-1", "tk-1")).rejects.toThrow(BadRequestException);
+  });
+
+  // Regressão (race condition, dinheiro): requireOpen rodava FORA da transação, então dois
+  // "fechar" concorrentes passavam juntos pela checagem e geravam receita/comissão/estoque em
+  // dobro. Agora o status é relido sob o lock da comanda, dentro da transação.
+  it("close relê o status sob lock: comanda já fechada por outra requisição não gera efeitos", async () => {
+    const { service, prisma, commissions, finance, products } = build();
+    (prisma.ticket.findFirst as jest.Mock).mockResolvedValue(
+      ticket({ status: "CLOSED", payments: [{ id: "p1", method: "CASH", amountCents: 5000, createdAt: new Date() }] }),
+    );
+
+    await expect(service.close("t-1", "u-1", "tk-1")).rejects.toThrow(ConflictException);
+
+    expect(commissions.computeForTicket).not.toHaveBeenCalled();
+    expect(finance.recordTicketIncome).not.toHaveBeenCalled();
+    expect(products.registerSale).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["addPayment", (s: TicketsService) => s.addPayment("t-1", "tk-1", { method: "PIX", amountCents: 100 })],
+    ["cancel", (s: TicketsService) => s.cancel("t-1", "tk-1")],
+    ["setDiscount", (s: TicketsService) => s.setDiscount("t-1", "tk-1", { discountCents: 0 })],
+    ["removeItem", (s: TicketsService) => s.removeItem("t-1", "tk-1", "it-1")],
+  ])("%s toma o lock da comanda antes de ler/escrever", async (_name, run) => {
+    const { service, prismaTx, prisma } = build();
+    (prisma.ticketItem.findFirst as jest.Mock).mockResolvedValue({ id: "it-1" });
+
+    await run(service);
+
+    expect(prismaTx.$executeRaw).toHaveBeenCalledTimes(1);
+    const lockOrder = (prismaTx.$executeRaw as jest.Mock).mock.invocationCallOrder[0];
+    const firstRead = (prisma.ticket.findFirst as jest.Mock).mock.invocationCallOrder[0];
+    expect(lockOrder).toBeLessThan(firstRead);
+  });
+
+  it("addPayment confere o saldo com a comanda lida DENTRO do lock (pagamento concorrente não estoura o total)", async () => {
+    const { service, prisma } = build();
+    // Outro caixa já pagou tudo entre a abertura da tela e este clique: o que vale é o estado
+    // relido sob lock, não o que o front achava.
+    (prisma.ticket.findFirst as jest.Mock).mockResolvedValue(
+      ticket({ payments: [{ id: "p0", method: "PIX", amountCents: 5000, createdAt: new Date() }] }),
+    );
+
+    await expect(
+      service.addPayment("t-1", "tk-1", { method: "PIX", amountCents: 100 }),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.payment.create).not.toHaveBeenCalled();
   });
 });

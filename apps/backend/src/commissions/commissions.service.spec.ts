@@ -1,3 +1,4 @@
+import { BadRequestException } from "@nestjs/common";
 import { CommissionsService } from "./commissions.service";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -72,5 +73,31 @@ describe("CommissionsService.computeForTicket", () => {
     ]);
     await service.computeForTicket(tx as never, "t-1", "tk-1", [item()]);
     expect(created).toHaveLength(0);
+  });
+});
+
+describe("CommissionsService.report", () => {
+  // Regressão: sem teto de intervalo, "1970 → 2100" materializava todas as comissões do tenant.
+  it("recusa intervalo maior que o teto do relatório, sem consultar o banco", async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const svc = new CommissionsService({ commissionEntry: { findMany } } as unknown as PrismaService);
+
+    await expect(
+      svc.report("t-1", "1970-01-01T00:00:00Z", "2100-01-01T00:00:00Z"),
+    ).rejects.toThrow(BadRequestException);
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
+  it("aceita um intervalo anual e sempre filtra por tenantId", async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const svc = new CommissionsService({ commissionEntry: { findMany } } as unknown as PrismaService);
+
+    await svc.report("t-1", "2026-01-01T00:00:00Z", "2026-12-31T00:00:00Z", "prof-1");
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ tenantId: "t-1", professionalId: "prof-1" }),
+      }),
+    );
   });
 });

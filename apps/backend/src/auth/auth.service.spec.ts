@@ -1,4 +1,4 @@
-import { UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
 import { Role } from "@totalagenda/database";
 import { AuthService } from "./auth.service";
@@ -250,5 +250,36 @@ describe("AuthService.refresh", () => {
     expect(result.accessToken).toBe("signed-token");
     expect(result.refreshToken).toBe("signed-token");
     expect(result.user).toMatchObject({ id: "u-1", tenantId: "t-1", role: Role.OWNER });
+  });
+});
+
+describe("AuthService.setPassword", () => {
+  const validInvite = {
+    ...ACTIVE_USER,
+    passwordSetTokenExpiresAt: new Date(Date.now() + 60_000),
+  };
+
+  it("resgata o convite de um usuário ativo e devolve sessão", async () => {
+    const prisma = buildPrisma();
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue(validInvite);
+    const service = new AuthService(prisma, buildJwtService());
+
+    const result = await service.setPassword({ token: "convite", password: "nova-senha-123" });
+
+    expect(result.accessToken).toBe("signed-token");
+  });
+
+  // Regressão: setPassword devolve tokens de sessão, então um convite ainda válido de um
+  // usuário que o dono desativou reabria o acesso à conta.
+  it("rejeita o convite de um usuário desativado, sem emitir sessão", async () => {
+    const prisma = buildPrisma();
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...validInvite, isActive: false });
+    const jwt = buildJwtService();
+    const service = new AuthService(prisma, jwt);
+
+    await expect(
+      service.setPassword({ token: "convite", password: "nova-senha-123" }),
+    ).rejects.toThrow(BadRequestException);
+    expect(jwt.sign).not.toHaveBeenCalled();
   });
 });

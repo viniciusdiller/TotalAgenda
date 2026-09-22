@@ -1,13 +1,15 @@
 import { plainToInstance } from "class-transformer";
-import { IsInt, IsNotEmpty, IsOptional, IsString, Min, validateSync } from "class-validator";
+import { IsInt, IsNotEmpty, IsOptional, IsString, Min, MinLength, validateSync } from "class-validator";
 
 class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   DATABASE_URL!: string;
 
+  // Assina TODOS os tokens (staff, refresh, cliente): segredo curto é força-bruta offline
+  // trivial. 32+ caracteres (ex.: `openssl rand -hex 32`); fail closed no boot.
   @IsString()
-  @IsNotEmpty()
+  @MinLength(32)
   JWT_SECRET!: string;
 
   @IsOptional()
@@ -22,6 +24,12 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   FRONTEND_URL?: string;
+
+  // Nº de proxies confiáveis à frente do backend (ver main.ts). Ausente = não confia em nenhum.
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  TRUST_PROXY_HOPS?: number;
 
   // Segredo compartilhado com o Admin-TotalSoftware para autenticar os webhooks de
   // provisionamento/sincronização de assinatura (ver src/webhooks). Obrigatório: sem ele
