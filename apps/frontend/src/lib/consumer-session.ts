@@ -1,35 +1,32 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { ApiError } from "@/lib/api";
+import { CONSUMER_COOKIE_NAME, consumerCookieOptions } from "./consumer-cookie";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 // Sessão do cliente final: UMA identidade global (Consumer) pra todos os salões, em um único
-// cookie httpOnly — não mais um por slug. Mesma expiração do JWT emitido pelo backend (30d,
-// ver CONSUMER_TOKEN_EXPIRES_IN em consumer-auth.service.ts). É deliberadamente separada da
-// sessão NextAuth de staff (lib/auth.ts): identidades e fluxos diferentes.
-const COOKIE_NAME = "ta_consumer";
-const MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
-
+// cookie httpOnly — não mais um por slug. É deliberadamente separada da sessão NextAuth de
+// staff (lib/auth.ts): identidades e fluxos diferentes.
+//
+// Sessão deslizante: o cookie dura só 14 dias (SESSION_TTL_DAYS em consumer-auth.service.ts),
+// mas o proxy.ts renova o token perto do vencimento enquanto o cliente continuar visitando o
+// site — na prática ele nunca vê a tela de login. Quem some por mais de 14 dias precisa logar
+// de novo. Cada login cria uma sessão própria (ConsumerSession), revogável individualmente em
+// /minha-conta.
 export async function getConsumerToken(): Promise<string | null> {
   const store = await cookies();
-  return store.get(COOKIE_NAME)?.value ?? null;
+  return store.get(CONSUMER_COOKIE_NAME)?.value ?? null;
 }
 
 export async function setConsumerToken(token: string) {
   const store = await cookies();
-  store.set(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: MAX_AGE_SECONDS,
-  });
+  store.set(CONSUMER_COOKIE_NAME, token, consumerCookieOptions());
 }
 
 export async function clearConsumerToken() {
   const store = await cookies();
-  store.delete({ name: COOKIE_NAME, path: "/" });
+  store.delete({ name: CONSUMER_COOKIE_NAME, path: "/" });
 }
 
 async function request<T>(path: string, init?: RequestInit, token?: string | null): Promise<T> {

@@ -1,10 +1,18 @@
 "use server";
 
 import { AuthError } from "next-auth";
+import { headers } from "next/headers";
 import type { ConsumerSession } from "@totalagenda/shared-types";
 import { ApiError } from "@/lib/api";
 import { signIn } from "@/lib/auth";
 import { consumerPublicFetch, setConsumerToken } from "@/lib/consumer-session";
+
+// consumerPublicFetch roda no servidor: sem isso, o backend veria o User-Agent da chamada
+// fetch() do Next (algo como "node"), não o do navegador de quem está logando — a lista de
+// "Dispositivos conectados" mostraria "node" pra todo mundo em vez de "Chrome, Windows".
+async function browserUserAgent(): Promise<string | undefined> {
+  return (await headers()).get("user-agent") ?? undefined;
+}
 
 export type LoginResult = { redirectTo: string } | { error: string };
 
@@ -60,6 +68,7 @@ export async function loginAction(
     const session = await consumerPublicFetch<ConsumerSession>("/public/consumer/login", {
       method: "POST",
       body: JSON.stringify({ identifier: id, password }),
+      headers: { "User-Agent": (await browserUserAgent()) ?? "" },
     });
     await setConsumerToken(session.accessToken);
   } catch (error) {
@@ -81,6 +90,7 @@ export async function registerAction(
     const session = await consumerPublicFetch<ConsumerSession>("/public/consumer/register", {
       method: "POST",
       body: JSON.stringify(input),
+      headers: { "User-Agent": (await browserUserAgent()) ?? "" },
     });
     await setConsumerToken(session.accessToken);
   } catch (error) {
