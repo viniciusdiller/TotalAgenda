@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { ApiError } from "@/lib/api";
 import { clearConsumerToken, consumerAuthedFetch, setConsumerToken } from "@/lib/consumer-session";
 
@@ -52,15 +53,36 @@ export async function changePasswordAction(_prev: FormState | undefined, formDat
   try {
     // Trocar a senha derruba todas as sessões antigas no backend; a resposta traz uma sessão nova
     // (pra quem trocou continuar logado aqui) e é ela que vai pro cookie.
+    const userAgent = (await headers()).get("user-agent") ?? "";
     const result = await consumerAuthedFetch<{ accessToken: string }>("/public/consumer/password", {
       method: "PATCH",
       body: JSON.stringify({ currentPassword, newPassword }),
+      headers: { "User-Agent": userAgent },
     });
     await setConsumerToken(result.accessToken);
   } catch (error) {
     return { error: messageFor(error, "Não foi possível trocar a senha.") };
   }
-  return { success: "Senha alterada." };
+  return { success: "Senha alterada. Você foi desconectado dos outros dispositivos." };
+}
+
+export async function revokeSessionAction(sessionId: string) {
+  try {
+    await consumerAuthedFetch(`/public/consumer/sessions/${sessionId}`, { method: "DELETE" });
+  } catch {
+    // Falha silenciosa: o pior caso é o dispositivo continuar na lista até a próxima tentativa —
+    // não é uma ação crítica o bastante pra propagar erro pra UI aqui.
+  }
+  revalidatePath("/minha-conta");
+}
+
+export async function revokeOtherSessionsAction() {
+  try {
+    await consumerAuthedFetch("/public/consumer/sessions", { method: "DELETE" });
+  } catch {
+    // Mesma lógica de revokeSessionAction.
+  }
+  revalidatePath("/minha-conta");
 }
 
 export async function cancelMyBookingAction(bookingId: string) {
