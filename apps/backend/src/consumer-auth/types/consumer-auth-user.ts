@@ -6,12 +6,17 @@ export interface ConsumerJwtPayload {
   // consumidor global não passa em nenhuma rota daqueles domínios.
   type: "consumer";
   // "Versão" da senha (prefixo do sha256 do hash): trocar a senha muda o valor e derruba todas
-  // as sessões antigas — sem isso um token roubado valia por 30 dias mesmo após a troca.
+  // as sessões antigas — sem isso um token roubado valia até o fim da janela mesmo após a troca.
+  // Redundante com a revogação por ConsumerSession abaixo (defesa em profundidade barata).
   pv: string;
+  // Id da linha ConsumerSession que este token representa — um dispositivo/login. É o que
+  // permite revogar UM dispositivo sem derrubar os outros (ver ConsumerJwtAuthGuard).
+  sid: string;
 }
 
 export interface AuthenticatedConsumer {
   consumerId: string;
+  sessionId: string;
 }
 
 // Não expõe o hash (só o prefixo do sha256 dele) e não precisa de coluna nova no banco.

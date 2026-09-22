@@ -786,8 +786,26 @@ model Consumer {
 
   tenantLinks ConsumerTenantLink[]
   reviews     Review[]
+  sessions    ConsumerSession[]
 
   @@index([phone])
+}
+
+// Uma linha por dispositivo/login (não por consumidor): sessão deslizante — cada uso próximo do
+// vencimento estende expiresAt (ver ConsumerAuthService.refresh), então quem volta ao site
+// dentro da janela nunca vê a tela de login, mas cada dispositivo é revogável individualmente
+// (ver revokeSession/revokeOtherSessions) sem precisar derrubar os outros.
+model ConsumerSession {
+  id         String    @id @default(uuid())
+  consumerId String
+  consumer   Consumer  @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+  userAgent  String? // rótulo de dispositivo pro usuário reconhecer na lista ("Chrome, Windows")
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+  lastSeenAt DateTime  @default(now()) @db.Timestamptz(6)
+  expiresAt  DateTime  @db.Timestamptz(6)
+  revokedAt  DateTime? @db.Timestamptz(6)
+
+  @@index([consumerId])
 }
 
 // Liga o consumidor global ao Client daquele tenant (identidade "viva" no negócio).

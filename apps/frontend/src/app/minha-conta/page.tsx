@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DateTime } from "luxon";
 import type {
+  ConsumerDevice,
   ConsumerEstablishment,
   ConsumerMe,
   Paginated,
@@ -18,6 +19,7 @@ import { AppointmentTicket } from "@/components/consumer-account/AppointmentTick
 import { EstablishmentGrid } from "@/components/consumer-account/EstablishmentGrid";
 import { HistoryTimeline } from "@/components/consumer-account/HistoryTimeline";
 import { PasswordForm, ProfileForm } from "@/components/consumer-account/ProfileForm";
+import { SessionsList } from "@/components/consumer-account/SessionsList";
 import { logoutConsumerAction } from "./actions";
 
 export const metadata: Metadata = { title: "Minha conta - TotalAgenda" };
@@ -64,7 +66,7 @@ export default async function MinhaContaPage({
   const historyPageNumber = parsePageParam(params.historico);
   const establishmentsPageNumber = parsePageParam(params.pagina);
 
-  const [upcoming, history, establishments] = await Promise.all([
+  const [upcoming, history, establishments, sessions] = await Promise.all([
     tab === "agenda"
       ? fetchPage<PublicBooking>("/public/consumer/bookings", {
           scope: "upcoming",
@@ -84,6 +86,9 @@ export default async function MinhaContaPage({
           page: establishmentsPageNumber,
           pageSize: ESTABLISHMENTS_PAGE_SIZE,
         })
+      : null,
+    tab === "conta"
+      ? consumerAuthedFetch<ConsumerDevice[]>("/public/consumer/sessions").catch(() => [])
       : null,
   ]);
 
@@ -244,6 +249,7 @@ export default async function MinhaContaPage({
           <div className="grid gap-6 md:grid-cols-2">
             <ProfileForm name={me.name} email={me.email} phone={me.phone} />
             <PasswordForm />
+            {sessions ? <SessionsList sessions={sessions} /> : null}
           </div>
         ) : null}
       </div>

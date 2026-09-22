@@ -203,6 +203,16 @@ export interface ConsumerSession {
   consumer: { id: string; name: string; phone: string; email: string | null };
 }
 
+// Uma linha da lista "Dispositivos conectados" em /minha-conta — não confundir com
+// ConsumerSession acima (a resposta de login/refresh).
+export interface ConsumerDevice {
+  id: string;
+  userAgent: string | null;
+  createdAt: string;
+  lastSeenAt: string;
+  current: boolean;
+}
+
 export interface OwnerReview {
   id: string;
   rating: number;

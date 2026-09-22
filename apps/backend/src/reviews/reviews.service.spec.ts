@@ -2,7 +2,7 @@ import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { ReviewsService } from "./reviews.service";
 import { PrismaService } from "../prisma/prisma.service";
 
-const consumer = { consumerId: "cons-1" };
+const consumer = { consumerId: "cons-1", sessionId: "session-1" };
 
 function build(over: Record<string, unknown> = {}) {
   const prisma = {

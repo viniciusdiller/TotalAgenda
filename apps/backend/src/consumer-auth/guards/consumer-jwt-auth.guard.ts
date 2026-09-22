@@ -6,9 +6,13 @@ import { ConsumerJwtPayload, passwordVersion } from "../types/consumer-auth-user
 // Guard sem Passport (independente do JwtAuthGuard de staff), aplicado localmente via
 // @Public() + @UseGuards(ConsumerJwtAuthGuard).
 //
-// Além da assinatura, confere no banco que a conta ainda existe e que a versão da senha do
-// token é a atual: conta excluída (LGPD) ou senha trocada derrubam a sessão na hora, em vez de
-// o token continuar válido pelos 30 dias. Falha sempre com a mesma mensagem (sem distinguir).
+// Além da assinatura, confere no banco a linha ConsumerSession (não só a Consumer): existe, não
+// revogada, não expirada, e pertence de fato ao consumerId do `sub`. É essa consulta por `sid`
+// (não só por consumerId) que faz "revogar este dispositivo" (ConsumerAuthService.revokeSession)
+// surtir efeito na hora, mesmo com o JWT ainda válido por assinatura/exp — sem ela, revogar um
+// dispositivo não teria como derrubar especificamente aquele token. `pv` continua conferido como
+// defesa extra (barata, já que a sessão inclui a senha atual no mesmo select). Toda falha usa a
+// mesma mensagem genérica, sem distinguir motivo.
 @Injectable()
 export class ConsumerJwtAuthGuard implements CanActivate {
   constructor(
@@ -30,19 +34,30 @@ export class ConsumerJwtAuthGuard implements CanActivate {
     } catch {
       throw new UnauthorizedException("Sessão inválida ou expirada.");
     }
-    if (payload.type !== "consumer" || typeof payload.pv !== "string") {
+    if (payload.type !== "consumer" || typeof payload.pv !== "string" || typeof payload.sid !== "string") {
       throw new UnauthorizedException("Sessão inválida ou expirada.");
     }
 
-    const consumer = await this.prisma.consumer.findUnique({
-      where: { id: payload.sub },
-      select: { passwordHash: true },
+    const session = await this.prisma.consumerSession.findUnique({
+      where: { id: payload.sid },
+      select: {
+        consumerId: true,
+        revokedAt: true,
+        expiresAt: true,
+        consumer: { select: { passwordHash: true } },
+      },
     });
-    if (!consumer || passwordVersion(consumer.passwordHash) !== payload.pv) {
+    if (
+      !session ||
+      session.consumerId !== payload.sub ||
+      session.revokedAt !== null ||
+      session.expiresAt.getTime() <= Date.now() ||
+      passwordVersion(session.consumer.passwordHash) !== payload.pv
+    ) {
       throw new UnauthorizedException("Sessão inválida ou expirada.");
     }
 
-    request.consumerUser = { consumerId: payload.sub };
+    request.consumerUser = { consumerId: payload.sub, sessionId: payload.sid };
     return true;
   }
 }

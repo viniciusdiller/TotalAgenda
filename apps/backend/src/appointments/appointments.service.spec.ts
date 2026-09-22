@@ -23,7 +23,7 @@ function buildConsumerAuthMock() {
   } as unknown as ConsumerAuthService;
 }
 
-const consumer = { consumerId: "consumer-1" };
+const consumer = { consumerId: "consumer-1", sessionId: "session-1" };
 
 // Um atendimento "hidratado" como o APPOINTMENT_INCLUDE devolve — usado pelo serialize().
 function hydratedAppointment(overrides: Record<string, unknown> = {}) {
