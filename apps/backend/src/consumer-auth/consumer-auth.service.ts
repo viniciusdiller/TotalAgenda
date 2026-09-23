@@ -2,9 +2,11 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
+import { Cron, CronExpression } from "@nestjs/schedule";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
 import { Prisma } from "@totalagenda/database";
@@ -29,6 +31,12 @@ import { AuthenticatedConsumer, ConsumerJwtPayload, passwordVersion } from "./ty
 const SESSION_TTL_DAYS = 14;
 const BCRYPT_ROUNDS = 12;
 
+// ConsumerSession nunca é apagada no fluxo normal (login cria, logout/troca de senha só marcam
+// revokedAt) — cresce uma linha por login, pra sempre, sem valor nenhum passada essa janela
+// (diferente de Appointment/Ticket, nada financeiro/comissão depende dela). Retenção generosa:
+// não há exigência de compliance aqui, só sobra pra investigar um dispositivo suspeito.
+const SESSION_RETENTION_DAYS = 90;
+
 // Hash fixo (calculado uma vez, no boot) só pra rodar bcrypt.compare contra ele quando não há
 // conta/senha ou a conta está travada — mesmo custo de CPU de uma comparação real, senão o
 // tempo de resposta denuncia o que a mensagem esconde. Instância própria (não compartilhada
@@ -39,6 +47,8 @@ type Db = Prisma.TransactionClient | PrismaService;
 
 @Injectable()
 export class ConsumerAuthService {
+  private readonly logger = new Logger(ConsumerAuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
@@ -230,6 +240,24 @@ export class ConsumerAuthService {
       data: { revokedAt: new Date() },
     });
     return { revoked: result.count };
+  }
+
+  // Housekeeping, não domínio de negócio: apaga fisicamente sessão revogada/expirada há mais de
+  // SESSION_RETENTION_DAYS. "Revogada há X" e "nunca revogada mas expirada há X" são os dois
+  // jeitos de uma sessão estar morta há tempo suficiente — sessão ativa (revokedAt null e
+  // expiresAt no futuro) nunca cai aqui, não importa a idade de createdAt.
+  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  async cleanupExpiredSessions() {
+    const cutoff = new Date(Date.now() - SESSION_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+    const result = await this.prisma.consumerSession.deleteMany({
+      where: {
+        OR: [{ revokedAt: { lt: cutoff } }, { AND: [{ revokedAt: null }, { expiresAt: { lt: cutoff } }] }],
+      },
+    });
+    if (result.count > 0) {
+      this.logger.log(`Limpeza de ConsumerSession: ${result.count} sessão(ões) removida(s).`);
+    }
+    return result.count;
   }
 
   // Garante um Client no tenant e o vínculo com o consumidor. Chamado no agendamento e na
