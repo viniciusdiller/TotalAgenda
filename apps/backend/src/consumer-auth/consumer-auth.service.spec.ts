@@ -58,6 +58,7 @@ function build(initialConsumer: Record<string, unknown> | null = null, over: Rec
       update: jest.fn(),
       updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       findMany: jest.fn().mockResolvedValue([]),
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     ...over,
   };
@@ -385,6 +386,35 @@ describe("ConsumerAuthService.revokeSession / revokeOtherSessions", () => {
       data: { revokedAt: expect.any(Date) },
     });
     expect(result).toEqual({ revoked: 2 });
+  });
+});
+
+describe("ConsumerAuthService.cleanupExpiredSessions", () => {
+  const NOW = new Date("2026-09-23T12:00:00.000Z");
+
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(NOW);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  // Regressão: sessão viva (nunca revogada, ainda não expirada) não pode ser apagada, não
+  // importa a idade — só revokedAt/expiresAt antigos indicam que a sessão está morta há tempo.
+  it("apaga só sessão revogada ou expirada há mais de 90 dias, nunca uma ativa", async () => {
+    const { service, prisma } = build({ ...BASE_CONSUMER });
+    (prisma.consumerSession.deleteMany as jest.Mock).mockResolvedValue({ count: 3 });
+
+    const removed = await service.cleanupExpiredSessions();
+
+    const cutoff = new Date(NOW.getTime() - 90 * 24 * 60 * 60 * 1000);
+    expect(prisma.consumerSession.deleteMany).toHaveBeenCalledWith({
+      where: {
+        OR: [{ revokedAt: { lt: cutoff } }, { AND: [{ revokedAt: null }, { expiresAt: { lt: cutoff } }] }],
+      },
+    });
+    expect(removed).toBe(3);
   });
 });
 
