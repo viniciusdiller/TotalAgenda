@@ -1,22 +1,17 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 
 type Theme = "light" | "dark";
 
 const ThemeContext = createContext<{ theme: Theme; toggleTheme: (origin?: { x: number; y: number }) => void } | null>(null);
 
-// O valor inicial ("light") é só o que o server consegue renderizar sem acesso a
-// localStorage/matchMedia — a classe .dark real na <html> já foi aplicada antes do
-// paint pelo script inline em layout.tsx (evita flash de tema errado). O useEffect
-// aqui só sincroniza o estado do React com o que já está no DOM, não decide o tema.
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light");
-
-  useEffect(() => {
-    setTheme(document.documentElement.classList.contains("dark") ? "dark" : "light");
-  }, []);
+// initialTheme vem do cookie "theme", já lido no servidor (layout.tsx) — o mesmo valor que
+// decidiu a classe .dark no <html> renderizado. Sem isso o primeiro render client sempre
+// começaria em "light" e corrigiria só depois de um efeito, piscando o ícone/label errado.
+export function ThemeProvider({ children, initialTheme }: { children: ReactNode; initialTheme: Theme }) {
+  const [theme, setTheme] = useState<Theme>(initialTheme);
 
   // origin = centro (em px da viewport) de onde a revelação circular se expande — o botão
   // que disparou a troca. Sem View Transitions API, ou com prefers-reduced-motion, troca direto.
@@ -26,12 +21,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     function apply() {
       setTheme(next);
       document.documentElement.classList.toggle("dark", next === "dark");
-      try {
-        localStorage.setItem("theme", next);
-      } catch {
-        // Storage bloqueado (modo privado, cookies desabilitados) — tema ainda troca
-        // nesta sessão, só não persiste entre visitas.
-      }
+      // Cookie (não localStorage): precisa ser lido no servidor em layout.tsx pra decidir a
+      // classe .dark do <html> antes do primeiro paint, sem script inline.
+      document.cookie = `theme=${next}; path=/; max-age=31536000; samesite=lax`;
     }
 
     const animate =

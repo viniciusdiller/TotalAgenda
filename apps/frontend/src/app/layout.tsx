@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Manrope, Outfit } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { FloatingThemeToggle } from "@/components/ui/FloatingThemeToggle";
@@ -41,28 +42,21 @@ export const metadata: Metadata = {
   },
 };
 
-// Roda antes do React hidratar — aplica a classe .dark antes do primeiro paint, pra
-// não piscar o tema errado. Padrão é sempre claro pra visita nova (não segue mais a
-// preferência do SO) — só fica escuro se o usuário já escolheu isso antes.
-const THEME_INIT_SCRIPT = `
-(function () {
-  try {
-    var stored = localStorage.getItem("theme");
-    document.documentElement.classList.toggle("dark", stored === "dark");
-  } catch (e) {}
-})();
-`;
+// Tema decidido no servidor a partir do cookie "theme" (gravado por ThemeProvider.toggleTheme)
+// — a classe .dark já sai certa no HTML antes do primeiro paint, sem script inline e sem risco
+// de flash. Padrão é sempre claro pra visita nova; só fica escuro se o usuário já escolheu isso
+// antes (cookie ausente != "dark").
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const cookieStore = await cookies();
+  const theme = cookieStore.get("theme")?.value === "dark" ? "dark" : "light";
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="pt-BR"
-      className={`${display.variable} ${body.variable} ${brand.variable}`}
-      suppressHydrationWarning
+      className={`${display.variable} ${body.variable} ${brand.variable}${theme === "dark" ? " dark" : ""}`}
     >
       <body className="min-h-dvh bg-stone-50 font-body text-zinc-900 antialiased dark:bg-zinc-950 dark:text-stone-100">
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        <ThemeProvider>
+        <ThemeProvider initialTheme={theme}>
           {children}
           <FloatingThemeToggle />
         </ThemeProvider>
