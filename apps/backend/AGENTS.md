@@ -41,6 +41,7 @@ não domínio.
 | `professionals` | CRUD de profissional (vínculo com `User`), horário de trabalho, vínculo com serviços. |
 | `reviews` | Avaliação pública de um `Consumer` sobre um atendimento + moderação pelo dono. |
 | `services` | Catálogo de serviço (nome/preço/duração), vínculo profissional↔serviço. |
+| `signup` | Cadastro público de tenant + dono (`POST /public/signup`): trial de 14 dias, sem cartão, sem `Subscription`. |
 | `tenants` | Perfil público do tenant (nome, logo, galeria, slug), config de marketplace. |
 | `tickets` | Comanda/PDV: itens, desconto, pagamento, fechamento — ver CLAUDE.md raiz > Segurança > Confiança no cliente pra a regra que rege `AddTicketItemDto`. |
 | `time-blocks` | Bloqueio manual de horário (folga/férias) na agenda de um profissional. |

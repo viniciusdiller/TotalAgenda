@@ -72,11 +72,24 @@ depois" (evita janela de IDOR).
     antes de abrir amplamente.
 
 ### Billing
-Cobrança real (Stripe, checkout, ciclo) vive no **Admin-TotalSoftware**, repositório
-externo. Este backend só mantém um espelho (`Plan` / `Subscription`) atualizado por
-webhooks (`src/webhooks`, autenticados por `WebhookSecretGuard` com segredo compartilhado)
-para aplicar limites de plano (`PlanLimitService`) e liberar/bloquear acesso
-(`TenantBillingGuard`). Tenants trial nascem via cadastro local.
+**Em migração** (plano em `docs/roadmap.md`): o TotalAgenda passa a cadastrar, dar trial e cobrar
+sozinho (Stripe direto), e o Admin-TotalSoftware vira só back-office.
+
+- **Cadastro e trial (já em vigor):** `POST /public/signup` (`src/signup`, frontend em `/cadastro`)
+  cria `Tenant` + `User` OWNER numa transação, com `trialEndsAt = agora + TRIAL_DAYS` (14 dias,
+  `billing/trial.constants.ts`), **sem cartão e sem `Subscription`**. O status vem de
+  `computeBillingStatus` (`TRIALING` até o fim do trial, depois `TRIAL_EXPIRED` e o
+  `TenantBillingGuard` bloqueia). O body só traz negócio, nome, e-mail e senha: papel, tenant, trial
+  e plano são definidos pelo servidor. Slugs reservados (`common/constants/reserved-slugs.ts`)
+  ganham sufixo, porque `/[slug]` divide o namespace com as rotas do app.
+- **Cobrança real (ainda no Admin):** Stripe, checkout e ciclo vivem no **Admin-TotalSoftware**,
+  repositório externo. Este backend mantém um espelho (`Plan` / `Subscription`) atualizado por
+  webhooks (`src/webhooks`, autenticados por `WebhookSecretGuard` com segredo compartilhado) para
+  aplicar limites de plano (`PlanLimitService`) e liberar/bloquear acesso (`TenantBillingGuard`).
+  Sai de lá quando o Stripe passar a ser falado por este backend.
+- **E-mail de `User`** é sempre minúsculo (`NormalizeEmail` no login, no cadastro e no CRUD de
+  profissional): o e-mail é chave de login e único no Postgres (case-sensitive), então sem isso
+  "Foo@x.com" e "foo@x.com" seriam contas distintas e a checagem de duplicidade se contornaria.
 
 ### Agendamento
 - `Appointment` é o agregado (um "atendimento"/comanda), com `AppointmentItem[]`
@@ -234,6 +247,19 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
 - Abrir caixa não é atômico (dois `open` simultâneos podem criar dois caixas abertos); estoque
   pode ficar negativo (regra de negócio, não checada).
 - Cadastro do cliente revela se telefone/e-mail já têm conta (decisão de UX); sem OTP.
+- **Cadastro de dono (`/public/signup`) sem verificação de e-mail** (não há provedor de e-mail
+  transacional na v1): revela 409 para e-mail já cadastrado e permite ocupar o e-mail de terceiros
+  (`User.email` é único global). Decisão consciente de UX vs. segurança; mitigação = throttle de
+  5/hora por IP (em memória, um processo). `User.emailVerifiedAt` existe e não é exigido: a
+  verificação entra na área do cliente quando houver e-mail (v2).
+- **Sem recuperação de senha por e-mail** para o dono: hoje só reset manual. Fluxo planejado: o
+  Admin gera um link de redefinição (API interna com HMAC, log de auditoria) e o suporte entrega ao
+  dono por outro canal, reaproveitando `/auth/set-password`.
+- Chamadas server-side do frontend (login NextAuth, Server Actions) **não repassam o IP do
+  visitante**: o throttle por IP vê o IP do servidor Next e limita todos juntos (ex.: 10/min em
+  `/auth/login` para o site inteiro). O cadastro evita isso chamando o backend direto do navegador
+  (`publicApi.signup`); o login ainda sofre com isso.
+- Sem termos de uso/política de privacidade publicados para o cadastro de dono.
 - Backend não faz requisição HTTP de saída hoje (sem superfície de SSRF): se surgir fetch de
   URL controlada por usuário, validar host contra allowlist e bloquear IP privado/metadata.
 

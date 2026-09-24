@@ -133,3 +133,25 @@ Refactor que todo o resto depende. Fazer e **revisar antes** de construir M1–M
 - Relatórios: exportação CSV, agendados por período.
 - Identidade visual: pass de design próprio (não copiar layout do Trinks — só paridade
   de função).
+
+## Billing dentro do TotalAgenda (em andamento)
+
+O TotalAgenda passa a cadastrar, dar trial e cobrar sozinho (Stripe direto); o Admin-TotalSoftware
+vira back-office. Decisões: produtos independentes (sem SSO), trial de 14 dias sem cartão, só cartão
+via Stripe, sem provedor de e-mail na v1, troca de plano por tela própria (downgrade valendo na
+hora, dono escolhe quais profissionais excedentes desativar), bloqueio total pós-trial/cancelamento.
+
+- [x] Fase 0 (Admin) — sessão do painel assinada, sem credencial padrão, limite de tentativas no login.
+- [x] Fase 1 — `POST /public/signup` + `/cadastro`, trial de 14 dias, e-mail de User em minúsculas,
+  slugs reservados, CTAs apontando para `/cadastro`.
+- [ ] Fase 2 — Stripe no backend: Checkout, Customer Portal, `POST /webhooks/stripe` (assinatura,
+  dedupe por `event.id`, estado relido na API do Stripe), `POST /billing/change-plan`, exclusão de
+  profissional só sem histórico, mensagens do guard por estado.
+- [ ] Fase 3 — UI `/dashboard/plano`, modal de troca de plano com aviso explícito, banner com link.
+- [ ] Fase 4 — aposentar `webhooks/totalsoftware` e `Tenant.externalCustomerId` (manter `/auth/set-password`).
+- [ ] Fase 5 — API interna com HMAC + página de suporte no Admin (buscar tenant, gerar link de redefinição).
+
+Backlog: verificação de e-mail (`User.emailVerifiedAt` já existe) e recuperação de senha por e-mail
+quando houver provedor; OTP; Pix/boleto e NFS-e; downgrade só no fim do período; termos de uso e
+política de privacidade; repasse do IP do visitante nas chamadas server-side (throttle por IP hoje
+vê o IP do servidor Next); módulo de cobrança compartilhado entre produtos.
