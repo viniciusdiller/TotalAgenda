@@ -1,5 +1,7 @@
 "use server";
 
+import { backendFetch } from "@/lib/backend-fetch";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 export interface SetPasswordState {
@@ -23,7 +25,7 @@ export async function setPasswordAction(
   }
 
   try {
-    const response = await fetch(`${API_URL}/auth/set-password`, {
+    const response = await backendFetch(`${API_URL}/auth/set-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token, password }),

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { decodeJwtExpiryMs } from "@/lib/jwt-decode";
+import { signedVisitorHeaders } from "@/lib/client-ip";
 import { CONSUMER_COOKIE_NAME, consumerCookieOptions } from "@/lib/consumer-cookie";
 
 const AUTH_PAGES = ["/entrar"];
@@ -30,9 +31,14 @@ async function renewConsumerSessionIfNeeded(req: NextRequest, response: NextResp
   if (msLeft <= 0 || msLeft > RENEW_WITHIN_MS) return;
 
   try {
+    // Roda a cada navegação: sem o IP do visitante assinado, o throttle do backend veria só o
+    // IP deste servidor e todas as renovações do site dividiriam o mesmo balde.
     const refreshResponse = await fetch(`${API_URL}/public/consumer/refresh`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...signedVisitorHeaders(req.headers.get("x-forwarded-for")),
+      },
     });
     if (!refreshResponse.ok) return;
     const data = (await refreshResponse.json()) as { accessToken: string };

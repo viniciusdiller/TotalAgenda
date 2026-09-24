@@ -1,6 +1,7 @@
 import "server-only";
 import { auth } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
+import { backendFetch } from "@/lib/backend-fetch";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -14,7 +15,7 @@ export async function authedFetch<T>(path: string, init?: RequestInit): Promise<
   // o browser precisa setar multipart/form-data; boundary=... sozinho.
   const isFormData = init?.body instanceof FormData;
 
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await backendFetch(`${API_URL}${path}`, {
     ...init,
     headers: {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),

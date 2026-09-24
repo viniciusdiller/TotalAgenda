@@ -4,13 +4,14 @@ import { SetPasswordForm } from "./SetPasswordForm";
 import { Logo } from "@/components/brand/Logo";
 import { Footer } from "@/components/marketing/Footer";
 import { BackLink } from "@/components/ui/BackLink";
+import { backendFetch } from "@/lib/backend-fetch";
 
 export const metadata: Metadata = { title: "Definir senha - TotalAgenda" };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 async function checkToken(token: string): Promise<{ name: string } | null> {
-  const response = await fetch(`${API_URL}/auth/set-password/${encodeURIComponent(token)}`, {
+  const response = await backendFetch(`${API_URL}/auth/set-password/${encodeURIComponent(token)}`, {
     cache: "no-store",
   });
   if (!response.ok) return null;

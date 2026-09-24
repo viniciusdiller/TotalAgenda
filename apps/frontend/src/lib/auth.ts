@@ -2,6 +2,7 @@ import NextAuth, { type Session, type User } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import type { JWT } from "next-auth/jwt";
 import { decodeJwtExpiryMs } from "./jwt-decode";
+import { backendFetch } from "./backend-fetch";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -10,7 +11,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 // as claims antigas.
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
-    const response = await fetch(`${API_URL}/auth/refresh`, {
+    const response = await backendFetch(`${API_URL}/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken: token.refreshToken }),
@@ -57,7 +58,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Senha", type: "password" },
       },
       async authorize(credentials) {
-        const response = await fetch(`${API_URL}/auth/login`, {
+        const response = await backendFetch(`${API_URL}/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
