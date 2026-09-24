@@ -1,4 +1,5 @@
 import { IsBoolean, IsEmail, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { NormalizeEmail } from "../../common/decorators/normalize-email.decorator";
 
 export class UpdateProfessionalDto {
   @IsOptional()
@@ -8,6 +9,7 @@ export class UpdateProfessionalDto {
   name?: string;
 
   @IsOptional()
+  @NormalizeEmail()
   @IsEmail()
   email?: string;
 

@@ -9,6 +9,7 @@ import {
   MaxLength,
   ValidateNested,
 } from "class-validator";
+import { NormalizeEmail } from "../../common/decorators/normalize-email.decorator";
 
 export type SincronizacaoStatus = "ativa" | "cancelada" | "inadimplente";
 
@@ -63,6 +64,7 @@ export class TotalSoftwareWebhookDto {
   responsavelNome?: string;
 
   @IsOptional()
+  @NormalizeEmail()
   @IsEmail()
   responsavelEmail?: string;
 

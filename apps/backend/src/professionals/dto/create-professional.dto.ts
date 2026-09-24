@@ -1,4 +1,5 @@
 import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { NormalizeEmail } from "../../common/decorators/normalize-email.decorator";
 
 export class CreateProfessionalDto {
   @IsString()
@@ -6,6 +7,7 @@ export class CreateProfessionalDto {
   @MaxLength(120)
   name!: string;
 
+  @NormalizeEmail()
   @IsEmail()
   email!: string;
 
