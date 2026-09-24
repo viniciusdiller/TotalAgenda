@@ -1,7 +1,7 @@
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min, IsUUID } from "class-validator";
 
 export class UpsertCommissionRuleDto {
-  @IsString()
+  @IsUUID()
   professionalId!: string;
 
   @IsIn(["SERVICE", "PRODUCT", "ALL"])
@@ -9,7 +9,7 @@ export class UpsertCommissionRuleDto {
 
   // Obrigatório quando base != ALL: id do serviço ou produto alvo.
   @IsOptional()
-  @IsString()
+  @IsUUID()
   targetId?: string;
 
   @IsIn(["PERCENT", "FIXED"])

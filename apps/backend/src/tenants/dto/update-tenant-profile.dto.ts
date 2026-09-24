@@ -1,34 +1,50 @@
-import { IsBoolean, IsOptional, IsString, IsUrl, Matches, MaxLength } from "class-validator";
+import { Trim } from "../../common/decorators/trim.decorator";
+import { IsBoolean, IsOptional, IsString, Matches, MaxLength, ValidateIf } from "class-validator";
 
 export class UpdateTenantProfileDto {
   @IsOptional()
   @IsString()
   @MaxLength(500)
+  @Trim()
   description?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(300)
+  @Trim()
   address?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(500)
+  @Trim()
   businessHours?: string;
 
+  // Nos três campos abaixo, vazio limpa o valor (o service grava null); o formato só é conferido
+  // quando há valor.
   @IsOptional()
+  @ValidateIf((o) => !!o.accentColor)
   @Matches(/^#[0-9a-fA-F]{6}$/, { message: "Cor inválida. Use o formato #RRGGBB." })
   accentColor?: string;
 
+  // Vira link wa.me na página pública: só número brasileiro com DDI (55 + DDD + 8/9 dígitos).
   @IsOptional()
-  @Matches(/^\d{10,15}$/, { message: "Telefone inválido. Use só dígitos, com DDI (ex: 5511912345678)." })
+  @ValidateIf((o) => !!o.whatsappNumber)
+  @Matches(/^55[1-9][1-9]\d{8,9}$/, {
+    message: "WhatsApp inválido. Informe DDD e número (ex: (11) 91234-5678).",
+  })
   whatsappNumber?: string;
 
-  // Vira href numa página PÚBLICA: só http(s) com protocolo explícito. Sem isso um esquema como
-  // javascript: virava XSS armazenado no perfil do salão.
+  // Vira href numa página PÚBLICA: só https no domínio do Instagram. Antes bastava ser http(s)
+  // (o `javascript:` já era barrado), mas qualquer domínio deixava o dono publicar um link de
+  // phishing como se fosse o Instagram do salão.
   @IsOptional()
-  @IsUrl({ require_tld: false, protocols: ["http", "https"], require_protocol: true })
+  @ValidateIf((o) => !!o.instagramUrl)
+  @Matches(/^https:\/\/(www\.)?instagram\.com\/[A-Za-z0-9._-]+\/?(\?[A-Za-z0-9._=&%-]*)?$/, {
+    message: "Instagram inválido. Use o link do perfil (ex: https://instagram.com/seusalao).",
+  })
   @MaxLength(300)
+  @Trim()
   instagramUrl?: string;
 
   @IsOptional()

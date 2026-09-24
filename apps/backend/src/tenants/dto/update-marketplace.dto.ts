@@ -1,3 +1,4 @@
+import { Trim } from "../../common/decorators/trim.decorator";
 import {
   ArrayMaxSize,
   IsArray,
@@ -10,6 +11,7 @@ import {
   Max,
   MaxLength,
   Min,
+  Matches,
 } from "class-validator";
 
 // Configuração de listagem no marketplace (M5). Todos opcionais — PATCH parcial.
@@ -21,11 +23,13 @@ export class UpdateMarketplaceDto {
   @IsOptional()
   @IsString()
   @MaxLength(120)
+  @Trim()
   city?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(120)
+  @Trim()
   neighborhood?: string;
 
   @IsOptional()
@@ -47,5 +51,7 @@ export class UpdateMarketplaceDto {
   @IsArray()
   @ArrayMaxSize(6)
   @IsString({ each: true })
+  @Matches(/^[a-z0-9-]+$/, { each: true })
+  @MaxLength(60, { each: true })
   categorySlugs?: string[];
 }

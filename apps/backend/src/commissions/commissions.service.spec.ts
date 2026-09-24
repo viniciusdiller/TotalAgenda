@@ -101,3 +101,51 @@ describe("CommissionsService.report", () => {
     );
   });
 });
+
+// Regressão: `targetId` vinha do body sem checar o tenant, então uma regra podia apontar para um
+// serviço/produto de OUTRO negócio. Agora o alvo tem que existir no tenant do JWT.
+describe("CommissionsService.createRule: alvo da regra", () => {
+  const dto = (over: Record<string, unknown> = {}) =>
+    ({
+      professionalId: "prof-1",
+      base: "SERVICE",
+      targetId: "svc-de-outro-tenant",
+      kind: "PERCENT",
+      value: 10,
+      ...over,
+    }) as never;
+
+  const build = (found: { service?: unknown; product?: unknown }) => {
+    const prisma = {
+      professional: { findFirst: jest.fn().mockResolvedValue({ id: "prof-1" }) },
+      service: { findFirst: jest.fn().mockResolvedValue(found.service ?? null) },
+      product: { findFirst: jest.fn().mockResolvedValue(found.product ?? null) },
+      commissionRule: { create: jest.fn().mockResolvedValue({ id: "r1" }) },
+    };
+    return { prisma, svc: new CommissionsService(prisma as unknown as PrismaService) };
+  };
+
+  it("recusa serviço de outro tenant (a busca leva o tenantId no WHERE)", async () => {
+    const { prisma, svc } = build({});
+    await expect(svc.createRule("tenant-A", dto())).rejects.toThrow("Serviço não encontrado.");
+    expect(prisma.service.findFirst).toHaveBeenCalledWith({
+      where: { id: "svc-de-outro-tenant", tenantId: "tenant-A" },
+      select: { id: true },
+    });
+    expect(prisma.commissionRule.create).not.toHaveBeenCalled();
+  });
+
+  it("recusa produto de outro tenant", async () => {
+    const { prisma, svc } = build({});
+    await expect(svc.createRule("tenant-A", dto({ base: "PRODUCT" }))).rejects.toThrow("Produto não encontrado.");
+    expect(prisma.commissionRule.create).not.toHaveBeenCalled();
+  });
+
+  it("aceita alvo do próprio tenant e regra ALL (sem alvo)", async () => {
+    const own = build({ service: { id: "svc-1" } });
+    await expect(own.svc.createRule("tenant-A", dto({ targetId: "svc-1" }))).resolves.toBeDefined();
+    const all = build({});
+    await expect(all.svc.createRule("tenant-A", dto({ base: "ALL", targetId: undefined }))).resolves.toBeDefined();
+    expect(all.prisma.service.findFirst).not.toHaveBeenCalled();
+  });
+});

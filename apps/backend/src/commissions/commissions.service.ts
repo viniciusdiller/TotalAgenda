@@ -203,6 +203,19 @@ export class CommissionsService {
     if (dto.base !== "ALL" && !dto.targetId) {
       throw new BadRequestException("Informe o serviço/produto alvo para regras específicas.");
     }
+    // targetId vem do body: sem checar o tenant, a regra podia apontar para um serviço/produto de
+    // OUTRO negócio (referência cruzada entre tenants, mesmo que hoje nunca case com um item local).
+    if (dto.base !== "ALL" && dto.targetId) {
+      const target =
+        dto.base === "SERVICE"
+          ? await this.prisma.service.findFirst({ where: { id: dto.targetId, tenantId }, select: { id: true } })
+          : await this.prisma.product.findFirst({ where: { id: dto.targetId, tenantId }, select: { id: true } });
+      if (!target) {
+        throw new NotFoundException(
+          dto.base === "SERVICE" ? "Serviço não encontrado." : "Produto não encontrado.",
+        );
+      }
+    }
     if (dto.kind === "PERCENT" && dto.value > 100) {
       throw new BadRequestException("Percentual de comissão não pode passar de 100.");
     }

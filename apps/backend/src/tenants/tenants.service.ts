@@ -78,8 +78,21 @@ export class TenantsService {
     return tenant;
   }
 
+  // Texto opcional em branco limpa o campo (null); undefined (campo ausente) não altera nada.
   updateProfile(tenantId: string, dto: UpdateTenantProfileDto) {
-    return this.prisma.tenant.update({ where: { id: tenantId }, data: dto });
+    const nullable = (value?: string) => (value === undefined ? undefined : value.trim() === "" ? null : value);
+    return this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        ...dto,
+        description: nullable(dto.description),
+        address: nullable(dto.address),
+        businessHours: nullable(dto.businessHours),
+        accentColor: nullable(dto.accentColor),
+        whatsappNumber: nullable(dto.whatsappNumber),
+        instagramUrl: nullable(dto.instagramUrl),
+      },
+    });
   }
 
   async getMarketplaceSettings(tenantId: string) {
