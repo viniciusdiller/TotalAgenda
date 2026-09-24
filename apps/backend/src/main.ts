@@ -5,7 +5,9 @@ import { NestExpressApplication } from "@nestjs/platform-express";
 import { ValidationPipe } from "@nestjs/common";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
+import { validationExceptionFactory } from "./common/validation/pt-br-validation";
 import { RejectNullBytesInterceptor } from "./common/interceptors/reject-null-bytes.interceptor";
+import { PtBrHttpExceptionFilter } from "./common/filters/pt-br-http-exception.filter";
 import { PrismaExceptionFilter } from "./common/filters/prisma-exception.filter";
 import { UPLOADS_DIR } from "./common/constants/uploads";
 
@@ -40,9 +42,11 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      // Mensagens em português (o frontend as mostra ao usuário); mesma forma de resposta.
+      exceptionFactory: validationExceptionFactory,
     }),
   );
-  app.useGlobalFilters(new PrismaExceptionFilter());
+  app.useGlobalFilters(new PtBrHttpExceptionFilter(), new PrismaExceptionFilter());
   app.useGlobalInterceptors(new RejectNullBytesInterceptor());
 
   const port = process.env.PORT ? Number(process.env.PORT) : 3001;

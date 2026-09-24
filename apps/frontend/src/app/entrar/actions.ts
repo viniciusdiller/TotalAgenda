@@ -1,6 +1,7 @@
 "use server";
 
 import { AuthError } from "next-auth";
+import { isSafeRedirectPath } from "@/lib/safe-path";
 import { headers } from "next/headers";
 import type { ConsumerSession } from "@totalagenda/shared-types";
 import { ApiError } from "@/lib/api";
@@ -18,12 +19,8 @@ export type LoginResult = { redirectTo: string } | { error: string };
 
 const GENERIC_LOGIN_ERROR = "E-mail/telefone ou senha incorretos.";
 
-// `next` vem da query string (controlada por quem montou o link): só aceita caminho relativo
-// do próprio site. "//host" e "/\host" viram URL absoluta no navegador — sem esse filtro o
-// login seria um open redirect pra phishing.
-function isSafePath(next: string | undefined): next is string {
-  return !!next && next.startsWith("/") && !next.startsWith("//") && !next.includes("\\");
-}
+// `next` vem da query string (controlada por quem montou o link): ver lib/safe-path.ts.
+const isSafePath = isSafeRedirectPath;
 
 function clientDestination(next: string | undefined) {
   return isSafePath(next) ? next : "/descobrir";
