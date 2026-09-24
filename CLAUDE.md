@@ -82,7 +82,7 @@ sozinho (Stripe direto), e o Admin-TotalSoftware vira só back-office.
   `TenantBillingGuard` bloqueia). O body só traz negócio, nome, e-mail e senha: papel, tenant, trial
   e plano são definidos pelo servidor. Slugs reservados (`common/constants/reserved-slugs.ts`)
   ganham sufixo, porque `/[slug]` divide o namespace com as rotas do app.
-- **Cobrança direto no Stripe (backend em vigor; tela do dashboard pendente):** `src/billing` e
+- **Cobrança direto no Stripe (backend e tela em vigor):** `src/billing` e
   `src/webhooks/stripe-webhook.*`. Rotas do **OWNER**, que funcionam mesmo com o acesso bloqueado
   (`@SkipBillingCheck`: quem está bloqueado precisa delas para pagar) e têm limite de 10/min:
   `POST /billing/checkout` (só `tier`; o Price vem de `STRIPE_PRICE_*`, o tenant do JWT e o retorno de
@@ -93,6 +93,13 @@ sozinho (Stripe direto), e o Admin-TotalSoftware vira só back-office.
   vão numa transação com lock por tenant, Stripe por último, então uma falha dele não desativa
   ninguém). `DELETE /professionals/:id` só exclui quem não tem histórico (o schema protege o histórico
   com `Restrict`); os demais são desativados. **Nenhum DTO de cobrança tem campo de valor.**
+- **Tela `/dashboard/plano`** (`app/dashboard/plano`): resumo do estado, cards de plano (preços de `GET /plans`),
+  "Assinar" (Server Action -> checkout do Stripe), "Gerenciar pagamento" (portal) e o diálogo de troca de
+  plano, com o aviso explícito de que vale agora e a escolha obrigatória dos profissionais a desativar. As
+  regras de qual botão cada card mostra e das mensagens do banner vivem em `lib/billing.ts` (testadas). Com
+  o acesso bloqueado (teste vencido, cancelada, não paga) o `BillingGate` leva o dono direto a essa tela em
+  vez de páginas vazias; ele avalia num carregamento completo (o layout do Next é reaproveitado em
+  navegação client-side), e o backend continua sendo quem barra. Só o OWNER vê botões de ação.
 - **`POST /webhooks/stripe`:** assinatura conferida sobre o corpo CRU (`rawBody` no `main.ts`), pública
   e fora do throttle. Cada evento só sinaliza "algo mudou": a assinatura é RELIDA na API do Stripe e
   gravada, então eventos repetidos, fora de ordem ou atrasados convergem. O plano vem do Price, nunca

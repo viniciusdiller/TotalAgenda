@@ -52,7 +52,7 @@ describe("TenantBillingGuard", () => {
 
     await expect(attempt).rejects.toBeInstanceOf(ForbiddenException);
     await expect(attempt).rejects.toMatchObject({ message: billingBlockMessage(status) });
-    // O frontend leva o dono à tela de plano por este código, não pelo texto.
+    // Código estável para clientes da API: não dependem do texto (em português) da mensagem.
     await expect(attempt).rejects.toMatchObject({ response: { code: BILLING_BLOCKED_CODE, statusCode: 403 } });
   });
 

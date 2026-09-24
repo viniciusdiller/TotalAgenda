@@ -151,7 +151,7 @@ hora, dono escolhe quais profissionais excedentes desativar), bloqueio total pó
 - [x] Fase 2 — Stripe no backend (**código e testes prontos; falta o teste com chaves reais do Stripe em modo teste**): Checkout, Customer Portal, `POST /webhooks/stripe` (assinatura,
   dedupe por `event.id`, estado relido na API do Stripe), `POST /billing/change-plan`, exclusão de
   profissional só sem histórico, mensagens do guard por estado.
-- [ ] Fase 3 — UI `/dashboard/plano`, modal de troca de plano com aviso explícito, banner com link.
+- [x] Fase 3 — UI `/dashboard/plano`, modal de troca de plano com aviso explícito, banner com link.
 - [ ] Fase 4 — aposentar `webhooks/totalsoftware` e `Tenant.externalCustomerId` (manter `/auth/set-password`).
 - [ ] Fase 5 — API interna com HMAC + página de suporte no Admin (buscar tenant, gerar link de redefinição).
 

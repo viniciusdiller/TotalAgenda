@@ -10,6 +10,7 @@ import {
   ChartLineUp,
   ClipboardText,
   ClockCounterClockwise,
+  CreditCard,
   Gear,
   IdentificationCard,
   Package,
@@ -33,6 +34,7 @@ const links = [
   { href: "/dashboard/servicos", label: "Serviços", icon: Scissors },
   { href: "/dashboard/lista-espera", label: "Lista de espera", icon: ClockCounterClockwise },
   { href: "/dashboard/fichas", label: "Fichas", icon: ClipboardText },
+  { href: "/dashboard/plano", label: "Plano e cobrança", icon: CreditCard },
   { href: "/dashboard/configuracoes", label: "Configurações", icon: Gear },
 ];
 

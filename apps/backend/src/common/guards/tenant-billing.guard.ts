@@ -47,8 +47,8 @@ export class TenantBillingGuard implements CanActivate {
     const status = computeBillingStatus(tenant, tenant.subscription);
 
     if (!hasBillingAccess(status)) {
-      // `code` legível por máquina: o frontend distingue "acesso bloqueado por cobrança" (leva o dono à
-      // tela de plano) de um 403 de papel, sem depender do texto da mensagem.
+      // `code` legível por máquina: quem consome a API distingue "acesso bloqueado por cobrança" de um
+      // 403 de papel sem depender do texto da mensagem (que é em português e pode mudar).
       throw new ForbiddenException({
         statusCode: 403,
         error: "Forbidden",
