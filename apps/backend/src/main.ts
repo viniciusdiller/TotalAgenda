@@ -13,7 +13,9 @@ async function bootstrap() {
   // existe em um clone novo — o ServeStaticModule (app.module.ts) precisa que exista.
   mkdirSync(UPLOADS_DIR, { recursive: true });
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // rawBody: o webhook do Stripe verifica a assinatura sobre o corpo CRU (POST /webhooks/stripe);
+  // o parser guarda o Buffer em req.rawBody só para JSON/urlencoded (upload multipart não é afetado).
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
 
   // Cabeçalhos de segurança (nosniff, HSTS, frame-ancestors...). crossOriginResourcePolicy
   // cross-origin de propósito: logos/galeria em /uploads são <img> carregadas pelo frontend, que
