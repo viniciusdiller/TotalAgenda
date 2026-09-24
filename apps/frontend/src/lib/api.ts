@@ -41,6 +41,8 @@ export interface SignupInput {
   ownerName: string;
   email: string;
   password: string;
+  // Versão dos Termos/Privacidade que o usuário aceitou (LEGAL_DOCS_VERSION); o backend confere.
+  acceptedTermsVersion: string;
 }
 
 export const publicApi = {

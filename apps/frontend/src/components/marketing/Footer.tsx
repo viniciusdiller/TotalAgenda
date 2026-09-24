@@ -78,9 +78,19 @@ export function Footer({ isHome = false }: { isHome?: boolean }) {
           </div>
         </div>
 
-        <div className="mt-14 border-t border-zinc-200 pt-6 text-sm text-zinc-500 dark:border-white/10 dark:text-stone-400">
-          © {new Date().getFullYear()} TotalAgenda. Todos os direitos
-          reservados.
+        <div className="mt-14 flex flex-col gap-3 border-t border-zinc-200 pt-6 text-sm text-zinc-500 sm:flex-row sm:items-center sm:justify-between dark:border-white/10 dark:text-stone-400">
+          <p>
+            © {new Date().getFullYear()} TotalAgenda. Todos os direitos
+            reservados.
+          </p>
+          <div className="flex gap-5">
+            <a href="/termos" className="transition-colors hover:text-zinc-900 dark:hover:text-white">
+              Termos de Uso
+            </a>
+            <a href="/privacidade" className="transition-colors hover:text-zinc-900 dark:hover:text-white">
+              Privacidade
+            </a>
+          </div>
         </div>
       </Container>
     </footer>

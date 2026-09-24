@@ -271,7 +271,12 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
   IP assinado de propósito (fetches com `revalidate` são compartilhados entre visitantes). Só vira
   problema com tráfego público alto; a saída é cache/`revalidate` nessas chamadas ou um
   `skipThrottle` para o IP assinado do servidor Next.
-- Sem termos de uso/política de privacidade publicados para o cadastro de dono.
+- **Termos de Uso e Política de Privacidade estão em RASCUNHO** (`/termos`, `/privacidade`, conteúdo em
+  `apps/frontend/src/lib/legal-content.ts`, lacunas marcadas `[PREENCHER|DECIDIR|REVISAR]`). O cadastro
+  exige o aceite da versão vigente (`LEGAL_DOCS_VERSION` em `shared-types`, conferida no servidor) e
+  grava `User.termsAcceptedAt`/`termsVersion` (sem IP). **Não abrir o cadastro ao público** antes de
+  preencher as lacunas, passar por advogado, marcar `LEGAL_DRAFT = false` (`lib/legal.ts`; o teste
+  `legal.test.ts` falha se ainda houver lacuna) e atualizar `LEGAL_DOCS_VERSION` junto com o texto.
 - Backend não faz requisição HTTP de saída hoje (sem superfície de SSRF): se surgir fetch de
   URL controlada por usuário, validar host contra allowlist e bloquear IP privado/metadata.
 

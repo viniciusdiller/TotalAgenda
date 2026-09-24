@@ -145,7 +145,9 @@ hora, dono escolhe quais profissionais excedentes desativar), bloqueio total pó
 - [x] Fase 1 — `POST /public/signup` + `/cadastro`, trial de 14 dias, e-mail de User em minúsculas,
   slugs reservados, CTAs apontando para `/cadastro`.
 - [x] Fase 1b — IP do visitante assinado (HMAC) nas chamadas server-side; throttle por IP mede o visitante.
-- [ ] Fase 1c — termos de uso e política de privacidade (rascunho para revisão jurídica) + aceite versionado.
+- [x] Fase 1c — aceite versionado dos Termos e da Privacidade (`LEGAL_DOCS_VERSION`, `User.termsAcceptedAt`/`termsVersion`)
+  e páginas `/termos` e `/privacidade` **em rascunho**. Pendente (usuário): preencher as lacunas, revisão
+  jurídica, `LEGAL_DRAFT = false` e nova `LEGAL_DOCS_VERSION`.
 - [ ] Fase 2 — Stripe no backend: Checkout, Customer Portal, `POST /webhooks/stripe` (assinatura,
   dedupe por `event.id`, estado relido na API do Stripe), `POST /billing/change-plan`, exclusão de
   profissional só sem histórico, mensagens do guard por estado.

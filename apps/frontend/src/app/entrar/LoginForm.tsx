@@ -182,8 +182,17 @@ export function LoginForm({ next }: { next?: string }) {
               onChange={(e) => setConsent(e.target.checked)}
               className="mt-0.5"
             />
-            Aceito os termos de uso e a política de privacidade. Meus dados serão usados só para
-            identificar minha conta, meus agendamentos e avaliações.
+            <span>
+              Aceito os{" "}
+              <Link href="/termos" target="_blank" className="font-semibold text-accent-600 dark:text-accent-300">
+                termos de uso
+              </Link>{" "}
+              e a{" "}
+              <Link href="/privacidade" target="_blank" className="font-semibold text-accent-600 dark:text-accent-300">
+                política de privacidade
+              </Link>
+              . Meus dados serão usados só para identificar minha conta, meus agendamentos e avaliações.
+            </span>
           </label>
 
           {error ? <p role="alert" className="animate-rise-in text-sm text-red-600 dark:text-red-400">{error}</p> : null}

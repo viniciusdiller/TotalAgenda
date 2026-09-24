@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { LEGAL_DOCS_VERSION } from "@totalagenda/shared-types";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { ApiError, publicApi } from "@/lib/api";
@@ -18,7 +19,12 @@ function signupErrorMessage(error: unknown): string {
     if (error.statusCode === 429) {
       return "Muitos cadastros feitos desta rede em pouco tempo. Tente novamente mais tarde.";
     }
-    if (error.statusCode === 400) return "Confira os dados informados e tente de novo.";
+    if (error.statusCode === 400) {
+      // Termos desatualizados: a mensagem do backend diz o que fazer (recarregar e aceitar de novo).
+      return error.message.includes("Termos")
+        ? error.message
+        : "Confira os dados informados e tente de novo.";
+    }
   }
   return "Não foi possível criar a conta. Tente novamente.";
 }
@@ -33,6 +39,7 @@ export function SignupForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [accepted, setAccepted] = useState(false);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,9 +53,20 @@ export function SignupForm() {
       return;
     }
 
+    if (!accepted) {
+      setError("Para criar a conta, aceite os Termos de Uso e a Política de Privacidade.");
+      return;
+    }
+
     startTransition(async () => {
       try {
-        await publicApi.signup({ businessName, ownerName, email, password });
+        await publicApi.signup({
+          businessName,
+          ownerName,
+          email,
+          password,
+          acceptedTermsVersion: LEGAL_DOCS_VERSION,
+        });
       } catch (err) {
         setError(signupErrorMessage(err));
         return;
@@ -121,6 +139,31 @@ export function SignupForm() {
         required
         maxLength={MAX_PASSWORD}
       />
+
+      <label className="flex items-start gap-2 text-sm text-zinc-600 dark:text-stone-300">
+        <input
+          type="checkbox"
+          name="accepted"
+          checked={accepted}
+          onChange={(e) => setAccepted(e.target.checked)}
+          className="mt-1"
+        />
+        <span>
+          Li e aceito os{" "}
+          <Link href="/termos" target="_blank" className="font-semibold text-accent-600 dark:text-accent-300">
+            Termos de Uso
+          </Link>{" "}
+          e a{" "}
+          <Link
+            href="/privacidade"
+            target="_blank"
+            className="font-semibold text-accent-600 dark:text-accent-300"
+          >
+            Política de Privacidade
+          </Link>
+          .
+        </span>
+      </label>
 
       {error ? (
         <p role="alert" className="animate-rise-in text-sm text-red-600 dark:text-red-400">
