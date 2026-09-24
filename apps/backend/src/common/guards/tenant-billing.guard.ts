@@ -10,6 +10,8 @@ import {
   hasBillingAccess,
 } from "../../billing/billing-status.util";
 
+export const BILLING_BLOCKED_CODE = "BILLING_BLOCKED";
+
 @Injectable()
 export class TenantBillingGuard implements CanActivate {
   constructor(
@@ -45,7 +47,14 @@ export class TenantBillingGuard implements CanActivate {
     const status = computeBillingStatus(tenant, tenant.subscription);
 
     if (!hasBillingAccess(status)) {
-      throw new ForbiddenException(billingBlockMessage(status));
+      // `code` legível por máquina: o frontend distingue "acesso bloqueado por cobrança" (leva o dono à
+      // tela de plano) de um 403 de papel, sem depender do texto da mensagem.
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: "Forbidden",
+        message: billingBlockMessage(status),
+        code: BILLING_BLOCKED_CODE,
+      });
     }
 
     return true;

@@ -7,7 +7,11 @@ export class BillingService {
   constructor(private readonly prisma: PrismaService) {}
 
   listPlans() {
-    return this.prisma.plan.findMany({ orderBy: { priceCents: "asc" } });
+    // Endpoint PÚBLICO: só o que a tela de planos mostra. Ids internos e stripePriceId ficam de fora.
+    return this.prisma.plan.findMany({
+      orderBy: { priceCents: "asc" },
+      select: { tier: true, name: true, priceCents: true, maxProfessionals: true },
+    });
   }
 
   async getTenantBillingStatus(tenantId: string) {

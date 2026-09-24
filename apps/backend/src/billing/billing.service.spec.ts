@@ -78,3 +78,18 @@ describe("BillingService.getTenantBillingStatus", () => {
     );
   });
 });
+
+describe("BillingService.listPlans", () => {
+  // GET /plans é público: devolvia a linha inteira de Plan (id interno e stripePriceId).
+  it("seleciona só tier, nome, preço e limite, ordenado por preço", async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const prisma = { plan: { findMany } } as unknown as PrismaService;
+
+    await new BillingService(prisma).listPlans();
+
+    expect(findMany).toHaveBeenCalledWith({
+      orderBy: { priceCents: "asc" },
+      select: { tier: true, name: true, priceCents: true, maxProfessionals: true },
+    });
+  });
+});

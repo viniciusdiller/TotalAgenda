@@ -1,7 +1,7 @@
 import { ExecutionContext, ForbiddenException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { PrismaService } from "../../prisma/prisma.service";
-import { TenantBillingGuard } from "./tenant-billing.guard";
+import { BILLING_BLOCKED_CODE, TenantBillingGuard } from "./tenant-billing.guard";
 import { billingBlockMessage } from "../../billing/billing-status.util";
 
 const FUTURE = new Date(Date.now() + 86_400_000);
@@ -52,6 +52,8 @@ describe("TenantBillingGuard", () => {
 
     await expect(attempt).rejects.toBeInstanceOf(ForbiddenException);
     await expect(attempt).rejects.toMatchObject({ message: billingBlockMessage(status) });
+    // O frontend leva o dono à tela de plano por este código, não pelo texto.
+    await expect(attempt).rejects.toMatchObject({ response: { code: BILLING_BLOCKED_CODE, statusCode: 403 } });
   });
 
   it("rotas públicas e @SkipBillingCheck passam sem consultar o banco (quem está bloqueado precisa poder pagar)", async () => {
