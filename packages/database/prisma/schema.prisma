@@ -134,7 +134,8 @@ model Tenant {
   updatedAt   DateTime @updatedAt @db.Timestamptz(6)
 
   // Id do cliente no sistema externo (Admin-TotalSoftware) que originou este tenant via
-  // webhook de provisionamento. Nulo para tenants criados via cadastro trial local.
+  // webhook de provisionamento. Nulo para tenants criados pelo cadastro público
+  // (POST /public/signup), que nascem em trial de 14 dias.
   externalCustomerId Int? @unique
 
   // Perfil público exibido em /[slug] — todos opcionais, editados pelo dono no dashboard.
@@ -221,6 +222,11 @@ model User {
   // token em claro (mesmo padrão do passwordHash).
   passwordSetTokenHash      String?   @unique
   passwordSetTokenExpiresAt DateTime? @db.Timestamptz(6)
+
+  // Preparado para a verificação de e-mail na área do cliente (v2, quando houver provedor de
+  // e-mail transacional). Hoje o cadastro público (/public/signup) não envia e-mail nem exige
+  // este campo: fica nulo e NADA no backend depende dele. Ver CLAUDE.md > Autenticação.
+  emailVerifiedAt DateTime? @db.Timestamptz(6)
 
   // Lockout progressivo por conta (além do rate limit por IP no ThrottlerGuard) — ver
   // AuthService.login. Reseta em login bem-sucedido; nunca exposto em nenhuma resposta (a

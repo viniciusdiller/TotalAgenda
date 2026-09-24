@@ -30,6 +30,7 @@ import { FinanceModule } from "./finance/finance.module";
 import { ConsumerAuthModule } from "./consumer-auth/consumer-auth.module";
 import { MarketplaceModule } from "./marketplace/marketplace.module";
 import { ReviewsModule } from "./reviews/reviews.module";
+import { SignupModule } from "./signup/signup.module";
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { ReviewsModule } from "./reviews/reviews.module";
     ConsumerAuthModule,
     MarketplaceModule,
     ReviewsModule,
+    SignupModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
