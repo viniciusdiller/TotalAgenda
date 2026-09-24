@@ -4,6 +4,8 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUrl,
+  Matches,
   Min,
   MinLength,
   ValidateIf,
@@ -30,8 +32,10 @@ class EnvironmentVariables {
   @Min(1)
   PORT?: number;
 
-  @IsOptional()
-  @IsString()
+  // URL pública do frontend: destino do retorno do checkout/portal do Stripe. Sem ela em produção o
+  // padrão seria localhost, então é obrigatória com NODE_ENV=production.
+  @ValidateIf((o) => o.NODE_ENV === "production" || o.FRONTEND_URL !== undefined)
+  @IsUrl({ require_tld: false, require_protocol: true, protocols: ["http", "https"] })
   FRONTEND_URL?: string;
 
   // Nº de proxies confiáveis à frente do backend (ver main.ts). Ausente = não confia em nenhum.
@@ -51,6 +55,30 @@ class EnvironmentVariables {
   @IsString()
   @MinLength(32)
   CLIENT_IP_SECRET?: string;
+
+  // Cobrança (Stripe). Opcionais em desenvolvimento (as rotas de cobrança respondem 503 "cobrança não
+  // configurada"); OBRIGATÓRIAS em produção (o boot falha). O prefixo é conferido para pegar chave
+  // trocada (ex.: colar a chave pública no lugar da secreta).
+  @ValidateIf((o) => o.NODE_ENV === "production" || o.STRIPE_SECRET_KEY !== undefined)
+  @Matches(/^sk_(test|live)_[A-Za-z0-9]+$/)
+  STRIPE_SECRET_KEY?: string;
+
+  @ValidateIf((o) => o.NODE_ENV === "production" || o.STRIPE_WEBHOOK_SECRET !== undefined)
+  @Matches(/^whsec_[A-Za-z0-9]+$/)
+  STRIPE_WEBHOOK_SECRET?: string;
+
+  // Price mensal de cada plano (criados no Stripe). O preço cobrado vem daqui, nunca do cliente.
+  @ValidateIf((o) => o.NODE_ENV === "production" || o.STRIPE_PRICE_ESSENCIAL !== undefined)
+  @Matches(/^price_[A-Za-z0-9]+$/)
+  STRIPE_PRICE_ESSENCIAL?: string;
+
+  @ValidateIf((o) => o.NODE_ENV === "production" || o.STRIPE_PRICE_PROFISSIONAL !== undefined)
+  @Matches(/^price_[A-Za-z0-9]+$/)
+  STRIPE_PRICE_PROFISSIONAL?: string;
+
+  @ValidateIf((o) => o.NODE_ENV === "production" || o.STRIPE_PRICE_PREMIUM !== undefined)
+  @Matches(/^price_[A-Za-z0-9]+$/)
+  STRIPE_PRICE_PREMIUM?: string;
 
   // Segredo compartilhado com o Admin-TotalSoftware para autenticar os webhooks de
   // provisionamento/sincronização de assinatura (ver src/webhooks). Obrigatório: sem ele

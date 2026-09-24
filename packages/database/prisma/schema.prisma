@@ -138,6 +138,10 @@ model Tenant {
   // (POST /public/signup), que nascem em trial de 14 dias.
   externalCustomerId Int? @unique
 
+  // Customer do Stripe deste tenant, criado na primeira vez que o dono abre o checkout. É por ele que o
+  // webhook do Stripe acha o tenant; nunca vem de body/query.
+  stripeCustomerId String? @unique
+
   // Perfil público exibido em /[slug] — todos opcionais, editados pelo dono no dashboard.
   description     String?
   address         String?
@@ -914,4 +918,15 @@ model Subscription {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   plan   Plan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+}
+
+// Eventos do Stripe já processados (POST /webhooks/stripe): evita reprocessar a mesma entrega. O estado
+// da assinatura é sempre relido na API do Stripe, então isto é otimização + trilha, não a garantia de
+// correção. Gravado DEPOIS de processar com sucesso, para uma falha no meio ser reentregue pelo Stripe.
+model StripeEvent {
+  id          String   @id // event.id do Stripe (evt_...)
+  type        String
+  processedAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([processedAt])
 }
