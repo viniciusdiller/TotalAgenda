@@ -36,7 +36,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+export interface SignupInput {
+  businessName: string;
+  ownerName: string;
+  email: string;
+  password: string;
+}
+
 export const publicApi = {
+  // Chamado direto do navegador (não por Server Action) de propósito: o throttle de 5/hora por
+  // IP do backend precisa enxergar o IP do visitante. Por Server Action ele veria só o IP do
+  // servidor Next e o limite valeria para o produto inteiro.
+  signup: (input: SignupInput) =>
+    request<{ slug: string }>("/public/signup", { method: "POST", body: JSON.stringify(input) }),
+
   getTenant: (slug: string) => request<PublicTenant>(`/public/tenants/${slug}`),
 
   getServices: (slug: string) => request<PublicService[]>(`/public/tenants/${slug}/services`),
