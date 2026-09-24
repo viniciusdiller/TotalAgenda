@@ -32,6 +32,7 @@ describe("validateEnv", () => {
         ...strong,
         NODE_ENV: "production",
         CLIENT_IP_SECRET: "c".repeat(32),
+        INTERNAL_API_SECRET: "i".repeat(32),
         FRONTEND_URL: "https://totalagenda.com.br",
         STRIPE_SECRET_KEY: "sk_live_abc123",
         STRIPE_WEBHOOK_SECRET: "whsec_abc123",
@@ -50,6 +51,28 @@ describe("validateEnv", () => {
     });
   });
 
+  it("INTERNAL_API_SECRET: opcional em dev, 32+ caracteres se vier, obrigatório em produção", () => {
+    const strong = { ...base, JWT_SECRET: "a".repeat(40) };
+    expect(() => validateEnv(strong)).not.toThrow();
+    expect(() => validateEnv({ ...strong, INTERNAL_API_SECRET: "curto" })).toThrow();
+    expect(() => validateEnv({ ...strong, INTERNAL_API_SECRET: "i".repeat(32) })).not.toThrow();
+    // Produção sem o segredo: a API interna ficaria sem autenticação configurada (o guard falha fechado,
+    // mas o boot deve avisar em vez de subir com o suporte mudo).
+    const prodNoInternal = {
+      ...strong,
+      NODE_ENV: "production",
+      CLIENT_IP_SECRET: "c".repeat(32),
+      FRONTEND_URL: "https://totalagenda.com.br",
+      STRIPE_SECRET_KEY: "sk_live_abc123",
+      STRIPE_WEBHOOK_SECRET: "whsec_abc123",
+      STRIPE_PRICE_ESSENCIAL: "price_e1",
+      STRIPE_PRICE_PROFISSIONAL: "price_p1",
+      STRIPE_PRICE_PREMIUM: "price_x1",
+    };
+    expect(() => validateEnv(prodNoInternal)).toThrow();
+    expect(() => validateEnv({ ...prodNoInternal, INTERNAL_API_SECRET: "i".repeat(32) })).not.toThrow();
+  });
+
   it("TRUST_PROXY_HOPS é opcional mas, se vier, precisa ser inteiro positivo", () => {
     expect(() => validateEnv({ ...base, JWT_SECRET: "a".repeat(40), TRUST_PROXY_HOPS: "1" })).not.toThrow();
     expect(() => validateEnv({ ...base, JWT_SECRET: "a".repeat(40), TRUST_PROXY_HOPS: "0" })).toThrow();
@@ -65,7 +88,7 @@ describe("validateEnv: Stripe e FRONTEND_URL", () => {
     STRIPE_PRICE_PROFISSIONAL: "price_p1",
     STRIPE_PRICE_PREMIUM: "price_x1",
   };
-  const prod = { ...dev, NODE_ENV: "production", CLIENT_IP_SECRET: "c".repeat(32), FRONTEND_URL: "https://totalagenda.com.br" };
+  const prod = { ...dev, NODE_ENV: "production", CLIENT_IP_SECRET: "c".repeat(32), INTERNAL_API_SECRET: "i".repeat(32), FRONTEND_URL: "https://totalagenda.com.br" };
 
   it("em desenvolvimento nada do Stripe é obrigatório (o backend local não cai no boot)", () => {
     expect(() => validateEnv(dev)).not.toThrow();
