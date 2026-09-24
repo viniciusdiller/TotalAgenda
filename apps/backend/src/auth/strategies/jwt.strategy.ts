@@ -5,6 +5,7 @@ import { ExtractJwt, Strategy } from "passport-jwt";
 import { Role } from "@totalagenda/database";
 import { PrismaService } from "../../prisma/prisma.service";
 import { JwtPayload, AuthenticatedUser } from "../types/auth-user";
+import { isSessionRevoked } from "../../common/utils/session.util";
 
 const STAFF_ROLES = new Set<string>(Object.values(Role));
 
@@ -35,9 +36,19 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // permissões vêm SEMPRE do banco (leitura por PK, barata); o token só prova quem é.
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { tenantId: true, role: true, isActive: true, professional: { select: { id: true } } },
+      select: {
+        tenantId: true,
+        role: true,
+        isActive: true,
+        passwordChangedAt: true,
+        professional: { select: { id: true } },
+      },
     });
     if (!user || !user.isActive) {
+      throw new UnauthorizedException();
+    }
+    // Senha redefinida depois da emissão deste token: a sessão antiga não vale mais.
+    if (isSessionRevoked(payload.iat, user.passwordChangedAt)) {
       throw new UnauthorizedException();
     }
 

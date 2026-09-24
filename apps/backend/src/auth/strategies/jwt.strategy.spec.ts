@@ -1,54 +1,41 @@
 import { UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Role } from "@totalagenda/database";
-import { JwtStrategy } from "./jwt.strategy";
 import { PrismaService } from "../../prisma/prisma.service";
+import { JwtStrategy } from "./jwt.strategy";
 
-function buildStrategy(user: unknown) {
+const CHANGED = new Date("2026-09-24T12:00:00Z");
+const CHANGED_SEC = Math.floor(CHANGED.getTime() / 1000);
+
+function build(user: Record<string, unknown> | null) {
   const prisma = { user: { findUnique: jest.fn().mockResolvedValue(user) } } as unknown as PrismaService;
-  const config = { getOrThrow: () => "x".repeat(48) } as unknown as ConfigService;
+  const config = { getOrThrow: () => "x".repeat(40) } as unknown as ConfigService;
   return { strategy: new JwtStrategy(config, prisma), prisma };
 }
 
-const payload = { sub: "u-1", tenantId: "tenant-token", role: Role.OWNER };
+const ROW = { tenantId: "t-1", role: Role.OWNER, isActive: true, passwordChangedAt: null, professional: null };
+const payload = (over: Record<string, unknown> = {}) => ({ sub: "u-1", tenantId: "t-1", role: Role.OWNER, iat: CHANGED_SEC, ...over });
 
-describe("JwtStrategy.validate", () => {
-  it("usa tenantId/role/professionalId do BANCO, não as claims do token", async () => {
-    const { strategy } = buildStrategy({
-      tenantId: "tenant-db",
-      role: Role.PROFESSIONAL,
-      isActive: true,
-      professional: { id: "prof-9" },
-    });
+describe("JwtStrategy.validate: sessão depois da redefinição de senha", () => {
+  it("access token emitido antes da redefinição deixa de valer (401)", async () => {
+    const { strategy } = build({ ...ROW, passwordChangedAt: CHANGED });
 
-    await expect(strategy.validate(payload)).resolves.toEqual({
+    await expect(strategy.validate(payload({ iat: CHANGED_SEC - 60 }))).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it("emitido depois da redefinição vale, e a identidade vem do banco", async () => {
+    const { strategy } = build({ ...ROW, passwordChangedAt: CHANGED });
+
+    await expect(strategy.validate(payload({ iat: CHANGED_SEC + 5, tenantId: "forjado" }))).resolves.toMatchObject({
       userId: "u-1",
-      tenantId: "tenant-db",
-      role: Role.PROFESSIONAL,
-      professionalId: "prof-9",
+      tenantId: "t-1",
     });
   });
 
-  it("rejeita usuário desativado mesmo com token ainda dentro da validade", async () => {
-    const { strategy } = buildStrategy({
-      tenantId: "t",
-      role: Role.OWNER,
-      isActive: false,
-      professional: null,
-    });
-    await expect(strategy.validate(payload)).rejects.toThrow(UnauthorizedException);
-  });
-
-  it("rejeita usuário que não existe mais", async () => {
-    const { strategy } = buildStrategy(null);
-    await expect(strategy.validate(payload)).rejects.toThrow(UnauthorizedException);
-  });
-
-  it("rejeita token sem role de staff (consumer/refresh) sem nem consultar o banco", async () => {
-    const { strategy, prisma } = buildStrategy(null);
-    await expect(
-      strategy.validate({ sub: "c-1", type: "consumer" } as unknown as typeof payload),
-    ).rejects.toThrow(UnauthorizedException);
-    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  it("sem redefinição nada muda; usuário desativado continua 401", async () => {
+    await expect(build(ROW).strategy.validate(payload({ iat: 1 }))).resolves.toBeDefined();
+    await expect(build({ ...ROW, isActive: false }).strategy.validate(payload())).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
   });
 });

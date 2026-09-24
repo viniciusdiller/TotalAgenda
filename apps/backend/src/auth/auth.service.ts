@@ -5,6 +5,7 @@ import { Role } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
 import { hashPasswordSetToken } from "../common/utils/password-set-token.util";
 import { LOCKOUT_THRESHOLD, lockoutDurationMs } from "../common/utils/lockout.util";
+import { isSessionRevoked } from "../common/utils/session.util";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshDto } from "./dto/refresh.dto";
 import { SetPasswordDto } from "./dto/set-password.dto";
@@ -116,6 +117,11 @@ export class AuthService {
     if (!user || !user.isActive) {
       throw new UnauthorizedException("Sessão expirada. Faça login novamente.");
     }
+    // Refresh token emitido antes da última redefinição de senha: não renova (é o que sustenta a
+    // sessão de 30 dias, então é o que precisa cair quando a conta é recuperada).
+    if (isSessionRevoked(payload.iat, user.passwordChangedAt)) {
+      throw new UnauthorizedException("Sessão expirada. Faça login novamente.");
+    }
 
     return this.buildAuthResponse(
       user.id,
@@ -140,7 +146,16 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash, passwordSetTokenHash: null, passwordSetTokenExpiresAt: null },
+      data: {
+        passwordHash,
+        passwordSetTokenHash: null,
+        passwordSetTokenExpiresAt: null,
+        // Derruba as sessões emitidas antes desta troca (ver isSessionRevoked).
+        passwordChangedAt: new Date(),
+        // Recuperar a conta também zera o bloqueio por tentativas erradas.
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
     });
 
     return this.buildAuthResponse(

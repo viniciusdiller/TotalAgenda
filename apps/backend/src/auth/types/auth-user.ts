@@ -5,6 +5,7 @@ export interface JwtPayload {
   tenantId: string;
   role: Role;
   professionalId?: string;
+  iat?: number; // emissão (segundos), preenchido pelo JwtService
 }
 
 // Sem `role` de propósito — é o que faz o JwtStrategy (STAFF_ROLES.has(payload.role))
@@ -12,6 +13,7 @@ export interface JwtPayload {
 export interface RefreshTokenPayload {
   sub: string; // userId
   type: "refresh";
+  iat?: number;
 }
 
 export interface AuthenticatedUser {

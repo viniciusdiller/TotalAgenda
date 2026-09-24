@@ -283,3 +283,57 @@ describe("AuthService.setPassword", () => {
     expect(jwt.sign).not.toHaveBeenCalled();
   });
 });
+
+// Recuperar a conta (link de redefinição gerado pelo suporte) precisa derrubar as sessões antigas:
+// o refresh token de staff dura 30 dias e não era revogável por nenhum outro meio.
+describe("AuthService: sessões antigas caem depois da redefinição de senha", () => {
+  const changedAt = new Date("2026-09-24T12:00:00Z");
+  const changedAtSec = Math.floor(changedAt.getTime() / 1000);
+
+  it("setPassword grava passwordChangedAt e zera o bloqueio por tentativas", async () => {
+    const prisma = buildPrisma();
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      ...ACTIVE_USER,
+      failedLoginAttempts: 7,
+      lockedUntil: new Date(Date.now() + 60_000),
+      passwordSetTokenExpiresAt: new Date(Date.now() + 60_000),
+    });
+    const service = new AuthService(prisma, buildJwtService());
+
+    await service.setPassword({ token: "convite", password: "nova-senha-123" });
+
+    const data = (prisma.user.update as jest.Mock).mock.calls[0][0].data;
+    expect(data.passwordChangedAt).toBeInstanceOf(Date);
+    expect(data).toMatchObject({ failedLoginAttempts: 0, lockedUntil: null, passwordSetTokenHash: null });
+  });
+
+  it("refresh token emitido ANTES da redefinição não renova a sessão", async () => {
+    const prisma = buildPrisma({ ...ACTIVE_USER, passwordChangedAt: changedAt });
+    const jwt = buildJwtService({
+      verify: jest.fn().mockReturnValue({ sub: "u-1", type: "refresh", iat: changedAtSec - 3600 }),
+    });
+
+    await expect(new AuthService(prisma, jwt).refresh({ refreshToken: "antigo" })).rejects.toThrow(
+      UnauthorizedException,
+    );
+    expect(jwt.sign).not.toHaveBeenCalled();
+  });
+
+  it("refresh token emitido DEPOIS (ou no mesmo segundo) da redefinição continua valendo", async () => {
+    for (const iat of [changedAtSec, changedAtSec + 60]) {
+      const prisma = buildPrisma({ ...ACTIVE_USER, passwordChangedAt: changedAt });
+      const jwt = buildJwtService({ verify: jest.fn().mockReturnValue({ sub: "u-1", type: "refresh", iat }) });
+
+      await expect(new AuthService(prisma, jwt).refresh({ refreshToken: "novo" })).resolves.toMatchObject({
+        accessToken: "signed-token",
+      });
+    }
+  });
+
+  it("conta que nunca trocou a senha não é afetada", async () => {
+    const prisma = buildPrisma({ ...ACTIVE_USER, passwordChangedAt: null });
+    const jwt = buildJwtService({ verify: jest.fn().mockReturnValue({ sub: "u-1", type: "refresh", iat: 1 }) });
+
+    await expect(new AuthService(prisma, jwt).refresh({ refreshToken: "qualquer" })).resolves.toBeDefined();
+  });
+});

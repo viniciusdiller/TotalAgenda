@@ -232,6 +232,11 @@ model User {
   termsAcceptedAt DateTime? @db.Timestamptz(6)
   termsVersion    String?
 
+  // Quando a senha foi definida/redefinida por último. Tokens (acesso e refresh) emitidos ANTES disto
+  // deixam de valer: redefinir a senha (ex.: conta comprometida) precisa derrubar as sessões antigas,
+  // e o refresh token de staff dura 30 dias e não é revogável de outra forma.
+  passwordChangedAt DateTime? @db.Timestamptz(6)
+
   // Lockout progressivo por conta (além do rate limit por IP no ThrottlerGuard) — ver
   // AuthService.login. Reseta em login bem-sucedido; nunca exposto em nenhuma resposta (a
   // mensagem de erro é sempre a mesma genérica, logado ou não).
@@ -923,4 +928,17 @@ model StripeEvent {
   processedAt DateTime @default(now()) @db.Timestamptz(6)
 
   @@index([processedAt])
+}
+
+// Trilha de auditoria das ações do suporte (Admin-TotalSoftware) sobre contas de tenants. Nunca guarda
+// o token/link gerado. Sem FK de propósito: o registro sobrevive à exclusão do tenant ou do usuário.
+model AdminAuditLog {
+  id           String   @id @default(uuid())
+  action       String // ex.: PASSWORD_RESET_LINK
+  actor        String // e-mail do admin, vindo assinado do Admin
+  tenantId     String?
+  targetUserId String?
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([tenantId, createdAt])
 }
