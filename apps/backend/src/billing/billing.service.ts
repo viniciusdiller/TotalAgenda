@@ -16,10 +16,25 @@ export class BillingService {
       include: { subscription: { include: { plan: true } } },
     });
 
+    // Qualquer papel de staff chama esta rota: devolve só o necessário para a tela, sem os ids do
+    // Stripe (customer/subscription) e sem ids internos.
+    const subscription = tenant.subscription;
     return {
-      status: computeBillingStatus(tenant, tenant.subscription),
+      status: computeBillingStatus(tenant, subscription),
       trialEndsAt: tenant.trialEndsAt,
-      subscription: tenant.subscription,
+      subscription: subscription
+        ? {
+            status: subscription.status,
+            currentPeriodEnd: subscription.currentPeriodEnd,
+            cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+            plan: {
+              tier: subscription.plan.tier,
+              name: subscription.plan.name,
+              priceCents: subscription.plan.priceCents,
+              maxProfessionals: subscription.plan.maxProfessionals,
+            },
+          }
+        : null,
     };
   }
 }

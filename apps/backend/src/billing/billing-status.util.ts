@@ -16,3 +16,18 @@ export function computeBillingStatus(
 export function hasBillingAccess(status: BillingStatus): boolean {
   return status === "TRIALING" || status === "ACTIVE" || status === "PAST_DUE";
 }
+
+// Mensagem mostrada quando o guard bloqueia. Uma por estado: "período de teste encerrado" para quem
+// cancelou ou está inadimplente confundia o dono sobre o que fazer.
+export function billingBlockMessage(status: BillingStatus): string {
+  switch (status) {
+    case "CANCELED":
+      return "Sua assinatura foi cancelada. Assine novamente para voltar a usar o TotalAgenda.";
+    case "UNPAID":
+      return "Não conseguimos processar o pagamento da sua assinatura. Atualize a forma de pagamento para reativar o acesso.";
+    case "INCOMPLETE":
+      return "O pagamento da sua assinatura ainda não foi concluído. Conclua o pagamento para liberar o acesso.";
+    default:
+      return "Seu período de teste terminou. Assine um plano para continuar usando o TotalAgenda.";
+  }
+}

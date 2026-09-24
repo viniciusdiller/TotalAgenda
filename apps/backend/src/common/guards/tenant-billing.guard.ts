@@ -4,7 +4,11 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
 import { SKIP_BILLING_CHECK_KEY } from "../decorators/skip-billing-check.decorator";
 import { AuthenticatedUser } from "../../auth/types/auth-user";
-import { computeBillingStatus, hasBillingAccess } from "../../billing/billing-status.util";
+import {
+  billingBlockMessage,
+  computeBillingStatus,
+  hasBillingAccess,
+} from "../../billing/billing-status.util";
 
 @Injectable()
 export class TenantBillingGuard implements CanActivate {
@@ -41,9 +45,7 @@ export class TenantBillingGuard implements CanActivate {
     const status = computeBillingStatus(tenant, tenant.subscription);
 
     if (!hasBillingAccess(status)) {
-      throw new ForbiddenException(
-        "Período de teste encerrado. Assine um plano para continuar usando o TotalAgenda.",
-      );
+      throw new ForbiddenException(billingBlockMessage(status));
     }
 
     return true;
