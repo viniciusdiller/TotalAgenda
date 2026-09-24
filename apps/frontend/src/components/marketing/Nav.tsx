@@ -9,10 +9,6 @@ import { Logo } from "../brand/Logo";
 import type { NavSession } from "@/lib/nav-session";
 import { AccountNav } from "../account/AccountNav";
 
-const LANDING_URL =
-  process.env.NEXT_PUBLIC_LANDING_URL ??
-  "https://totalsoftware.com.br/produtos";
-
 const links = [
   { href: "#como-funciona", label: "Como funciona" },
   { href: "#recursos", label: "Recursos" },
@@ -73,7 +69,7 @@ export function Nav({ session }: { session: NavSession }) {
                   {session.role === "OWNER" ? "Minha loja" : "Painel"}
                 </Button>
               ) : (
-                <Button href={LANDING_URL} className="px-5 py-2.5 text-sm">
+                <Button href="/cadastro" className="px-5 py-2.5 text-sm">
                   Para donos de salão
                 </Button>
               )}
@@ -134,7 +130,7 @@ export function Nav({ session }: { session: NavSession }) {
                   {session.role === "OWNER" ? "Minha loja" : "Painel"}
                 </Button>
               ) : (
-                <Button href={LANDING_URL} className="w-full">
+                <Button href="/cadastro" className="w-full">
                   Para donos de salão
                 </Button>
               )}

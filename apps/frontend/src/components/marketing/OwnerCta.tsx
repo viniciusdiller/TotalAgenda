@@ -3,10 +3,6 @@ import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
 import { Button } from "../ui/Button";
 
-const LANDING_URL =
-  process.env.NEXT_PUBLIC_LANDING_URL ??
-  "https://totalsoftware.com.br/produtos";
-
 // Faixa full-bleed (quebra o Container de propósito) — mesmo papel do bloco laranja do
 // Trinks: o ponto da home onde o dono de salão, não o cliente final, é o público.
 export function OwnerCta() {
@@ -32,7 +28,7 @@ export function OwnerCta() {
               trocar mensagem. Teste grátis por 14 dias, sem cartão.
             </p>
             <div className="mt-8">
-              <Button href={LANDING_URL} variant="secondary" className="bg-white text-accent-700 hover:bg-accent-50">
+              <Button href="/cadastro" variant="secondary" className="bg-white text-accent-700 hover:bg-accent-50">
                 Quero fazer parte
               </Button>
             </div>

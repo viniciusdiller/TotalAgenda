@@ -1,16 +1,12 @@
 import { Container } from "../ui/Container";
 import { Logo } from "../brand/Logo";
 
-const LANDING_URL =
-  process.env.NEXT_PUBLIC_LANDING_URL ??
-  "https://totalsoftware.com.br/produtos";
-
 // #como-funciona/#recursos/#faq são âncoras que só existem na home — em
 // qualquer outra página (descobrir, [slug], etc.) viram link morto. isHome
 // controla se essas colunas/links aparecem.
 const accountLinks = [
   { href: "/entrar", label: "Entrar" },
-  { href: LANDING_URL, label: "Começar grátis" },
+  { href: "/cadastro", label: "Começar grátis" },
 ];
 
 export function Footer({ isHome = false }: { isHome?: boolean }) {

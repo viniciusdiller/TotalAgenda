@@ -2,10 +2,6 @@ import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
 import { Button } from "../ui/Button";
 
-const LANDING_URL =
-  process.env.NEXT_PUBLIC_LANDING_URL ??
-  "https://totalsoftware.com.br/produtos";
-
 export function FinalCta() {
   return (
     <section className="py-20 lg:py-28">
@@ -24,7 +20,7 @@ export function FinalCta() {
               a receber agendamentos pelo link.
             </p>
             <div className="relative mt-9 flex justify-center">
-              <Button href={LANDING_URL}>Começar grátis</Button>
+              <Button href="/cadastro">Começar grátis</Button>
             </div>
           </div>
         </Reveal>

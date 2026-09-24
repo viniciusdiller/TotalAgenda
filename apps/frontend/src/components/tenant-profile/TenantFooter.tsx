@@ -4,9 +4,6 @@ import type { PublicTenant } from "@totalagenda/shared-types";
 import { Logo } from "../brand/Logo";
 import { Container } from "../ui/Container";
 
-const LANDING_URL =
-  process.env.NEXT_PUBLIC_LANDING_URL ?? "https://totalsoftware.com.br/produtos";
-
 // Rodapé próprio de /[slug]/* — components/marketing/Footer.tsx (o "footer padrão")
 // é o da landing, com "Começar grátis" mirando dono de negócio; num cliente final
 // fechando um agendamento isso é ruído fora de contexto. Aqui a marca TotalAgenda
@@ -31,13 +28,13 @@ export function TenantFooter({ tenant }: { tenant: PublicTenant }) {
           >
             Entrar na minha conta
           </Link>
-          <a
-            href={LANDING_URL}
+          <Link
+            href="/cadastro"
             className="inline-flex items-center gap-1 font-medium text-zinc-600 transition-colors hover:text-zinc-900 dark:text-stone-300 dark:hover:text-white"
           >
             Tem um salão ou barbearia?
             <ArrowUpRight size={13} />
-          </a>
+          </Link>
         </div>
 
         <p className="text-xs text-zinc-400 dark:text-stone-500">
