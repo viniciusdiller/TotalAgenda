@@ -18,8 +18,8 @@ export function MarketplaceSettings({ settings }: { settings: Settings }) {
       </label>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <Input label="Cidade" name="city" defaultValue={settings.city ?? ""} />
-        <Input label="Bairro" name="neighborhood" defaultValue={settings.neighborhood ?? ""} />
+        <Input label="Cidade" name="city" maxLength={120} autoComplete="address-level2" defaultValue={settings.city ?? ""} />
+        <Input label="Bairro" name="neighborhood" maxLength={120} defaultValue={settings.neighborhood ?? ""} />
         <Input
           label="Latitude"
           name="latitude"

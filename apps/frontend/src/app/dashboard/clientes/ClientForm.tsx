@@ -23,7 +23,7 @@ export function ClientForm({
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Input label="Nome" name="name" defaultValue={client?.name ?? ""} required />
+        <Input label="Nome" name="name" autoComplete="off" defaultValue={client?.name ?? ""} required minLength={2} maxLength={120} />
         <MaskedInput
           mask="phone"
           label="Telefone"
@@ -32,17 +32,19 @@ export function ClientForm({
           defaultValue={client?.phone ?? ""}
           required
         />
-        <Input label="E-mail" name="email" type="email" defaultValue={client?.email ?? ""} />
+        <Input label="E-mail" name="email" type="email" autoComplete="off" maxLength={254} defaultValue={client?.email ?? ""} />
         <Input
           label="Nascimento"
           name="birthDate"
           type="date"
+          min="1900-01-01"
           defaultValue={client?.birthDate?.slice(0, 10) ?? ""}
         />
-        <MaskedInput mask="cpf" label="CPF" name="cpf" defaultValue={client?.cpf ?? ""} />
+        <MaskedInput mask="cpf" label="CPF" name="cpf" placeholder="000.000.000-00" defaultValue={client?.cpf ?? ""} />
         <Input
           label="Tags (separadas por vírgula)"
           name="tags"
+          hint="Até 20 tags de até 40 caracteres."
           defaultValue={client?.tags.join(", ") ?? ""}
         />
       </div>
@@ -51,6 +53,7 @@ export function ClientForm({
         Observações
         <textarea
           name="notes"
+          maxLength={2000}
           defaultValue={client?.notes ?? ""}
           rows={3}
           className="rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-[15px] text-zinc-900 focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20 focus:outline-none dark:border-white/15 dark:bg-zinc-900 dark:text-white"

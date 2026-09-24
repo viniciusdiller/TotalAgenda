@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { authedFetch } from "@/lib/api-server";
 import { ApiError } from "@/lib/api";
+import { moneyToCents, parseIntStrict } from "@/lib/masks";
 
 export interface ProductActionState {
   error?: string;
@@ -12,26 +13,29 @@ function fail(err: unknown): ProductActionState {
   return { error: err instanceof ApiError ? err.message : "Erro inesperado." };
 }
 
-function centsFromReais(value: FormDataEntryValue | null): number {
-  const n = Number(String(value ?? "").replace(",", "."));
-  return Number.isFinite(n) ? Math.round(n * 100) : 0;
-}
+const text = (value: FormDataEntryValue | null) => (typeof value === "string" ? value.trim() : "");
 
 export async function createProductAction(
   _prev: ProductActionState,
   formData: FormData,
 ): Promise<ProductActionState> {
+  const priceCents = moneyToCents(text(formData.get("price")));
+  if (priceCents === null) return { error: "Informe um preço válido (ex: 45,90)." };
+  const costRaw = text(formData.get("cost"));
+  const costCents = costRaw ? moneyToCents(costRaw) : undefined;
+  if (costCents === null) return { error: "Informe um custo válido (ex: 20,00)." };
+  const stockRaw = text(formData.get("initialStock"));
+  const initialStock = stockRaw ? parseIntStrict(stockRaw) : undefined;
+  if (initialStock === null) return { error: "O estoque inicial deve ser um número inteiro." };
   try {
     await authedFetch("/products", {
       method: "POST",
       body: JSON.stringify({
         name: String(formData.get("name") ?? "").trim(),
         sku: String(formData.get("sku") ?? "").trim() || undefined,
-        priceCents: centsFromReais(formData.get("price")),
-        costCents: formData.get("cost") ? centsFromReais(formData.get("cost")) : undefined,
-        initialStock: formData.get("initialStock")
-          ? Number(formData.get("initialStock"))
-          : undefined,
+        priceCents,
+        costCents,
+        initialStock,
       }),
     });
   } catch (err) {

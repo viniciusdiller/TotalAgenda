@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { DateTime } from "luxon";
+import { MoneyInput } from "@/components/ui/MoneyInput";
 import type {
   CashFlowReport,
   DreReport,
@@ -197,9 +198,9 @@ export function FinanceView({
                   </option>
                 ))}
             </select>
-            <input name="description" placeholder="Descrição" required className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white" />
-            <input name="counterparty" placeholder="Fornecedor / cliente (opcional)" className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white" />
-            <input name="amount" placeholder="Valor (R$)" inputMode="decimal" required className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white" />
+            <input name="description" placeholder="Descrição" required maxLength={200} className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white" />
+            <input name="counterparty" placeholder="Fornecedor / cliente (opcional)" maxLength={200} className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white" />
+            <MoneyInput name="amount" placeholder="Valor (R$)" aria-label="Valor (R$)" required className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white" />
             <input name="dueDate" type="date" required defaultValue={DateTime.now().toISODate()!} className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white" />
             <label className="flex items-center gap-2 text-sm text-zinc-600 sm:col-span-2 dark:text-stone-300">
               <input type="checkbox" name="paidNow" /> Já quitado

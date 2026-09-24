@@ -12,13 +12,15 @@ export function CreateProfessionalForm() {
 
   return (
     <form action={action} className="grid gap-4 rounded-2xl border border-zinc-200 p-5 sm:grid-cols-3 dark:border-white/10">
-      <Input label="Nome" name="name" required />
-      <Input label="E-mail" name="email" type="email" required />
+      <Input label="Nome" name="name" autoComplete="off" required minLength={2} maxLength={120} />
+      <Input label="E-mail" name="email" type="email" autoComplete="off" required maxLength={254} />
       <Input
         label="Senha inicial"
         name="initialPassword"
         type="password"
+        autoComplete="new-password"
         minLength={8}
+        maxLength={72}
         required
         hint="Compartilhe com o profissional para o primeiro acesso."
       />

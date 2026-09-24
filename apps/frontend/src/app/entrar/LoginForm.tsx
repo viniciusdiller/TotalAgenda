@@ -98,6 +98,7 @@ export function LoginForm({ next }: { next?: string }) {
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
             required
+            maxLength={254}
           />
           <Input
             label="Senha"
@@ -107,6 +108,7 @@ export function LoginForm({ next }: { next?: string }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            maxLength={72}
           />
 
           {error ? <p role="alert" className="animate-rise-in text-sm text-red-600 dark:text-red-400">{error}</p> : null}
@@ -136,6 +138,7 @@ export function LoginForm({ next }: { next?: string }) {
             onChange={(e) => setName(e.target.value)}
             required
             minLength={2}
+            maxLength={120}
           />
           <MaskedInput
             mask="phone"
@@ -156,6 +159,7 @@ export function LoginForm({ next }: { next?: string }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            maxLength={254}
           />
           <Input
             label="Crie uma senha"
@@ -165,6 +169,7 @@ export function LoginForm({ next }: { next?: string }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            maxLength={72}
           />
           <Input
             label="Confirme a senha"
@@ -174,6 +179,7 @@ export function LoginForm({ next }: { next?: string }) {
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             required
+            maxLength={72}
           />
           <label className="flex items-start gap-2 text-xs text-zinc-500 dark:text-stone-400">
             <input

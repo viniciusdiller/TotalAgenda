@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Input } from "@/components/ui/Input";
+import { MaskedInput } from "@/components/ui/MaskedInput";
 import { Button } from "@/components/ui/Button";
 import { compressImageFile } from "@/lib/image-compression";
 import {
@@ -144,35 +145,43 @@ export function TenantProfileSettingsForm({ tenant }: { tenant: TenantProfile })
         <Input
           label="Descrição"
           name="description"
+          maxLength={500}
           defaultValue={tenant.description ?? ""}
           placeholder="Cortes modernos e atendimento personalizado."
         />
         <Input
           label="Endereço"
           name="address"
+          maxLength={300}
+          autoComplete="street-address"
           defaultValue={tenant.address ?? ""}
           placeholder="Rua Exemplo, 123 - Centro"
         />
         <Input
           label="Horário de funcionamento"
           name="businessHours"
+          maxLength={500}
           defaultValue={tenant.businessHours ?? ""}
           placeholder="Seg-Sex 9h-19h, Sáb 9h-13h"
         />
-        <Input
+        <MaskedInput
+          mask="phone"
           label="WhatsApp"
           name="whatsappNumber"
           type="tel"
           defaultValue={tenant.whatsappNumber ?? ""}
-          placeholder="5511912345678"
-          hint="DDI + DDD + número, só dígitos."
+          placeholder="(11) 91234-5678"
+          hint="DDD + número. O link do WhatsApp da sua página usa este número."
         />
         <Input
           label="Instagram"
           name="instagramUrl"
-          type="url"
           defaultValue={tenant.instagramUrl ?? ""}
-          placeholder="https://instagram.com/seu_negocio"
+          placeholder="@seusalao"
+          maxLength={300}
+          autoCapitalize="none"
+          spellCheck={false}
+          hint="Seu @ ou o link do perfil."
         />
 
         <div className="flex flex-col gap-1.5">

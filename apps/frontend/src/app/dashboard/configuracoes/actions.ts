@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { authedFetch } from "@/lib/api-server";
 import { ApiError } from "@/lib/api";
+import { normalizeInstagram, whatsappDigits } from "@/lib/masks";
 
 export interface UpdateProfileState {
   error?: string;
@@ -18,21 +19,30 @@ export async function updateTenantProfileAction(
     return { error: "Cor inválida. Use o formato #RRGGBB." };
   }
 
-  const whatsappNumber = String(formData.get("whatsappNumber") ?? "").replace(/\D/g, "");
-  if (whatsappNumber && (whatsappNumber.length < 10 || whatsappNumber.length > 15)) {
-    return { error: "Telefone do WhatsApp inválido. Use o DDI + DDD + número." };
+  // O dono digita "(11) 91234-5678"; o backend guarda com DDI ("5511912345678", vira link wa.me).
+  const whatsappRaw = String(formData.get("whatsappNumber") ?? "").trim();
+  const whatsappNumber = whatsappRaw ? whatsappDigits(whatsappRaw) : "";
+  if (whatsappRaw && !whatsappNumber) {
+    return { error: "WhatsApp inválido. Informe DDD e número, ex: (11) 91234-5678." };
   }
+  // Aceita "@salao", "salao" ou o link; o backend só aceita https://instagram.com/<usuário>.
+  const instagramUrl = normalizeInstagram(String(formData.get("instagramUrl") ?? ""));
+  if (instagramUrl === null) {
+    return { error: "Instagram inválido. Use @seusalao ou o link do perfil." };
+  }
+  // Campo em branco é enviado como "" (limpa o valor salvo); antes virava undefined e ficava preso.
+  const text = (key: string) => String(formData.get(key) ?? "").trim();
 
   try {
     await authedFetch("/tenants/me", {
       method: "PATCH",
       body: JSON.stringify({
-        description: formData.get("description") || undefined,
-        address: formData.get("address") || undefined,
-        businessHours: formData.get("businessHours") || undefined,
+        description: text("description"),
+        address: text("address"),
+        businessHours: text("businessHours"),
         accentColor: accentColor || undefined,
-        whatsappNumber: whatsappNumber || undefined,
-        instagramUrl: formData.get("instagramUrl") || undefined,
+        whatsappNumber,
+        instagramUrl,
         // Checkbox: só aparece no FormData quando marcado — por isso o estado real é
         // sempre calculado aqui e enviado explícito (nunca omitido), diferente dos campos
         // de texto acima onde "não preenchido" vira undefined (não altera o valor salvo).

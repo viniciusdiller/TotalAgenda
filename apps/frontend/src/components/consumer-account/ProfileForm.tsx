@@ -28,8 +28,8 @@ export function ProfileForm({
   return (
     <form action={action} className="flex flex-col gap-4 rounded-2xl border border-zinc-200 p-5 dark:border-white/10">
       <p className="font-brand font-semibold text-zinc-900 dark:text-white">Dados pessoais</p>
-      <Input label="Nome" name="name" defaultValue={name} required minLength={2} accentScoped />
-      <Input label="E-mail" name="email" type="email" defaultValue={email ?? ""} required accentScoped />
+      <Input label="Nome" name="name" autoComplete="name" defaultValue={name} required minLength={2} maxLength={120} accentScoped />
+      <Input label="E-mail" name="email" type="email" autoComplete="email" defaultValue={email ?? ""} required maxLength={254} accentScoped />
       <Input
         label="Telefone"
         name="phone"
@@ -62,6 +62,7 @@ export function PasswordForm() {
         type="password"
         autoComplete="current-password"
         required
+        maxLength={72}
         accentScoped
       />
       <Input
@@ -70,6 +71,7 @@ export function PasswordForm() {
         type="password"
         autoComplete="new-password"
         minLength={8}
+        maxLength={72}
         required
         accentScoped
       />
@@ -79,6 +81,7 @@ export function PasswordForm() {
         type="password"
         autoComplete="new-password"
         minLength={8}
+        maxLength={72}
         required
         accentScoped
       />

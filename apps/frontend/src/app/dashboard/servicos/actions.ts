@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { authedFetch } from "@/lib/api-server";
 import { ApiError } from "@/lib/api";
+import { moneyToCents, parseIntStrict } from "@/lib/masks";
 
 export interface CreateServiceState {
   error?: string;
@@ -12,14 +13,16 @@ export async function createServiceAction(
   _prevState: CreateServiceState | undefined,
   formData: FormData,
 ): Promise<CreateServiceState> {
-  const priceReais = Number(formData.get("price"));
-  const durationMinutes = Number(formData.get("durationMinutes"));
+  const rawPrice = formData.get("price");
+  const priceCents = moneyToCents(typeof rawPrice === "string" ? rawPrice : null);
+  const rawDuration = formData.get("durationMinutes");
+  const durationMinutes = parseIntStrict(typeof rawDuration === "string" ? rawDuration : null);
 
-  if (!Number.isFinite(priceReais) || priceReais < 0) {
-    return { error: "Informe um preço válido." };
+  if (priceCents === null) {
+    return { error: "Informe um preço válido (ex: 45,90)." };
   }
-  if (!Number.isFinite(durationMinutes) || durationMinutes < 5) {
-    return { error: "A duração mínima é de 5 minutos." };
+  if (durationMinutes === null || durationMinutes < 5 || durationMinutes > 1440) {
+    return { error: "A duração deve ser de 5 a 1440 minutos." };
   }
 
   try {
@@ -29,7 +32,7 @@ export async function createServiceAction(
         name: formData.get("name"),
         description: formData.get("description") || undefined,
         durationMinutes,
-        priceCents: Math.round(priceReais * 100),
+        priceCents,
       }),
     });
   } catch (error) {

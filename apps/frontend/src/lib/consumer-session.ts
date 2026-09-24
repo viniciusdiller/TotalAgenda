@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { ApiError } from "@/lib/api";
 import { CONSUMER_COOKIE_NAME, consumerCookieOptions } from "./consumer-cookie";
+import { assertSafeApiPath } from "./api-path";
 import { backendFetch } from "./backend-fetch";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -31,7 +32,7 @@ export async function clearConsumerToken() {
 }
 
 async function request<T>(path: string, init?: RequestInit, token?: string | null): Promise<T> {
-  const response = await backendFetch(`${API_URL}${path}`, {
+  const response = await backendFetch(`${API_URL}${assertSafeApiPath(path)}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",

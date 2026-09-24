@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import clsx from "clsx";
 import { Input } from "@/components/ui/Input";
+import { MaskedInput } from "@/components/ui/MaskedInput";
+import { formatCentsBRL, moneyToCents, parseIntStrict } from "@/lib/masks";
 import { Button } from "@/components/ui/Button";
 import { toggleServiceActiveAction, updateServiceAction } from "./actions";
 
@@ -34,7 +36,7 @@ export function ServiceRow({
   const [nameInput, setNameInput] = useState(name);
   const [descriptionInput, setDescriptionInput] = useState(description ?? "");
   const [durationInput, setDurationInput] = useState(String(durationMinutes));
-  const [priceInput, setPriceInput] = useState((priceCents / 100).toString());
+  const [priceInput, setPriceInput] = useState(formatCentsBRL(priceCents));
 
   function toggleActive() {
     startTransition(async () => {
@@ -48,24 +50,24 @@ export function ServiceRow({
     setNameInput(name);
     setDescriptionInput(description ?? "");
     setDurationInput(String(durationMinutes));
-    setPriceInput((priceCents / 100).toString());
+    setPriceInput(formatCentsBRL(priceCents));
     setError(null);
     setEditing(true);
   }
 
   function save() {
-    const priceReais = Number(priceInput);
-    const duration = Number(durationInput);
+    const newPriceCents = moneyToCents(priceInput);
+    const duration = parseIntStrict(durationInput);
     if (!nameInput.trim()) {
       setError("Informe o nome do serviço.");
       return;
     }
-    if (!Number.isFinite(priceReais) || priceReais < 0) {
-      setError("Informe um preço válido.");
+    if (newPriceCents === null) {
+      setError("Informe um preço válido (ex: 45,90).");
       return;
     }
-    if (!Number.isFinite(duration) || duration < 5) {
-      setError("A duração mínima é de 5 minutos.");
+    if (duration === null || duration < 5 || duration > 1440) {
+      setError("A duração deve ser de 5 a 1440 minutos.");
       return;
     }
     startTransition(async () => {
@@ -74,7 +76,7 @@ export function ServiceRow({
         name: nameInput.trim(),
         description: descriptionInput.trim() || undefined,
         durationMinutes: duration,
-        priceCents: Math.round(priceReais * 100),
+        priceCents: newPriceCents,
       });
       if (result?.error) setError(result.error);
       else setEditing(false);
@@ -87,6 +89,7 @@ export function ServiceRow({
         <div className="grid gap-3 sm:grid-cols-3">
           <Input
             label="Nome"
+            maxLength={120}
             value={nameInput}
             onChange={(e) => setNameInput(e.target.value)}
             required
@@ -94,19 +97,19 @@ export function ServiceRow({
           <Input
             label="Duração (minutos)"
             type="number"
+            inputMode="numeric"
             min={5}
+            max={1440}
             step={5}
             value={durationInput}
             onChange={(e) => setDurationInput(e.target.value)}
             required
           />
-          <Input
+          <MaskedInput
+            mask="money"
             label="Preço (R$)"
-            type="number"
-            min={0}
-            step="0.01"
             value={priceInput}
-            onChange={(e) => setPriceInput(e.target.value)}
+            onChange={setPriceInput}
             required
           />
           <div className="sm:col-span-3">

@@ -46,10 +46,11 @@ function Editor({
     setError(null);
     const prepared = fields
       .filter((f) => f.label.trim())
-      .map((f) => ({
+      .map((f, i) => ({
         ...f,
         label: f.label.trim(),
-        key: (f.key.trim() || slugify(f.label)) as string,
+        // Rótulo só com símbolos ("???") gera slug vazio, que o backend recusa: cai num nome neutro.
+        key: (f.key.trim() || slugify(f.label) || `campo_${i + 1}`) as string,
         options:
           f.type === "select"
             ? (f.options ?? []).map((o) => o.trim()).filter(Boolean)

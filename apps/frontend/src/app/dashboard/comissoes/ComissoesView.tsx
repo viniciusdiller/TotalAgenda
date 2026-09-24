@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { DateTime } from "luxon";
+import { MoneyInput } from "@/components/ui/MoneyInput";
 import type { CommissionReport, CommissionRule } from "@totalagenda/shared-types";
 import {
   createCommissionRuleAction,
@@ -32,6 +33,7 @@ export function ComissoesView({
 }) {
   const [state, formAction, pending] = useActionState(createCommissionRuleAction, initial);
   const [base, setBase] = useState<"SERVICE" | "PRODUCT" | "ALL">("ALL");
+  const [kind, setKind] = useState<"PERCENT" | "FIXED">("PERCENT");
 
   const [report, setReport] = useState<CommissionReport | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -110,17 +112,34 @@ export function ComissoesView({
               ))}
             </select>
           ) : null}
-          <select name="kind" className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white">
+          <select name="kind" value={kind} onChange={(e) => setKind(e.target.value as typeof kind)} className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white">
             <option value="PERCENT">%</option>
-            <option value="FIXED">R$ fixo (centavos)</option>
+            <option value="FIXED">R$ fixo</option>
           </select>
-          <input
-            name="value"
-            type="number"
-            min={0}
-            placeholder="valor"
-            className="w-24 rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white"
-          />
+          {kind === "PERCENT" ? (
+            <input
+              key="percent"
+              name="value"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={100}
+              step={1}
+              required
+              placeholder="% (0–100)"
+              aria-label="Percentual da comissão"
+              className="w-24 rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white"
+            />
+          ) : (
+            <MoneyInput
+              key="fixed"
+              name="value"
+              required
+              placeholder="R$ 0,00"
+              aria-label="Valor fixo da comissão (R$)"
+              className="w-28 rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white"
+            />
+          )}
           <button
             type="submit"
             disabled={pending}

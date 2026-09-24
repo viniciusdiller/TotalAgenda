@@ -6,6 +6,8 @@ import type {
   PublicTenant,
 } from "@totalagenda/shared-types";
 
+import { assertSafeApiPath } from "./api-path";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 export class ApiError extends Error {
@@ -19,7 +21,7 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(`${API_URL}${assertSafeApiPath(path)}`, {
     ...init,
     headers: { "Content-Type": "application/json", ...init?.headers },
     cache: "no-store",

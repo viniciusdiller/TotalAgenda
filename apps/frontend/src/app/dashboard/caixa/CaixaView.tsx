@@ -4,6 +4,8 @@ import { useActionState } from "react";
 import { DateTime } from "luxon";
 import type { CashRegisterSummary } from "@totalagenda/shared-types";
 import { Input } from "@/components/ui/Input";
+import { MaskedInput } from "@/components/ui/MaskedInput";
+import { MoneyInput } from "@/components/ui/MoneyInput";
 import {
   cashMovementAction,
   closeCashAction,
@@ -38,7 +40,7 @@ export function CaixaView({ summary }: { summary: CashRegisterSummary }) {
   if (!summary.open) {
     return (
       <form action={openAction} className="mt-6 max-w-sm space-y-3">
-        <Input label="Fundo de troco (R$)" name="float" inputMode="decimal" defaultValue="0" />
+        <MaskedInput mask="money" label="Fundo de troco (R$)" name="float" defaultValue="0,00" required />
         {openState.error ? (
           <p className="text-sm text-red-600 dark:text-red-400">{openState.error}</p>
         ) : null}
@@ -86,10 +88,11 @@ export function CaixaView({ summary }: { summary: CashRegisterSummary }) {
             <option value="WITHDRAWAL">Sangria</option>
             <option value="DEPOSIT">Suprimento</option>
           </select>
-          <input
+          <MoneyInput
             name="amount"
-            placeholder="R$"
-            inputMode="decimal"
+            placeholder="R$ 0,00"
+            required
+            aria-label="Valor (R$)"
             className="w-24 rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white"
           />
           <input
@@ -136,7 +139,7 @@ export function CaixaView({ summary }: { summary: CashRegisterSummary }) {
       <div>
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">Fechar caixa</h2>
         <form action={closeFormAction} className="mt-3 flex flex-wrap items-end gap-2">
-          <Input label="Dinheiro contado (R$)" name="counted" inputMode="decimal" />
+          <MaskedInput mask="money" label="Dinheiro contado (R$)" name="counted" required />
           <button
             type="submit"
             disabled={closePending}

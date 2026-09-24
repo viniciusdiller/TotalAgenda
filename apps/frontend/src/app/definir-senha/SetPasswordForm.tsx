@@ -33,6 +33,7 @@ export function SetPasswordForm({ token }: { token: string }) {
         type="password"
         autoComplete="new-password"
         minLength={8}
+        maxLength={72}
         required
       />
       <Input
@@ -41,6 +42,7 @@ export function SetPasswordForm({ token }: { token: string }) {
         type="password"
         autoComplete="new-password"
         minLength={8}
+        maxLength={72}
         required
       />
 

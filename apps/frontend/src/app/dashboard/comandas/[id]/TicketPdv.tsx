@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { DateTime } from "luxon";
 import { Trash } from "@phosphor-icons/react/dist/ssr";
+import { MoneyInput } from "@/components/ui/MoneyInput";
+import { formatCentsBRL, moneyToCents } from "@/lib/masks";
 import type { AdminProduct, PaymentMethod, Ticket } from "@totalagenda/shared-types";
 import {
   addItemAction,
@@ -15,7 +17,8 @@ import {
 
 const brl = (cents: number) =>
   (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const centsFromReais = (v: string) => Math.round(Number(v.replace(",", ".")) * 100) || 0;
+// Texto BRL → centavos; valor mal formado dá null (nunca um 0 silencioso que zeraria desconto/pagamento).
+const centsFromReais = (v: string) => moneyToCents(v);
 
 const METHODS: { value: PaymentMethod; label: string }[] = [
   { value: "CASH", label: "Dinheiro" },
@@ -53,7 +56,7 @@ export function TicketPdv({
   const [professionalId, setProfessionalId] = useState("");
 
   const [discountInput, setDiscountInput] = useState(
-    initialTicket.discountCents ? String(initialTicket.discountCents / 100) : "",
+    initialTicket.discountCents ? formatCentsBRL(initialTicket.discountCents) : "",
   );
   const [payMethod, setPayMethod] = useState<PaymentMethod>("PIX");
   const [payAmount, setPayAmount] = useState("");
@@ -77,8 +80,13 @@ export function TicketPdv({
     if (pickKind === "SERVICE") body.serviceId = pickId;
     else if (pickKind === "PRODUCT") body.productId = pickId;
     else {
-      body.description = customDesc;
-      body.unitPriceCents = centsFromReais(customPrice);
+      const unitPriceCents = centsFromReais(customPrice);
+      if (unitPriceCents === null) {
+        setError("Informe um valor válido para o item (ex: 25,00).");
+        return;
+      }
+      body.description = customDesc.trim();
+      body.unitPriceCents = unitPriceCents;
     }
     run(() => addItemAction(ticket.id, body));
     setPickId("");
@@ -187,13 +195,14 @@ export function TicketPdv({
                 value={customDesc}
                 onChange={(e) => setCustomDesc(e.target.value)}
                 placeholder="Descrição"
+                maxLength={120}
                 className="min-w-32 flex-1 rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white"
               />
-              <input
+              <MoneyInput
                 value={customPrice}
-                onChange={(e) => setCustomPrice(e.target.value)}
-                placeholder="R$"
-                inputMode="decimal"
+                onChange={setCustomPrice}
+                placeholder="R$ 0,00"
+                aria-label="Valor do item (R$)"
                 className="w-20 rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white"
               />
             </>
@@ -217,7 +226,7 @@ export function TicketPdv({
             disabled={
               isPending ||
               (pickKind !== "CUSTOM" && !pickId) ||
-              (pickKind === "CUSTOM" && (!customDesc || !customPrice))
+              (pickKind === "CUSTOM" && (customDesc.trim().length < 2 || !customPrice))
             }
             onClick={addItem}
             className="rounded-full bg-accent-500 px-4 py-2 text-sm font-semibold text-white hover:bg-accent-600 disabled:opacity-40"
@@ -239,14 +248,20 @@ export function TicketPdv({
             <span>− {brl(ticket.discountCents)}</span>
           ) : (
             <span className="flex items-center gap-2">
-              <input
+              <MoneyInput
                 value={discountInput}
-                onChange={(e) => setDiscountInput(e.target.value)}
-                onBlur={() =>
-                  run(() => setDiscountAction(ticket.id, centsFromReais(discountInput)))
-                }
+                onChange={setDiscountInput}
+                onBlur={() => {
+                  // Vazio = sem desconto; valor mal formado NÃO vira desconto zero em silêncio.
+                  const discountCents = discountInput ? centsFromReais(discountInput) : 0;
+                  if (discountCents === null) {
+                    setError("Informe um desconto válido (ex: 5,00).");
+                    return;
+                  }
+                  if (discountCents !== ticket.discountCents) run(() => setDiscountAction(ticket.id, discountCents));
+                }}
                 placeholder="0,00"
-                inputMode="decimal"
+                aria-label="Desconto (R$)"
                 className="w-24 rounded-lg border border-zinc-300 px-2 py-1 text-right text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white"
               />
             </span>
@@ -293,11 +308,11 @@ export function TicketPdv({
               </option>
             ))}
           </select>
-          <input
+          <MoneyInput
             value={payAmount}
-            onChange={(e) => setPayAmount(e.target.value)}
+            onChange={setPayAmount}
             placeholder={brl(ticket.dueCents)}
-            inputMode="decimal"
+            aria-label="Valor do pagamento (R$)"
             className="w-28 rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white"
           />
           <button
@@ -305,6 +320,10 @@ export function TicketPdv({
             disabled={isPending}
             onClick={() => {
               const cents = payAmount ? centsFromReais(payAmount) : ticket.dueCents;
+              if (cents === null || cents < 1) {
+                setError("Informe um valor de pagamento válido (ex: 50,00).");
+                return;
+              }
               run(() => addPaymentAction(ticket.id, { method: payMethod, amountCents: cents }));
               setPayAmount("");
             }}

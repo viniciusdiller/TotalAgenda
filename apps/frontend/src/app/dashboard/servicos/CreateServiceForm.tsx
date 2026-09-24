@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Input } from "@/components/ui/Input";
+import { MaskedInput } from "@/components/ui/MaskedInput";
 import { Button } from "@/components/ui/Button";
 import { createServiceAction, type CreateServiceState } from "./actions";
 
@@ -15,11 +16,11 @@ export function CreateServiceForm() {
       action={action}
       className="grid gap-4 rounded-2xl border border-zinc-200 p-5 sm:grid-cols-3 dark:border-white/10"
     >
-      <Input label="Nome do serviço" name="name" placeholder="Corte Feminino" required />
-      <Input label="Duração (minutos)" name="durationMinutes" type="number" min={5} step={5} required />
-      <Input label="Preço (R$)" name="price" type="number" min={0} step="0.01" required />
+      <Input label="Nome do serviço" name="name" placeholder="Corte Feminino" required minLength={2} maxLength={120} />
+      <Input label="Duração (minutos)" name="durationMinutes" type="number" inputMode="numeric" min={5} max={1440} step={5} required />
+      <MaskedInput mask="money" label="Preço (R$)" name="price" placeholder="0,00" required />
       <div className="sm:col-span-3">
-        <Input label="Descrição (opcional)" name="description" />
+        <Input label="Descrição (opcional)" name="description" maxLength={1000} />
       </div>
 
       {state?.error ? (

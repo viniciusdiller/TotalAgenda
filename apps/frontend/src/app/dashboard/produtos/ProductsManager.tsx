@@ -4,6 +4,7 @@ import { useActionState, useState, useTransition } from "react";
 import { Package, Plus } from "@phosphor-icons/react/dist/ssr";
 import type { AdminProduct } from "@totalagenda/shared-types";
 import { Input } from "@/components/ui/Input";
+import { MaskedInput } from "@/components/ui/MaskedInput";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
   adjustStockAction,
@@ -68,11 +69,11 @@ export function ProductsManager({ products }: { products: AdminProduct[] }) {
           action={formAction}
           className="mb-6 grid gap-3 rounded-2xl border border-zinc-200 p-4 sm:grid-cols-2 dark:border-white/10"
         >
-          <Input label="Nome" name="name" required />
-          <Input label="SKU (opcional)" name="sku" />
-          <Input label="Preço de venda (R$)" name="price" inputMode="decimal" required />
-          <Input label="Custo (R$, opcional)" name="cost" inputMode="decimal" />
-          <Input label="Estoque inicial" name="initialStock" type="number" />
+          <Input label="Nome" name="name" required minLength={2} maxLength={120} />
+          <Input label="SKU (opcional)" name="sku" maxLength={60} />
+          <MaskedInput mask="money" label="Preço de venda (R$)" name="price" required />
+          <MaskedInput mask="money" label="Custo (R$, opcional)" name="cost" />
+          <Input label="Estoque inicial" name="initialStock" type="number" min={0} max={1000000} step={1} />
           {state.error ? (
             <p className="text-sm text-red-600 sm:col-span-2 dark:text-red-400">{state.error}</p>
           ) : null}
