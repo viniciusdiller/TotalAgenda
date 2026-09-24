@@ -214,6 +214,17 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
   porque `/uploads` é carregado do frontend em outra origem). Atrás de proxy, definir
   `TRUST_PROXY_HOPS` (nº de proxies confiáveis, nunca `true`) — senão o throttle por IP limita
   todos os clientes juntos.
+- **IP do visitante no throttle (frontend → backend):** chamadas server-side do Next (login
+  NextAuth, refresh, definir-senha, cliente final, `authedFetch`, `proxy.ts`) chegam ao backend com
+  o IP do servidor Next. Por isso o frontend anexa o IP do visitante em `x-client-ip` +
+  `x-client-ip-ts` + `x-client-ip-sig` (HMAC-SHA256 com `CLIENT_IP_SECRET`, janela de 60s;
+  `lib/client-ip.ts`, `lib/backend-fetch.ts`) e o `ClientIpThrottlerGuard` só confia nele se a
+  assinatura for válida; senão usa `req.ip`. Quem chama o backend direto (navegador) segue por
+  `req.ip`. Sem `CLIENT_IP_SECRET` o cabeçalho é ignorado; o segredo é obrigatório em produção.
+  Operação (mesma VPS, nginx/Caddy na frente dos dois): o proxy **sobrescreve** `X-Forwarded-For`
+  (`proxy_set_header X-Forwarded-For $remote_addr;`), `TRUST_PROXY_HOPS=1` no backend,
+  `TRUSTED_PROXY_HOPS=1` no frontend, mesmo `CLIENT_IP_SECRET` nos dois `.env`, e as portas 3000 e
+  3001 só acessíveis pelo proxy (quem alcançasse o Next direto forjaria `X-Forwarded-For`).
 - Senhas com bcrypt (rounds 12). Nunca logar senha, token, hash ou `Authorization`.
 - JWT: validar assinatura + expiração (`passport-jwt`); `JWT_SECRET` obrigatório no
   `env.validation` (fail closed). Não confiar em claim sem revalidar o recurso no banco.
@@ -255,10 +266,11 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
 - **Sem recuperação de senha por e-mail** para o dono: hoje só reset manual. Fluxo planejado: o
   Admin gera um link de redefinição (API interna com HMAC, log de auditoria) e o suporte entrega ao
   dono por outro canal, reaproveitando `/auth/set-password`.
-- Chamadas server-side do frontend (login NextAuth, Server Actions) **não repassam o IP do
-  visitante**: o throttle por IP vê o IP do servidor Next e limita todos juntos (ex.: 10/min em
-  `/auth/login` para o site inteiro). O cadastro evita isso chamando o backend direto do navegador
-  (`publicApi.signup`); o login ainda sofre com isso.
+- Renderização server-side de páginas públicas (`publicApi.*` em Server Components, `no-store`) ainda
+  chega ao backend com o IP do servidor Next e divide o limite global de 100/min por IP. Não recebe o
+  IP assinado de propósito (fetches com `revalidate` são compartilhados entre visitantes). Só vira
+  problema com tráfego público alto; a saída é cache/`revalidate` nessas chamadas ou um
+  `skipThrottle` para o IP assinado do servidor Next.
 - Sem termos de uso/política de privacidade publicados para o cadastro de dono.
 - Backend não faz requisição HTTP de saída hoje (sem superfície de SSRF): se surgir fetch de
   URL controlada por usuário, validar host contra allowlist e bloquear IP privado/metadata.

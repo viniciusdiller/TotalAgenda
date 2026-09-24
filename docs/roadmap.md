@@ -144,6 +144,8 @@ hora, dono escolhe quais profissionais excedentes desativar), bloqueio total pó
 - [x] Fase 0 (Admin) — sessão do painel assinada, sem credencial padrão, limite de tentativas no login.
 - [x] Fase 1 — `POST /public/signup` + `/cadastro`, trial de 14 dias, e-mail de User em minúsculas,
   slugs reservados, CTAs apontando para `/cadastro`.
+- [x] Fase 1b — IP do visitante assinado (HMAC) nas chamadas server-side; throttle por IP mede o visitante.
+- [ ] Fase 1c — termos de uso e política de privacidade (rascunho para revisão jurídica) + aceite versionado.
 - [ ] Fase 2 — Stripe no backend: Checkout, Customer Portal, `POST /webhooks/stripe` (assinatura,
   dedupe por `event.id`, estado relido na API do Stripe), `POST /billing/change-plan`, exclusão de
   profissional só sem histórico, mensagens do guard por estado.
@@ -153,5 +155,4 @@ hora, dono escolhe quais profissionais excedentes desativar), bloqueio total pó
 
 Backlog: verificação de e-mail (`User.emailVerifiedAt` já existe) e recuperação de senha por e-mail
 quando houver provedor; OTP; Pix/boleto e NFS-e; downgrade só no fim do período; termos de uso e
-política de privacidade; repasse do IP do visitante nas chamadas server-side (throttle por IP hoje
-vê o IP do servidor Next); módulo de cobrança compartilhado entre produtos.
+política de privacidade; throttle das páginas públicas renderizadas no servidor (IP do servidor Next); módulo de cobrança compartilhado entre produtos.
