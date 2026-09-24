@@ -18,6 +18,27 @@ describe("validateEnv", () => {
     expect(() => validateEnv({ ...base, JWT_SECRET: "a".repeat(31) })).toThrow();
   });
 
+  describe("CLIENT_IP_SECRET (IP assinado do visitante)", () => {
+    const strong = { ...base, JWT_SECRET: "a".repeat(40) };
+
+    it("é opcional fora de produção", () => {
+      expect(() => validateEnv(strong)).not.toThrow();
+      expect(() => validateEnv({ ...strong, NODE_ENV: "development" })).not.toThrow();
+    });
+
+    it("é obrigatório em produção (sem ele o login teria um balde único)", () => {
+      expect(() => validateEnv({ ...strong, NODE_ENV: "production" })).toThrow();
+      expect(() =>
+        validateEnv({ ...strong, NODE_ENV: "production", CLIENT_IP_SECRET: "c".repeat(32) }),
+      ).not.toThrow();
+    });
+
+    it("se vier, precisa ter 32+ caracteres em qualquer ambiente", () => {
+      expect(() => validateEnv({ ...strong, CLIENT_IP_SECRET: "curto" })).toThrow();
+      expect(() => validateEnv({ ...strong, CLIENT_IP_SECRET: "c".repeat(32) })).not.toThrow();
+    });
+  });
+
   it("TRUST_PROXY_HOPS é opcional mas, se vier, precisa ser inteiro positivo", () => {
     expect(() => validateEnv({ ...base, JWT_SECRET: "a".repeat(40), TRUST_PROXY_HOPS: "1" })).not.toThrow();
     expect(() => validateEnv({ ...base, JWT_SECRET: "a".repeat(40), TRUST_PROXY_HOPS: "0" })).toThrow();

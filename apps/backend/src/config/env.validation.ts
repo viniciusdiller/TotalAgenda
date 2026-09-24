@@ -1,5 +1,14 @@
 import { plainToInstance } from "class-transformer";
-import { IsInt, IsNotEmpty, IsOptional, IsString, Min, MinLength, validateSync } from "class-validator";
+import {
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Min,
+  MinLength,
+  ValidateIf,
+  validateSync,
+} from "class-validator";
 
 class EnvironmentVariables {
   @IsString()
@@ -30,6 +39,18 @@ class EnvironmentVariables {
   @IsInt()
   @Min(1)
   TRUST_PROXY_HOPS?: number;
+
+  @IsOptional()
+  @IsString()
+  NODE_ENV?: string;
+
+  // Segredo compartilhado com o frontend que assina o IP do visitante repassado nas chamadas
+  // server-side (ver ClientIpThrottlerGuard). Opcional em desenvolvimento (sem ele o throttle
+  // usa o IP da conexão); OBRIGATÓRIO em produção, senão o login fica com um balde único.
+  @ValidateIf((o) => o.NODE_ENV === "production" || o.CLIENT_IP_SECRET !== undefined)
+  @IsString()
+  @MinLength(32)
+  CLIENT_IP_SECRET?: string;
 
   // Segredo compartilhado com o Admin-TotalSoftware para autenticar os webhooks de
   // provisionamento/sincronização de assinatura (ver src/webhooks). Obrigatório: sem ele
