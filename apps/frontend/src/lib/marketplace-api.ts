@@ -35,5 +35,5 @@ export const marketplaceApi = {
     return req<MarketplaceResult[]>(`/public/marketplace/search?${qs.toString()}`);
   },
   establishment: (slug: string) =>
-    req<MarketplaceEstablishment>(`/public/marketplace/establishments/${slug}`),
+    req<MarketplaceEstablishment>(`/public/marketplace/establishments/${encodeURIComponent(slug)}`),
 };

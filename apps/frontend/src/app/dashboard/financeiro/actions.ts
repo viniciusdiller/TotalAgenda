@@ -44,7 +44,7 @@ export async function createEntryAction(
 
 export async function settleEntryAction(id: string): Promise<FinanceActionState> {
   try {
-    await authedFetch(`/finance/entries/${id}/settle`, { method: "POST", body: JSON.stringify({}) });
+    await authedFetch(`/finance/entries/${encodeURIComponent(id)}/settle`, { method: "POST", body: JSON.stringify({}) });
   } catch (err) {
     return fail(err);
   }
@@ -54,7 +54,7 @@ export async function settleEntryAction(id: string): Promise<FinanceActionState>
 
 export async function cancelEntryAction(id: string): Promise<FinanceActionState> {
   try {
-    await authedFetch(`/finance/entries/${id}/cancel`, { method: "POST", body: JSON.stringify({}) });
+    await authedFetch(`/finance/entries/${encodeURIComponent(id)}/cancel`, { method: "POST", body: JSON.stringify({}) });
   } catch (err) {
     return fail(err);
   }

@@ -52,7 +52,7 @@ export async function previewPlanChangeAction(
 ): Promise<{ preview: PlanChangePreview } | { error: string }> {
   if (!isTier(tier)) return INVALID;
   try {
-    return { preview: await authedFetch<PlanChangePreview>(`/billing/change-plan/preview?tier=${tier}`) };
+    return { preview: await authedFetch<PlanChangePreview>(`/billing/change-plan/preview?tier=${encodeURIComponent(tier)}`) };
   } catch (error) {
     return failure(error);
   }

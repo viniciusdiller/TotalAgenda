@@ -56,10 +56,10 @@ export default async function ProfessionalDetailPage({
   }
 
   const [professional, services, links, blocks] = await Promise.all([
-    authedFetch<ProfessionalDetail>(`/professionals/${id}`),
+    authedFetch<ProfessionalDetail>(`/professionals/${encodeURIComponent(id)}`),
     authedFetch<ServiceOption[]>("/services"),
-    authedFetch<ProfessionalServiceLink[]>(`/professionals/${id}/services`),
-    authedFetch<TimeBlockItem[]>(`/time-blocks?professionalId=${id}`),
+    authedFetch<ProfessionalServiceLink[]>(`/professionals/${encodeURIComponent(id)}/services`),
+    authedFetch<TimeBlockItem[]>(`/time-blocks?professionalId=${encodeURIComponent(id)}`),
   ]);
 
   const linkedServiceIds = links.filter((link) => link.isActive).map((link) => link.serviceId);

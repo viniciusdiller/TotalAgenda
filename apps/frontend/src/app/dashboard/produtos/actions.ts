@@ -50,7 +50,7 @@ export async function updateProductAction(
   patch: { name?: string; priceCents?: number; isActive?: boolean },
 ): Promise<ProductActionState> {
   try {
-    await authedFetch(`/products/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+    await authedFetch(`/products/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(patch) });
   } catch (err) {
     return fail(err);
   }
@@ -65,7 +65,7 @@ export async function adjustStockAction(
   note?: string,
 ): Promise<ProductActionState> {
   try {
-    await authedFetch(`/products/${id}/stock`, {
+    await authedFetch(`/products/${encodeURIComponent(id)}/stock`, {
       method: "POST",
       body: JSON.stringify({ kind, quantity, note }),
     });

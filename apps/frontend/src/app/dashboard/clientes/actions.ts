@@ -60,14 +60,14 @@ export async function updateClientAction(
   formData: FormData,
 ): Promise<ClientFormState> {
   try {
-    await authedFetch(`/clients/${id}`, {
+    await authedFetch(`/clients/${encodeURIComponent(id)}`, {
       method: "PATCH",
       body: JSON.stringify(readPayload(formData)),
     });
   } catch (err) {
     return { error: err instanceof ApiError ? err.message : "Erro ao salvar cliente." };
   }
-  revalidatePath(`/dashboard/clientes/${id}`);
+  revalidatePath(`/dashboard/clientes/${encodeURIComponent(id)}`);
   return {};
 }
 

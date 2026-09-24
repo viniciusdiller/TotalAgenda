@@ -26,7 +26,7 @@ export async function createBookingAction(
   input: CreateBookingInput,
 ): Promise<BookingActionResult> {
   try {
-    const booking = await consumerAuthedFetch<PublicBooking>(`/public/tenants/${slug}/bookings`, {
+    const booking = await consumerAuthedFetch<PublicBooking>(`/public/tenants/${encodeURIComponent(slug)}/bookings`, {
       method: "POST",
       body: JSON.stringify(input),
     });
@@ -41,7 +41,7 @@ export async function joinWaitlistAction(
   input: CreateWaitlistInput,
 ): Promise<WaitlistActionResult> {
   try {
-    await consumerAuthedFetch(`/public/tenants/${slug}/waitlist`, {
+    await consumerAuthedFetch(`/public/tenants/${encodeURIComponent(slug)}/waitlist`, {
       method: "POST",
       body: JSON.stringify(input),
     });

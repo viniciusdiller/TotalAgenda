@@ -20,7 +20,7 @@ export async function saveIntakeFormAction(
   payload: IntakeFormPayload,
 ): Promise<IntakeFormActionState> {
   try {
-    await authedFetch(id ? `/intake/forms/${id}` : "/intake/forms", {
+    await authedFetch(id ? `/intake/forms/${encodeURIComponent(id)}` : "/intake/forms", {
       method: id ? "PATCH" : "POST",
       body: JSON.stringify(payload),
     });

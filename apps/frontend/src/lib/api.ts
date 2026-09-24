@@ -54,21 +54,21 @@ export const publicApi = {
   signup: (input: SignupInput) =>
     request<{ slug: string }>("/public/signup", { method: "POST", body: JSON.stringify(input) }),
 
-  getTenant: (slug: string) => request<PublicTenant>(`/public/tenants/${slug}`),
+  getTenant: (slug: string) => request<PublicTenant>(`/public/tenants/${encodeURIComponent(slug)}`),
 
-  getServices: (slug: string) => request<PublicService[]>(`/public/tenants/${slug}/services`),
+  getServices: (slug: string) => request<PublicService[]>(`/public/tenants/${encodeURIComponent(slug)}/services`),
 
   getProfessionals: (slug: string, serviceId: string) =>
     request<PublicProfessional[]>(
-      `/public/tenants/${slug}/professionals?serviceId=${encodeURIComponent(serviceId)}`,
+      `/public/tenants/${encodeURIComponent(slug)}/professionals?serviceId=${encodeURIComponent(serviceId)}`,
     ),
 
-  getTeam: (slug: string) => request<PublicProfessional[]>(`/public/tenants/${slug}/professionals/team`),
+  getTeam: (slug: string) => request<PublicProfessional[]>(`/public/tenants/${encodeURIComponent(slug)}/professionals/team`),
 
   getAvailability: (slug: string, professionalId: string, serviceId: string, date: string) =>
     request<AvailableSlot[]>(
-      `/public/tenants/${slug}/professionals/${professionalId}/availability?serviceId=${encodeURIComponent(
+      `/public/tenants/${encodeURIComponent(slug)}/professionals/${encodeURIComponent(professionalId)}/availability?serviceId=${encodeURIComponent(
         serviceId,
-      )}&date=${date}`,
+      )}&date=${encodeURIComponent(date)}`,
     ),
 };

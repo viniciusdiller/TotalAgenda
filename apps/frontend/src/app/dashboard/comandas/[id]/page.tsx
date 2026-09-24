@@ -26,7 +26,7 @@ export default async function ComandaDetailPage({
 
   let ticket: Ticket;
   try {
-    ticket = await authedFetch<Ticket>(`/tickets/${id}`);
+    ticket = await authedFetch<Ticket>(`/tickets/${encodeURIComponent(id)}`);
   } catch (err) {
     if (err instanceof ApiError && err.statusCode === 404) notFound();
     throw err;

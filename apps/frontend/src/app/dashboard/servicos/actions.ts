@@ -48,7 +48,7 @@ export async function updateServiceAction(
   input: { name: string; description?: string; durationMinutes: number; priceCents: number },
 ): Promise<{ error?: string }> {
   try {
-    await authedFetch(`/services/${id}`, { method: "PATCH", body: JSON.stringify(input) });
+    await authedFetch(`/services/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(input) });
   } catch (error) {
     return { error: error instanceof ApiError ? error.message : "Não foi possível salvar." };
   }
@@ -61,7 +61,7 @@ export async function toggleServiceActiveAction(
   isActive: boolean,
 ): Promise<{ error?: string }> {
   try {
-    await authedFetch(`/services/${id}`, {
+    await authedFetch(`/services/${encodeURIComponent(id)}`, {
       method: "PATCH",
       body: JSON.stringify({ isActive }),
     });

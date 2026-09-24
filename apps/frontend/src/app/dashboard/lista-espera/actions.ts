@@ -9,7 +9,7 @@ export async function updateWaitlistStatusAction(
   status: string,
 ): Promise<{ error?: string }> {
   try {
-    await authedFetch(`/waitlist/${id}/status`, {
+    await authedFetch(`/waitlist/${encodeURIComponent(id)}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status }),
     });

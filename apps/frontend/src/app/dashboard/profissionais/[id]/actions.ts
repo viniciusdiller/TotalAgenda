@@ -19,14 +19,14 @@ export async function updateWorkingHoursAction(
   intervals: WorkingHoursInterval[],
 ): Promise<ActionState> {
   try {
-    await authedFetch(`/professionals/${professionalId}/working-hours`, {
+    await authedFetch(`/professionals/${encodeURIComponent(professionalId)}/working-hours`, {
       method: "PUT",
       body: JSON.stringify({ intervals }),
     });
   } catch (error) {
     return { error: error instanceof ApiError ? error.message : "Não foi possível salvar." };
   }
-  revalidatePath(`/dashboard/profissionais/${professionalId}`);
+  revalidatePath(`/dashboard/profissionais/${encodeURIComponent(professionalId)}`);
   return {};
 }
 
@@ -35,14 +35,14 @@ export async function updateProfessionalProfileAction(
   input: { name: string; email: string; bio?: string },
 ): Promise<{ error?: string }> {
   try {
-    await authedFetch(`/professionals/${professionalId}`, {
+    await authedFetch(`/professionals/${encodeURIComponent(professionalId)}`, {
       method: "PATCH",
       body: JSON.stringify(input),
     });
   } catch (error) {
     return { error: error instanceof ApiError ? error.message : "Não foi possível salvar." };
   }
-  revalidatePath(`/dashboard/profissionais/${professionalId}`);
+  revalidatePath(`/dashboard/profissionais/${encodeURIComponent(professionalId)}`);
   revalidatePath("/dashboard/profissionais");
   return {};
 }
@@ -53,14 +53,14 @@ export async function toggleServiceLinkAction(
   isActive: boolean,
 ): Promise<{ error?: string }> {
   try {
-    await authedFetch(`/professionals/${professionalId}/services`, {
+    await authedFetch(`/professionals/${encodeURIComponent(professionalId)}/services`, {
       method: "POST",
       body: JSON.stringify({ serviceId, isActive }),
     });
   } catch (error) {
     return { error: error instanceof ApiError ? error.message : "Não foi possível atualizar." };
   }
-  revalidatePath(`/dashboard/profissionais/${professionalId}`);
+  revalidatePath(`/dashboard/profissionais/${encodeURIComponent(professionalId)}`);
   return {};
 }
 
@@ -102,7 +102,7 @@ export async function createTimeBlockAction(
     return { error: error instanceof ApiError ? error.message : "Não foi possível bloquear." };
   }
 
-  revalidatePath(`/dashboard/profissionais/${professionalId}`);
+  revalidatePath(`/dashboard/profissionais/${encodeURIComponent(professionalId)}`);
   return {};
 }
 
@@ -111,10 +111,10 @@ export async function deleteTimeBlockAction(
   blockId: string,
 ): Promise<{ error?: string }> {
   try {
-    await authedFetch(`/time-blocks/${blockId}`, { method: "DELETE" });
+    await authedFetch(`/time-blocks/${encodeURIComponent(blockId)}`, { method: "DELETE" });
   } catch (error) {
     return { error: error instanceof ApiError ? error.message : "Não foi possível remover." };
   }
-  revalidatePath(`/dashboard/profissionais/${professionalId}`);
+  revalidatePath(`/dashboard/profissionais/${encodeURIComponent(professionalId)}`);
   return {};
 }

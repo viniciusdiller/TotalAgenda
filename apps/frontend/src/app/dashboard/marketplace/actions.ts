@@ -55,7 +55,7 @@ export async function saveMarketplaceAction(
 
 export async function hideReviewAction(id: string): Promise<MarketplaceActionState> {
   try {
-    await authedFetch(`/reviews/${id}/hide`, { method: "PATCH" });
+    await authedFetch(`/reviews/${encodeURIComponent(id)}/hide`, { method: "PATCH" });
   } catch (err) {
     return fail(err);
   }
@@ -65,7 +65,7 @@ export async function hideReviewAction(id: string): Promise<MarketplaceActionSta
 
 export async function reportReviewAction(id: string, reason: string): Promise<MarketplaceActionState> {
   try {
-    await authedFetch(`/reviews/${id}/report`, {
+    await authedFetch(`/reviews/${encodeURIComponent(id)}/report`, {
       method: "PATCH",
       body: JSON.stringify({ reason }),
     });

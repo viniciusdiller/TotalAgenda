@@ -122,7 +122,7 @@ export async function uploadGalleryImageAction(
 
 export async function removeGalleryImageAction(imageId: string): Promise<{ error?: string }> {
   try {
-    await authedFetch(`/tenants/me/gallery/${imageId}`, { method: "DELETE" });
+    await authedFetch(`/tenants/me/gallery/${encodeURIComponent(imageId)}`, { method: "DELETE" });
   } catch (error) {
     return { error: error instanceof ApiError ? error.message : "Não foi possível remover a imagem." };
   }

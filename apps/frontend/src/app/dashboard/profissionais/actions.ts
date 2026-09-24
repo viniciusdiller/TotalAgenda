@@ -34,7 +34,7 @@ export async function toggleProfessionalActiveAction(
   isActive: boolean,
 ): Promise<{ error?: string }> {
   try {
-    await authedFetch(`/professionals/${id}`, {
+    await authedFetch(`/professionals/${encodeURIComponent(id)}`, {
       method: "PATCH",
       body: JSON.stringify({ isActive }),
     });

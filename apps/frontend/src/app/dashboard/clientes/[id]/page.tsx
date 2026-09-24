@@ -27,7 +27,7 @@ export default async function ClientDetailPage({
 
   let client: AdminClientDetail;
   try {
-    client = await authedFetch<AdminClientDetail>(`/clients/${id}`);
+    client = await authedFetch<AdminClientDetail>(`/clients/${encodeURIComponent(id)}`);
   } catch (err) {
     if (err instanceof ApiError && err.statusCode === 404) notFound();
     throw err;

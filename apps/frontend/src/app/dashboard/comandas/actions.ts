@@ -40,13 +40,13 @@ export async function openTicketAction(input: {
 }
 
 export async function addItemAction(id: string, body: unknown): Promise<TicketActionResult> {
-  return mutate(`/tickets/${id}/items`, body);
+  return mutate(`/tickets/${encodeURIComponent(id)}/items`, body);
 }
 
 export async function removeItemAction(id: string, itemId: string): Promise<TicketActionResult> {
   try {
-    const ticket = await authedFetch<Ticket>(`/tickets/${id}/items/${itemId}`, { method: "DELETE" });
-    revalidatePath(`/dashboard/comandas/${id}`);
+    const ticket = await authedFetch<Ticket>(`/tickets/${encodeURIComponent(id)}/items/${encodeURIComponent(itemId)}`, { method: "DELETE" });
+    revalidatePath(`/dashboard/comandas/${encodeURIComponent(id)}`);
     return { ok: true, ticket };
   } catch (err) {
     return fail(err);
@@ -55,11 +55,11 @@ export async function removeItemAction(id: string, itemId: string): Promise<Tick
 
 export async function setDiscountAction(id: string, discountCents: number) {
   try {
-    const ticket = await authedFetch<Ticket>(`/tickets/${id}/discount`, {
+    const ticket = await authedFetch<Ticket>(`/tickets/${encodeURIComponent(id)}/discount`, {
       method: "PATCH",
       body: JSON.stringify({ discountCents }),
     });
-    revalidatePath(`/dashboard/comandas/${id}`);
+    revalidatePath(`/dashboard/comandas/${encodeURIComponent(id)}`);
     return { ok: true, ticket };
   } catch (err) {
     return fail(err);
@@ -67,11 +67,11 @@ export async function setDiscountAction(id: string, discountCents: number) {
 }
 
 export async function addPaymentAction(id: string, body: unknown): Promise<TicketActionResult> {
-  return mutate(`/tickets/${id}/payments`, body);
+  return mutate(`/tickets/${encodeURIComponent(id)}/payments`, body);
 }
 
 export async function closeTicketAction(id: string): Promise<TicketActionResult> {
-  const result = await mutate(`/tickets/${id}/close`, {});
+  const result = await mutate(`/tickets/${encodeURIComponent(id)}/close`, {});
   if (result.ok) {
     revalidatePath("/dashboard/comandas");
     redirect("/dashboard/comandas");
@@ -80,7 +80,7 @@ export async function closeTicketAction(id: string): Promise<TicketActionResult>
 }
 
 export async function cancelTicketAction(id: string): Promise<TicketActionResult> {
-  const result = await mutate(`/tickets/${id}/cancel`, {});
+  const result = await mutate(`/tickets/${encodeURIComponent(id)}/cancel`, {});
   if (result.ok) redirect("/dashboard/comandas");
   return result;
 }

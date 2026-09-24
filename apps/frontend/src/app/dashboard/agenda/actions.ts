@@ -41,7 +41,7 @@ export async function setAppointmentStatusAction(
   status: "CONFIRMED" | "IN_SERVICE" | "COMPLETED" | "NO_SHOW",
 ): Promise<ActionResult> {
   try {
-    await authedFetch(`/appointments/${id}/status`, {
+    await authedFetch(`/appointments/${encodeURIComponent(id)}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status }),
     });
@@ -54,7 +54,7 @@ export async function setAppointmentStatusAction(
 
 export async function cancelAppointmentAction(id: string): Promise<ActionResult> {
   try {
-    await authedFetch(`/appointments/${id}/cancel`, { method: "PATCH" });
+    await authedFetch(`/appointments/${encodeURIComponent(id)}/cancel`, { method: "PATCH" });
     revalidatePath("/dashboard/agenda");
     return { ok: true };
   } catch (err) {
@@ -68,7 +68,7 @@ export async function rescheduleAppointmentAction(
   professionalId?: string,
 ): Promise<ActionResult> {
   try {
-    await authedFetch(`/appointments/${id}/reschedule`, {
+    await authedFetch(`/appointments/${encodeURIComponent(id)}/reschedule`, {
       method: "PATCH",
       body: JSON.stringify({ startAt, professionalId }),
     });

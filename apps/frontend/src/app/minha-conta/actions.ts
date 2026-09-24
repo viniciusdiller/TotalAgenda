@@ -68,7 +68,7 @@ export async function changePasswordAction(_prev: FormState | undefined, formDat
 
 export async function revokeSessionAction(sessionId: string) {
   try {
-    await consumerAuthedFetch(`/public/consumer/sessions/${sessionId}`, { method: "DELETE" });
+    await consumerAuthedFetch(`/public/consumer/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" });
   } catch {
     // Falha silenciosa: o pior caso é o dispositivo continuar na lista até a próxima tentativa —
     // não é uma ação crítica o bastante pra propagar erro pra UI aqui.
@@ -87,7 +87,7 @@ export async function revokeOtherSessionsAction() {
 
 export async function cancelMyBookingAction(bookingId: string) {
   try {
-    await consumerAuthedFetch(`/public/consumer/bookings/${bookingId}/cancel`, { method: "PATCH" });
+    await consumerAuthedFetch(`/public/consumer/bookings/${encodeURIComponent(bookingId)}/cancel`, { method: "PATCH" });
   } catch (error) {
     return { error: messageFor(error, "Não foi possível cancelar.") };
   }
@@ -97,7 +97,7 @@ export async function cancelMyBookingAction(bookingId: string) {
 
 export async function rescheduleMyBookingAction(bookingId: string, startAt: string) {
   try {
-    await consumerAuthedFetch(`/public/consumer/bookings/${bookingId}/reschedule`, {
+    await consumerAuthedFetch(`/public/consumer/bookings/${encodeURIComponent(bookingId)}/reschedule`, {
       method: "PATCH",
       body: JSON.stringify({ startAt }),
     });
