@@ -70,6 +70,16 @@ const FIELD_LABELS: Record<string, string> = {
   method: "Forma de pagamento",
   tier: "Plano",
   token: "Token",
+  professionalId: "Profissional",
+  serviceId: "Serviço",
+  clientId: "Cliente",
+  appointmentId: "Atendimento",
+  productId: "Produto",
+  categoryId: "Categoria",
+  parentId: "Categoria pai",
+  targetId: "Alvo da regra",
+  formId: "Ficha",
+  items: "Itens",
 };
 
 const label = (property: string) => FIELD_LABELS[property] ?? "Campo";
@@ -105,7 +115,6 @@ const TRANSLATIONS: Record<string, (field: string, message: string) => string> =
   arrayMinSize: (f, m) => `${f}: informe ao menos ${numberIn(m)} item(ns).`,
   arrayMaxSize: (f, m) => `${f}: no máximo ${numberIn(m)} itens.`,
   arrayUnique: (f) => `${f} não pode ter itens repetidos.`,
-  whitelistValidation: (f) => `${f} não é permitido.`,
 };
 
 // Texto padrão do class-validator sempre está em inglês; mensagem própria do DTO (português) não.
@@ -116,6 +125,11 @@ function collect(errors: ValidationError[], out: string[]) {
   for (const error of errors) {
     const field = label(error.property);
     for (const [constraint, message] of Object.entries(error.constraints ?? {})) {
+      // Campo que o DTO não declara: nomeia o campo enviado (é o que o próprio cliente mandou).
+      if (constraint === "whitelistValidation") {
+        out.push(`O campo "${error.property}" não é permitido.`);
+        continue;
+      }
       const translate = TRANSLATIONS[constraint];
       if (translate && looksLikeDefaultEnglish(message)) out.push(translate(field, message));
       else if (looksLikeDefaultEnglish(message)) out.push(`${field} inválido.`);

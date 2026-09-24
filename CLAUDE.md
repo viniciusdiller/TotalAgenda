@@ -211,6 +211,30 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
   corrigido com `FindWaitlistQueryDto` (`@Query() query: FindWaitlistQueryDto`), mesmo
   padrão de `GetAvailabilityQueryDto`/`SearchMarketplaceQueryDto`.
 
+### Validação na borda e máscaras (frontend nunca é a validação)
+- **Máscara é conforto, o backend revalida tudo.** `lib/masks.ts` (telefone, CPF, dinheiro) e
+  `<MaskedInput>`/`<MoneyInput>` só formatam o que o usuário vê. Telefone/CPF viajam formatados ou como
+  dígitos e o backend normaliza; **dinheiro** viaja como texto BRL ("1.234,56") e a Server Action converte
+  com `moneyToCents` (estrito: valor mal formado dá `null` → erro ao usuário, **nunca** `0` em silêncio — o
+  `Number("1.234,56".replace(",", "."))` antigo abria o caixa com fundo R$ 0,00). Novo campo monetário =
+  `MaskedInput mask="money"` + `moneyToCents`; nunca `type="number"` + `Math.round(x * 100)`.
+- **Backend** (`common/validators/br-validators.ts`, `common/decorators/trim.decorator.ts`,
+  `common/utils/{phone,cpf}.util.ts`): `@IsBrazilianPhone()` (DDD 11–99, celular começa com 9),
+  `@IsCpf()` (dígitos verificadores), `@IsBirthDate()` (1900 até hoje), `@Trim()` ANTES da validação (nome só
+  com espaços passava em `@MinLength`). Todo id vindo do cliente é `@IsUUID()` (nunca `@IsString()` solto);
+  listas têm teto de tamanho e de cada item (`tags`, `options`, `categorySlugs`); senha no máximo 72 (bcrypt
+  ignora o resto). O service repete a regra que protege dinheiro/identidade (o DTO não é a última linha).
+- Mensagens de erro saem em português: `validationExceptionFactory` (ValidationPipe) e
+  `PtBrHttpExceptionFilter` traduzem só o texto padrão em inglês; mensagem de domínio passa intacta. Bytes NUL
+  no corpo/query viram 400 (`RejectNullBytesInterceptor`), não erro de driver do Postgres.
+- **Caminho de chamada ao backend não é controlável pelo cliente:** `assertSafeApiPath` (`lib/api-path.ts`) roda
+  em `authedFetch`, `api.ts`, `marketplace-api.ts` e `consumer-session.ts`; `id`/`slug` interpolados vêm da URL
+  ou de argumento de Server Action e `..`/`%2f` mudariam o endpoint alvo com o token do usuário. `?next=` do
+  login passa por `isSafeRedirectPath` (`lib/safe-path.ts`): o navegador remove tab/CR/LF, então `/\t/evil.com`
+  virava `//evil.com`.
+- Perfil público: WhatsApp só `55` + DDD + número; Instagram só `https://instagram.com/<usuário>` (o form aceita
+  "@salao"/link e normaliza). Campo de texto em branco **limpa** o valor (grava `null`); `undefined` não altera.
+
 ### Concorrência (dinheiro) e uploads
 - Mutação de comanda (`TicketsService`) roda em `lockedOpenTicket`: advisory lock por comanda +
   status relido DENTRO da transação. "Checar aberta fora, escrever depois" deixava dois `close`
