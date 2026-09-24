@@ -11,6 +11,7 @@ import {
 } from "./dto/finance-dtos";
 import { Roles } from "../common/decorators/roles.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { CashFlowQueryDto, ListEntriesQueryDto, RequiredDateRangeQueryDto } from "../common/dto/query-dtos";
 import { AuthenticatedUser } from "../auth/types/auth-user";
 
 // PROFESSIONAL não acessa o financeiro; RECEPTIONIST lança e dá baixa; OWNER tudo.
@@ -46,15 +47,8 @@ export class FinanceController {
   }
 
   @Get("entries")
-  listEntries(
-    @CurrentUser() user: AuthenticatedUser,
-    @Query("from") from?: string,
-    @Query("to") to?: string,
-    @Query("direction") direction?: string,
-    @Query("status") status?: string,
-    @Query("basis") basis?: string,
-  ) {
-    return this.finance.listEntries(user.tenantId, { from, to, direction, status, basis });
+  listEntries(@CurrentUser() user: AuthenticatedUser, @Query() query: ListEntriesQueryDto) {
+    return this.finance.listEntries(user.tenantId, query);
   }
 
   @Post("entries")
@@ -92,23 +86,14 @@ export class FinanceController {
   }
 
   @Get("cash-flow")
-  cashFlow(
-    @CurrentUser() user: AuthenticatedUser,
-    @Query("from") from: string,
-    @Query("to") to: string,
-    @Query("basis") basis?: string,
-  ) {
-    return this.finance.cashFlow(user.tenantId, from, to, basis === "due" ? "due" : "paid");
+  cashFlow(@CurrentUser() user: AuthenticatedUser, @Query() query: CashFlowQueryDto) {
+    return this.finance.cashFlow(user.tenantId, query.from, query.to, query.basis === "due" ? "due" : "paid");
   }
 
   @Roles(Role.OWNER)
   @Get("dre")
-  dre(
-    @CurrentUser() user: AuthenticatedUser,
-    @Query("from") from: string,
-    @Query("to") to: string,
-  ) {
-    return this.finance.dre(user.tenantId, from, to);
+  dre(@CurrentUser() user: AuthenticatedUser, @Query() query: RequiredDateRangeQueryDto) {
+    return this.finance.dre(user.tenantId, query.from, query.to);
   }
 
   @Get("payables")

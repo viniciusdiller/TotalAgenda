@@ -2,7 +2,9 @@ import "reflect-metadata";
 import { plainToInstance } from "class-transformer";
 import { validateSync } from "class-validator";
 import {
+  CashFlowQueryDto,
   ClientSearchQueryDto,
+  ListEntriesQueryDto,
   RangeByProfessionalQueryDto,
   TimeBlocksQueryDto,
 } from "./query-dtos";
@@ -35,5 +37,24 @@ describe("DTOs de @Query", () => {
     expect(
       isValid(RangeByProfessionalQueryDto, { from: "2026-08-01", to: "2026-08-31", tenantId: "outro" }),
     ).toBe(false);
+  });
+});
+
+// Regressão: /finance/entries lia @Query("direction"|"status"|"basis") soltos — o ValidationPipe nunca os
+// via, e valor inválido era ignorado em silêncio. Agora são DTOs: lista fechada, objeto/array viram 400.
+describe("DTOs de query do financeiro", () => {
+  it("ListEntriesQueryDto: só valores da lista", () => {
+    expect(isValid(ListEntriesQueryDto, {})).toBe(true);
+    expect(isValid(ListEntriesQueryDto, { direction: "INCOME", status: "PAID", basis: "paid", from: "2030-01-01", to: "2030-01-31" })).toBe(true);
+    expect(isValid(ListEntriesQueryDto, { direction: "OUTRO" })).toBe(false);
+    expect(isValid(ListEntriesQueryDto, { status: ["PAID", "PENDING"] })).toBe(false);
+    expect(isValid(ListEntriesQueryDto, { basis: { a: 1 } })).toBe(false);
+    expect(isValid(ListEntriesQueryDto, { from: "ontem" })).toBe(false);
+  });
+
+  it("CashFlowQueryDto: intervalo obrigatório e basis restrito", () => {
+    expect(isValid(CashFlowQueryDto, { from: "2030-01-01", to: "2030-01-31", basis: "due" })).toBe(true);
+    expect(isValid(CashFlowQueryDto, { from: "2030-01-01" })).toBe(false);
+    expect(isValid(CashFlowQueryDto, { from: "2030-01-01", to: "2030-01-31", basis: "x" })).toBe(false);
   });
 });

@@ -19,7 +19,11 @@ export const INTAKE_FIELD_TYPES = ["text", "textarea", "boolean", "select"] as c
 export class IntakeFieldDto {
   @IsString()
   @MaxLength(120)
-  @Matches(/^[a-zA-Z][a-zA-Z0-9_]*$/, { message: "Chave inválida: use letras, números e _." })
+  // A chave indexa o objeto de respostas: nada de `__proto__`/`constructor` (o formulário gera a
+  // chave com [a-z0-9_], então isto não restringe o uso normal).
+  @Matches(/^(?!__proto__$|constructor$|prototype$)[A-Za-z0-9_]{1,64}$/, {
+    message: "Chave inválida: use letras, números e _.",
+  })
   key!: string;
 
   @IsString()

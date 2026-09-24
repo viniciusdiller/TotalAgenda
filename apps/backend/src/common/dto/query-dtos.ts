@@ -1,4 +1,4 @@
-import { IsISO8601, IsOptional, IsString, MaxLength, IsUUID } from "class-validator";
+import { IsIn, IsISO8601, IsOptional, IsString, MaxLength, IsUUID } from "class-validator";
 
 // @Query("campo") solto não passa pelo ValidationPipe: `?professionalId[a]=b` ou
 // `?search=a&search=b` chegam como objeto/array, vão cru pro Prisma/`.trim()` e viram 500 em
@@ -40,4 +40,26 @@ export class RangeByProfessionalQueryDto extends RequiredDateRangeQueryDto {
 export class TimeBlocksQueryDto {
   @IsUUID()
   professionalId!: string;
+}
+
+// Financeiro: mesmos parâmetros que antes eram @Query("...") soltos. Valor fora da lista agora é 400
+// (antes direction/status/basis inválidos eram ignorados em silêncio e devolviam tudo).
+export class ListEntriesQueryDto extends DateRangeQueryDto {
+  @IsOptional()
+  @IsIn(["INCOME", "EXPENSE"])
+  direction?: "INCOME" | "EXPENSE";
+
+  @IsOptional()
+  @IsIn(["PENDING", "PAID", "CANCELED"])
+  status?: "PENDING" | "PAID" | "CANCELED";
+
+  @IsOptional()
+  @IsIn(["due", "paid"])
+  basis?: "due" | "paid";
+}
+
+export class CashFlowQueryDto extends RequiredDateRangeQueryDto {
+  @IsOptional()
+  @IsIn(["due", "paid"])
+  basis?: "due" | "paid";
 }

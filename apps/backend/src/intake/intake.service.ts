@@ -118,7 +118,8 @@ export class IntakeService {
   private sanitizeAnswers(fields: IntakeFieldDto[], raw: Record<string, unknown>) {
     const result: Record<string, string | boolean> = {};
     for (const field of fields) {
-      const value = raw[field.key];
+      // hasOwn: uma chave como "constructor" não pode ler o protótipo do objeto de respostas.
+      const value = Object.hasOwn(raw, field.key) ? raw[field.key] : undefined;
       if (value === undefined || value === null || value === "") {
         if (field.required) {
           throw new BadRequestException(`O campo "${field.label}" é obrigatório.`);
