@@ -28,6 +28,11 @@ pnpm --filter @totalagenda/database db:seed
 pnpm dev                                # backend :3001, frontend :3000
 ```
 
+Os três planos (Essencial/Profissional/Premium) entram por **migration** (`seed_plans`, idempotente), não só pelo
+seed de demonstração: sem eles o dono em trial não consegue adicionar profissional (o Essencial é o teto do
+trial) e `/dashboard/plano` fica vazio. O Price real do Stripe vem de `STRIPE_PRICE_*`, não da coluna
+`stripePriceId` (placeholder só para a constraint UNIQUE).
+
 `.env` obrigatório em `apps/backend/` e `packages/database/` (ver `DATABASE_URL`,
 `JWT_SECRET` e, em produção, as do Stripe e `CLIENT_IP_SECRET`, em `apps/backend/src/config/env.validation.ts`).
 **Nunca commitar `.env*`** — regra absoluta do repo.
