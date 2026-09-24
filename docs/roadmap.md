@@ -152,7 +152,9 @@ hora, dono escolhe quais profissionais excedentes desativar), bloqueio total pó
   dedupe por `event.id`, estado relido na API do Stripe), `POST /billing/change-plan`, exclusão de
   profissional só sem histórico, mensagens do guard por estado.
 - [x] Fase 3 — UI `/dashboard/plano`, modal de troca de plano com aviso explícito, banner com link.
-- [ ] Fase 4 — aposentar `webhooks/totalsoftware` e `Tenant.externalCustomerId` (manter `/auth/set-password`).
+- [x] Fase 4 (TotalAgenda) — `webhooks/totalsoftware`, `WebhookSecretGuard`, `TOTALAGENDA_*` e `Tenant.externalCustomerId`
+  removidos (`/auth/set-password` mantido para a Fase 5). Pendente nos outros repos: tirar o TotalAgenda do
+  Admin (checkout, provisionamento, página `/totalagenda`) e apontar o "Assinar" do site para `/cadastro`.
 - [ ] Fase 5 — API interna com HMAC + página de suporte no Admin (buscar tenant, gerar link de redefinição).
 
 Backlog: verificação de e-mail (`User.emailVerifiedAt` já existe) e recuperação de senha por e-mail

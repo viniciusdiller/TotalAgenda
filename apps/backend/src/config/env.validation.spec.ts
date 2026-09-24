@@ -3,7 +3,6 @@ import { validateEnv } from "./env.validation";
 
 const base = {
   DATABASE_URL: "postgresql://x",
-  TOTALAGENDA_WEBHOOK_SECRET: "webhook-secret",
 };
 
 describe("validateEnv", () => {
@@ -58,7 +57,7 @@ describe("validateEnv", () => {
 });
 
 describe("validateEnv: Stripe e FRONTEND_URL", () => {
-  const dev = { DATABASE_URL: "postgresql://x", TOTALAGENDA_WEBHOOK_SECRET: "w", JWT_SECRET: "a".repeat(40) };
+  const dev = { DATABASE_URL: "postgresql://x", JWT_SECRET: "a".repeat(40) };
   const stripe = {
     STRIPE_SECRET_KEY: "sk_test_abc123",
     STRIPE_WEBHOOK_SECRET: "whsec_abc123",

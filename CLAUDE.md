@@ -29,7 +29,7 @@ pnpm dev                                # backend :3001, frontend :3000
 ```
 
 `.env` obrigatório em `apps/backend/` e `packages/database/` (ver `DATABASE_URL`,
-`JWT_SECRET`, `TOTALAGENDA_WEBHOOK_SECRET` em `apps/backend/src/config/env.validation.ts`).
+`JWT_SECRET` e, em produção, as do Stripe e `CLIENT_IP_SECRET`, em `apps/backend/src/config/env.validation.ts`).
 **Nunca commitar `.env*`** — regra absoluta do repo.
 
 ## Arquitetura
@@ -107,9 +107,10 @@ sozinho (Stripe direto), e o Admin-TotalSoftware vira só back-office.
   Stripe (o webhook do Admin, por sua vez, ignora tudo sem `clienteId`: **nunca** ponha `clienteId` na
   metadata do TotalAgenda). `StripeEvent` é gravado só depois de processar, para o Stripe reentregar uma
   falha. Em dev sem `STRIPE_*` as rotas respondem 503; em produção o boot exige todas as variáveis.
-- **Legado até a Fase 4:** `src/webhooks` (`/webhooks/totalsoftware`, segredo compartilhado) ainda
-  recebe o provisionamento do Admin; ele deixa de ser usado quando o cadastro/cobrança do Stripe
-  direto entrar em produção.
+- **O Admin-TotalSoftware não provisiona mais tenants do TotalAgenda:** o webhook `/webhooks/totalsoftware`,
+  o `WebhookSecretGuard`, as variáveis `TOTALAGENDA_*` e `Tenant.externalCustomerId` foram removidos. O
+  Admin não fala mais com este backend (a Fase 5 adiciona uma API interna de suporte, com HMAC). A
+  cobrança do TotalPousada continua no Admin e na mesma conta do Stripe.
 - **E-mail de `User`** é sempre minúsculo (`NormalizeEmail` no login, no cadastro e no CRUD de
   profissional): o e-mail é chave de login e único no Postgres (case-sensitive), então sem isso
   "Foo@x.com" e "foo@x.com" seriam contas distintas e a checagem de duplicidade se contornaria.
@@ -251,8 +252,8 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
 - Senhas com bcrypt (rounds 12). Nunca logar senha, token, hash ou `Authorization`.
 - JWT: validar assinatura + expiração (`passport-jwt`); `JWT_SECRET` obrigatório no
   `env.validation` (fail closed). Não confiar em claim sem revalidar o recurso no banco.
-- Webhooks do Admin-TotalSoftware: `WebhookSecretGuard` com segredo compartilhado,
-  comparação em tempo constante; sem segredo configurado → rejeita tudo.
+- Único webhook de entrada: `POST /webhooks/stripe`, autenticado pela assinatura do Stripe sobre o corpo
+  cru (sem segredo configurado → 503, nunca aceita sem verificar).
 - Token de "definir senha": só o **hash** é persistido, com expiração; consumido uma vez.
 
 ### Exposição de dados sensíveis

@@ -73,7 +73,6 @@ describe("SignupService", () => {
     expect(trialMs).toBeLessThanOrEqual(TRIAL_DAYS * DAY_MS + 5000);
     // Nenhum vínculo de billing é criado no cadastro: o status vem do trial.
     expect(tenantData).not.toHaveProperty("subscription");
-    expect(tenantData).not.toHaveProperty("externalCustomerId");
   });
 
   it("papel OWNER e tenantId são definidos pelo servidor, e a senha é guardada em bcrypt", async () => {
