@@ -109,8 +109,20 @@ sozinho (Stripe direto), e o Admin-TotalSoftware vira só back-office.
   falha. Em dev sem `STRIPE_*` as rotas respondem 503; em produção o boot exige todas as variáveis.
 - **O Admin-TotalSoftware não provisiona mais tenants do TotalAgenda:** o webhook `/webhooks/totalsoftware`,
   o `WebhookSecretGuard`, as variáveis `TOTALAGENDA_*` e `Tenant.externalCustomerId` foram removidos. O
-  Admin não fala mais com este backend (a Fase 5 adiciona uma API interna de suporte, com HMAC). A
+  Admin só fala com este backend pela API interna de suporte (`src/internal`, HMAC — ver abaixo). A
   cobrança do TotalPousada continua no Admin e na mesma conta do Stripe.
+- **API interna de suporte** (`GET /internal/tenants`, `POST /internal/tenants/:id/password-reset-link`):
+  só o Admin chama. `InternalAuthGuard` exige `x-internal-timestamp` + `x-internal-signature` (HMAC-SHA256
+  de `internal.v1
+{ts}
+{METHOD}
+{originalUrl}
+{sha256(body)}` com `INTERNAL_API_SECRET`, 32+ chars),
+  janela de 5 min, replay recusado (cache em memória, um processo), falha fechada sem segredo e resposta
+  uniforme 403 para qualquer falha. O link de redefinição mira o OWNER ativo, vale 24 h, persiste só o
+  hash e grava `AdminAuditLog` (ator = e-mail do admin, sem o token) na mesma transação. Trocar a senha
+  derruba as sessões antigas (`passwordChangedAt` vs `iat`, inclusive refresh) e zera o lockout. Em
+  produção o nginx deve restringir `/internal/` ao IP do Admin (defesa em profundidade, além do HMAC).
 - **E-mail de `User`** é sempre minúsculo (`NormalizeEmail` no login, no cadastro e no CRUD de
   profissional): o e-mail é chave de login e único no Postgres (case-sensitive), então sem isso
   "Foo@x.com" e "foo@x.com" seriam contas distintas e a checagem de duplicidade se contornaria.
@@ -287,9 +299,10 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
   (`User.email` é único global). Decisão consciente de UX vs. segurança; mitigação = throttle de
   5/hora por IP (em memória, um processo). `User.emailVerifiedAt` existe e não é exigido: a
   verificação entra na área do cliente quando houver e-mail (v2).
-- **Sem recuperação de senha por e-mail** para o dono: hoje só reset manual. Fluxo planejado: o
-  Admin gera um link de redefinição (API interna com HMAC, log de auditoria) e o suporte entrega ao
-  dono por outro canal, reaproveitando `/auth/set-password`.
+- **Sem recuperação de senha por e-mail** para o dono: o reset é manual. O suporte gera o link em
+  `/suporte-totalagenda` no Admin (API interna com HMAC, auditado) e entrega ao dono por outro canal,
+  depois de confirmar a identidade — quem controla o canal de entrega controla a conta, então isso é
+  processo humano, não só código. Some quando houver e-mail transacional (v2).
 - Renderização server-side de páginas públicas (`publicApi.*` em Server Components, `no-store`) ainda
   chega ao backend com o IP do servidor Next e divide o limite global de 100/min por IP. Não recebe o
   IP assinado de propósito (fetches com `revalidate` são compartilhados entre visitantes). Só vira

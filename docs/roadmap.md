@@ -155,7 +155,7 @@ hora, dono escolhe quais profissionais excedentes desativar), bloqueio total pó
 - [x] Fase 4 (TotalAgenda) — `webhooks/totalsoftware`, `WebhookSecretGuard`, `TOTALAGENDA_*` e `Tenant.externalCustomerId`
   removidos (`/auth/set-password` mantido para a Fase 5). Pendente nos outros repos: tirar o TotalAgenda do
   Admin (checkout, provisionamento, página `/totalagenda`) e apontar o "Assinar" do site para `/cadastro`.
-- [ ] Fase 5 — API interna com HMAC + página de suporte no Admin (buscar tenant, gerar link de redefinição).
+- [x] Fase 5 — API interna com HMAC (`src/internal`) + página `/suporte-totalagenda` no Admin (buscar tenant, gerar link de redefinição), com auditoria e sessões antigas revogadas.
 
 Backlog: verificação de e-mail (`User.emailVerifiedAt` já existe) e recuperação de senha por e-mail
 quando houver provedor; OTP; Pix/boleto e NFS-e; downgrade só no fim do período; termos de uso e

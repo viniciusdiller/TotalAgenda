@@ -46,6 +46,7 @@ não domínio.
 | `tickets` | Comanda/PDV: itens, desconto, pagamento, fechamento — ver CLAUDE.md raiz > Segurança > Confiança no cliente pra a regra que rege `AddTicketItemDto`. |
 | `time-blocks` | Bloqueio manual de horário (folga/férias) na agenda de um profissional. |
 | `waitlist` | Lista de espera pública quando não há horário livre no dia. |
+| `internal` | API de suporte do Admin (`/internal/*`), só com HMAC (`InternalAuthGuard`): lista tenants e gera link de redefinição de senha do dono, com `AdminAuditLog`. |
 | `webhooks` | `POST /webhooks/stripe` (assinatura sobre o corpo cru, estado relido na API, dedupe). |
 
 ## Guards globais e ordem de execução
