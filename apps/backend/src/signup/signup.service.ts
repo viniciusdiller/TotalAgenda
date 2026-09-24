@@ -1,6 +1,7 @@
-import { ConflictException, Injectable } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
 import { Prisma, Role } from "@totalagenda/database";
+import { LEGAL_DOCS_VERSION } from "@totalagenda/shared-types";
 import { PrismaService } from "../prisma/prisma.service";
 import { generateUniqueSlug } from "../common/utils/slug.util";
 import { isReservedSlug } from "../common/constants/reserved-slugs";
@@ -18,6 +19,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export const EMAIL_TAKEN_MESSAGE =
   "Este e-mail já está cadastrado. Entre na sua conta ou use outro e-mail.";
 
+export const TERMS_OUTDATED_MESSAGE =
+  "Os Termos de Uso e a Política de Privacidade foram atualizados. Recarregue a página e aceite novamente.";
+
 function isUniqueViolation(error: unknown, field: string): boolean {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
     return false;
@@ -34,6 +38,11 @@ export class SignupService {
   // Cria Tenant + OWNER em trial, tudo numa transação. Nasce SEM Subscription: o status de
   // billing vem de computeBillingStatus (TRIALING até trialEndsAt, depois TRIAL_EXPIRED).
   async signup(dto: SignupDto): Promise<{ slug: string }> {
+    // Antes de qualquer custo (bcrypt, banco): sem o aceite da versão vigente não há conta.
+    if (dto.acceptedTermsVersion !== LEGAL_DOCS_VERSION) {
+      throw new BadRequestException(TERMS_OUTDATED_MESSAGE);
+    }
+
     // O hash roda ANTES de qualquer consulta, então o custo de CPU é o mesmo com e-mail novo ou
     // repetido (não há atalho barato que diferencie os caminhos pelo tempo).
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
@@ -63,6 +72,9 @@ export class SignupService {
               passwordHash,
               name: dto.ownerName,
               role: Role.OWNER,
+              // Data e versão vêm do servidor (a versão é a vigente, já conferida acima).
+              termsAcceptedAt: new Date(),
+              termsVersion: LEGAL_DOCS_VERSION,
             },
           });
 

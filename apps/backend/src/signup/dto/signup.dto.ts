@@ -1,5 +1,5 @@
 import { Transform } from "class-transformer";
-import { IsEmail, IsString, MaxLength, MinLength } from "class-validator";
+import { IsEmail, IsNotEmpty, IsString, MaxLength, MinLength } from "class-validator";
 import { NormalizeEmail } from "../../common/decorators/normalize-email.decorator";
 
 const trim = () => Transform(({ value }) => (typeof value === "string" ? value.trim() : value));
@@ -31,4 +31,12 @@ export class SignupDto {
   @MinLength(8)
   @MaxLength(72)
   password!: string;
+
+  // Versão dos Termos/Privacidade que o usuário viu ao marcar o aceite. Não é "true/false": o
+  // servidor exige que seja EXATAMENTE a vigente (LEGAL_DOCS_VERSION), então quem tem a página
+  // aberta com um texto antigo é obrigado a recarregar e aceitar de novo.
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(40)
+  acceptedTermsVersion!: string;
 }

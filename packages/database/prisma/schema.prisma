@@ -228,6 +228,12 @@ model User {
   // este campo: fica nulo e NADA no backend depende dele. Ver CLAUDE.md > Autenticação.
   emailVerifiedAt DateTime? @db.Timestamptz(6)
 
+  // Aceite dos Termos de Uso e da Política de Privacidade no cadastro público (/public/signup):
+  // só a data e a versão aceita (LEGAL_DOCS_VERSION). Sem IP, por minimização de dados. Nulo em
+  // contas anteriores ao aceite (seed, provisionadas pelo Admin) e em usuários criados pelo dono.
+  termsAcceptedAt DateTime? @db.Timestamptz(6)
+  termsVersion    String?
+
   // Lockout progressivo por conta (além do rate limit por IP no ThrottlerGuard) — ver
   // AuthService.login. Reseta em login bem-sucedido; nunca exposto em nenhuma resposta (a
   // mensagem de erro é sempre a mesma genérica, logado ou não).

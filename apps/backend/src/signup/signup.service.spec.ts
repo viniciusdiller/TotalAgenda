@@ -1,14 +1,15 @@
 import "reflect-metadata";
-import { ConflictException } from "@nestjs/common";
+import { BadRequestException, ConflictException } from "@nestjs/common";
 import { plainToInstance } from "class-transformer";
 import { validate } from "class-validator";
 import * as bcrypt from "bcrypt";
 import { Prisma, Role } from "@totalagenda/database";
+import { LEGAL_DOCS_VERSION } from "@totalagenda/shared-types";
 import { PrismaService } from "../prisma/prisma.service";
 import { TRIAL_DAYS } from "../billing/trial.constants";
 import { computeBillingStatus, hasBillingAccess } from "../billing/billing-status.util";
 import { SignupDto } from "./dto/signup.dto";
-import { EMAIL_TAKEN_MESSAGE, SignupService } from "./signup.service";
+import { EMAIL_TAKEN_MESSAGE, SignupService, TERMS_OUTDATED_MESSAGE } from "./signup.service";
 
 // bcrypt real (o teste de senha compara o hash de verdade); só embrulha `hash` num jest.fn para
 // poder checar a ORDEM das chamadas.
@@ -24,6 +25,7 @@ const DTO: SignupDto = {
   ownerName: "José Silva",
   email: "ze@barbearia.com",
   password: "senha-forte-123",
+  acceptedTermsVersion: LEGAL_DOCS_VERSION,
 };
 
 function uniqueViolation(target: string[] | string) {
@@ -182,8 +184,46 @@ describe("SignupService", () => {
   });
 });
 
+describe("SignupService: aceite dos termos", () => {
+  it("grava a data e a versão vigente dos termos no dono", async () => {
+    const { prisma, tx } = buildPrisma();
+    const before = Date.now();
+
+    await new SignupService(prisma).signup(DTO);
+
+    const userData = tx.user.create.mock.calls[0][0].data;
+    expect(userData.termsVersion).toBe(LEGAL_DOCS_VERSION);
+    expect(userData.termsAcceptedAt.getTime()).toBeGreaterThanOrEqual(before);
+    expect(userData.termsAcceptedAt.getTime()).toBeLessThanOrEqual(Date.now());
+  });
+
+  // O servidor decide a versão vigente: um cliente com a página velha aberta, ou que tenta enviar
+  // qualquer coisa, não cria conta sem aceitar o texto atual.
+  it.each(["2020-01-01", "", "true", LEGAL_DOCS_VERSION + " ", "x".repeat(40)])(
+    "recusa versão de termos %j sem gastar bcrypt nem tocar no banco",
+    async (version) => {
+      const hashMock = bcrypt.hash as unknown as jest.Mock;
+      hashMock.mockClear();
+      const { prisma } = buildPrisma();
+
+      const attempt = new SignupService(prisma).signup({ ...DTO, acceptedTermsVersion: version });
+
+      await expect(attempt).rejects.toBeInstanceOf(BadRequestException);
+      await expect(attempt).rejects.toMatchObject({ message: TERMS_OUTDATED_MESSAGE });
+      expect(hashMock).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    },
+  );
+});
+
 describe("SignupDto (fronteira pública)", () => {
-  const valid = { businessName: "Salão", ownerName: "Maria", email: "M@X.com", password: "12345678" };
+  const valid = {
+    businessName: "Salão",
+    ownerName: "Maria",
+    email: "M@X.com",
+    password: "12345678",
+    acceptedTermsVersion: LEGAL_DOCS_VERSION,
+  };
 
   it("normaliza e-mail e apara nomes", async () => {
     const dto = plainToInstance(SignupDto, { ...valid, businessName: "  Salão  ", email: " M@X.com " });
@@ -198,13 +238,17 @@ describe("SignupDto (fronteira pública)", () => {
     ["e-mail inválido", { email: "nao-e-email" }],
     ["nome de negócio vazio", { businessName: "   " }],
     ["nome do dono muito longo", { ownerName: "a".repeat(121) }],
+    ["versão de termos vazia", { acceptedTermsVersion: "" }],
+    ["versão de termos ausente", { acceptedTermsVersion: undefined }],
+    ["versão de termos que não é texto", { acceptedTermsVersion: true }],
+    ["versão de termos gigante", { acceptedTermsVersion: "v".repeat(41) }],
   ])("rejeita %s", async (_label, patch) => {
     const dto = plainToInstance(SignupDto, { ...valid, ...patch });
     expect((await validate(dto)).length).toBeGreaterThan(0);
   });
 
   // Confiança no cliente: papel, tenant, plano, trial e verificação nunca vêm do body.
-  it.each(["role", "tenantId", "planTier", "trialEndsAt", "emailVerifiedAt", "priceCents"])(
+  it.each(["role", "tenantId", "planTier", "trialEndsAt", "emailVerifiedAt", "priceCents", "termsAcceptedAt", "termsVersion"])(
     "rejeita campo '%s' enviado pelo cliente",
     async (field) => {
       const dto = plainToInstance(SignupDto, { ...valid, [field]: "OWNER" });

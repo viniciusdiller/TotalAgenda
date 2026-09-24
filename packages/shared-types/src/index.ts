@@ -1,3 +1,9 @@
+// Versão vigente dos Termos de Uso e da Política de Privacidade (data da última alteração de texto).
+// O frontend envia a versão que o usuário viu ao aceitar no cadastro; o backend só aceita se for
+// IGUAL a esta, então mudar o texto sem trocar a versão (ou o contrário) é erro. Ao alterar os
+// documentos, atualize esta constante junto com o texto em apps/frontend/src/lib/legal-content.ts.
+export const LEGAL_DOCS_VERSION = "2026-09-24";
+
 // Resposta padrão de qualquer listagem paginada (backend: common/pagination/paginate.ts).
 export interface Paginated<T> {
   items: T[];
