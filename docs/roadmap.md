@@ -148,7 +148,7 @@ hora, dono escolhe quais profissionais excedentes desativar), bloqueio total pó
 - [x] Fase 1c — aceite versionado dos Termos e da Privacidade (`LEGAL_DOCS_VERSION`, `User.termsAcceptedAt`/`termsVersion`)
   e páginas `/termos` e `/privacidade` **em rascunho**. Pendente (usuário): preencher as lacunas, revisão
   jurídica, `LEGAL_DRAFT = false` e nova `LEGAL_DOCS_VERSION`.
-- [ ] Fase 2 — Stripe no backend: Checkout, Customer Portal, `POST /webhooks/stripe` (assinatura,
+- [x] Fase 2 — Stripe no backend (**código e testes prontos; falta o teste com chaves reais do Stripe em modo teste**): Checkout, Customer Portal, `POST /webhooks/stripe` (assinatura,
   dedupe por `event.id`, estado relido na API do Stripe), `POST /billing/change-plan`, exclusão de
   profissional só sem histórico, mensagens do guard por estado.
 - [ ] Fase 3 — UI `/dashboard/plano`, modal de troca de plano com aviso explícito, banner com link.

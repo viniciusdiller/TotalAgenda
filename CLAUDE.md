@@ -82,11 +82,27 @@ sozinho (Stripe direto), e o Admin-TotalSoftware vira só back-office.
   `TenantBillingGuard` bloqueia). O body só traz negócio, nome, e-mail e senha: papel, tenant, trial
   e plano são definidos pelo servidor. Slugs reservados (`common/constants/reserved-slugs.ts`)
   ganham sufixo, porque `/[slug]` divide o namespace com as rotas do app.
-- **Cobrança real (ainda no Admin):** Stripe, checkout e ciclo vivem no **Admin-TotalSoftware**,
-  repositório externo. Este backend mantém um espelho (`Plan` / `Subscription`) atualizado por
-  webhooks (`src/webhooks`, autenticados por `WebhookSecretGuard` com segredo compartilhado) para
-  aplicar limites de plano (`PlanLimitService`) e liberar/bloquear acesso (`TenantBillingGuard`).
-  Sai de lá quando o Stripe passar a ser falado por este backend.
+- **Cobrança direto no Stripe (backend em vigor; tela do dashboard pendente):** `src/billing` e
+  `src/webhooks/stripe-webhook.*`. Rotas do **OWNER**, que funcionam mesmo com o acesso bloqueado
+  (`@SkipBillingCheck`: quem está bloqueado precisa delas para pagar) e têm limite de 10/min:
+  `POST /billing/checkout` (só `tier`; o Price vem de `STRIPE_PRICE_*`, o tenant do JWT e o retorno de
+  `FRONTEND_URL`; recusa com assinatura viva para não cobrar em dobro), `POST /billing/portal`,
+  `GET /billing/change-plan/preview` e `POST /billing/change-plan` (troca na hora, com crédito
+  proporcional; se o plano novo tem menos vagas o dono escolhe quem desativar e o servidor exige
+  EXATAMENTE o excesso, só profissionais ativos do tenant e sem agenda futura; desativações e Stripe
+  vão numa transação com lock por tenant, Stripe por último, então uma falha dele não desativa
+  ninguém). `DELETE /professionals/:id` só exclui quem não tem histórico (o schema protege o histórico
+  com `Restrict`); os demais são desativados. **Nenhum DTO de cobrança tem campo de valor.**
+- **`POST /webhooks/stripe`:** assinatura conferida sobre o corpo CRU (`rawBody` no `main.ts`), pública
+  e fora do throttle. Cada evento só sinaliza "algo mudou": a assinatura é RELIDA na API do Stripe e
+  gravada, então eventos repetidos, fora de ordem ou atrasados convergem. O plano vem do Price, nunca
+  do nome. `metadata.product=totalagenda` + `metadata.tenantId` isolam do TotalPousada na mesma conta do
+  Stripe (o webhook do Admin, por sua vez, ignora tudo sem `clienteId`: **nunca** ponha `clienteId` na
+  metadata do TotalAgenda). `StripeEvent` é gravado só depois de processar, para o Stripe reentregar uma
+  falha. Em dev sem `STRIPE_*` as rotas respondem 503; em produção o boot exige todas as variáveis.
+- **Legado até a Fase 4:** `src/webhooks` (`/webhooks/totalsoftware`, segredo compartilhado) ainda
+  recebe o provisionamento do Admin; ele deixa de ser usado quando o cadastro/cobrança do Stripe
+  direto entrar em produção.
 - **E-mail de `User`** é sempre minúsculo (`NormalizeEmail` no login, no cadastro e no CRUD de
   profissional): o e-mail é chave de login e único no Postgres (case-sensitive), então sem isso
   "Foo@x.com" e "foo@x.com" seriam contas distintas e a checagem de duplicidade se contornaria.

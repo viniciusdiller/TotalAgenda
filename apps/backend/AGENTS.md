@@ -29,7 +29,7 @@ não domínio.
 | `appointments` | Agregado `Appointment` (agenda pública + staff): criação, reagendamento, cancelamento, transições de status, calendário. |
 | `auth` | Login/refresh/definir-senha de staff (`User`), lockout progressivo, JWT. |
 | `availability` | Cálculo de horários livres de um profissional pra um serviço (`public/tenants/:slug/professionals/:id/availability`). |
-| `billing` | Espelho de plano/assinatura sincronizado por webhook; `PlanLimitService`/`TenantBillingGuard` leem daqui. |
+| `billing` | Cobrança pelo Stripe: checkout, portal, troca de plano (`CheckoutService`, `PlanChangeService`, `StripeService`), status e planos; `PlanLimitService`/`TenantBillingGuard` leem daqui. |
 | `cash-register` | Abertura/fechamento de caixa, conferência de valor físico contra `Payment`/`CashMovement`. |
 | `clients` | CRUD de `Client` (ficha 360, intake) pelo staff. |
 | `commissions` | Regras de comissão por profissional/serviço e cálculo no fechamento de comanda. |
@@ -38,7 +38,7 @@ não domínio.
 | `intake` | Formulários de ficha de anamnese/cadastro configuráveis pelo tenant e respostas de cliente. |
 | `marketplace` | Busca/descoberta pública de estabelecimentos (`public/marketplace`), config de visibilidade do tenant. |
 | `products` | Catálogo de produto + estoque (ajuste manual, baixa automática por venda). |
-| `professionals` | CRUD de profissional (vínculo com `User`), horário de trabalho, vínculo com serviços. |
+| `professionals` | CRUD de profissional (vínculo com `User`), horário de trabalho, vínculo com serviços; exclusão definitiva só de quem não tem histórico. |
 | `reviews` | Avaliação pública de um `Consumer` sobre um atendimento + moderação pelo dono. |
 | `services` | Catálogo de serviço (nome/preço/duração), vínculo profissional↔serviço. |
 | `signup` | Cadastro público de tenant + dono (`POST /public/signup`): trial de 14 dias, sem cartão, sem `Subscription`. |
@@ -46,7 +46,7 @@ não domínio.
 | `tickets` | Comanda/PDV: itens, desconto, pagamento, fechamento — ver CLAUDE.md raiz > Segurança > Confiança no cliente pra a regra que rege `AddTicketItemDto`. |
 | `time-blocks` | Bloqueio manual de horário (folga/férias) na agenda de um profissional. |
 | `waitlist` | Lista de espera pública quando não há horário livre no dia. |
-| `webhooks` | Recebe provisionamento/sincronização de plano do Admin-TotalSoftware externo. |
+| `webhooks` | `POST /webhooks/stripe` (assinatura, estado relido na API, dedupe) e, legado até a Fase 4, o provisionamento do Admin-TotalSoftware. |
 
 ## Guards globais e ordem de execução
 
