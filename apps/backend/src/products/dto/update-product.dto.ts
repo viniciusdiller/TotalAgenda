@@ -1,3 +1,4 @@
+import { Trim } from "../../common/decorators/trim.decorator";
 import {
   IsBoolean,
   IsInt,
@@ -14,11 +15,13 @@ export class UpdateProductDto {
   @IsString()
   @MinLength(2)
   @MaxLength(120)
+  @Trim()
   name?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(60)
+  @Trim()
   sku?: string | null;
 
   @IsOptional()

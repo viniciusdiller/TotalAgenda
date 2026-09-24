@@ -1,7 +1,8 @@
-import { IsDateString, IsOptional, IsString, MaxLength } from "class-validator";
+import { Trim } from "../../common/decorators/trim.decorator";
+import { IsDateString, IsOptional, IsString, MaxLength, IsUUID } from "class-validator";
 
 export class CreateTimeBlockDto {
-  @IsString()
+  @IsUUID()
   professionalId!: string;
 
   @IsDateString()
@@ -13,5 +14,6 @@ export class CreateTimeBlockDto {
   @IsOptional()
   @IsString()
   @MaxLength(500)
+  @Trim()
   reason?: string;
 }

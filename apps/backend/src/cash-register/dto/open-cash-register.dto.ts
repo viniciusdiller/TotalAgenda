@@ -1,3 +1,4 @@
+import { Trim } from "../../common/decorators/trim.decorator";
 import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
 
 export class OpenCashRegisterDto {
@@ -9,5 +10,6 @@ export class OpenCashRegisterDto {
   @IsOptional()
   @IsString()
   @MaxLength(1000)
+  @Trim()
   note?: string;
 }

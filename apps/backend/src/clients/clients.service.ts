@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
+import { isValidCpf, normalizeCpf } from "../common/utils/cpf.util";
 import { isPlausibleBrazilianPhone, normalizePhone } from "../common/utils/phone.util";
 import { CreateClientDto } from "./dto/create-client.dto";
 import { UpdateClientDto } from "./dto/update-client.dto";
@@ -118,6 +119,14 @@ export class ClientsService {
     });
   }
 
+  // CPF só dígitos e com dígitos verificadores corretos. A DTO já barra, mas o service é chamado
+  // direto por outros caminhos (e pelos testes), então a regra também vive aqui.
+  private cleanCpf(value: string | null): string | null {
+    if (!value) return null;
+    if (!isValidCpf(value)) throw new BadRequestException("CPF inválido.");
+    return normalizeCpf(value);
+  }
+
   // Normaliza campos opcionais: string vazia vira null, CPF só dígitos, tags sem espaços.
   private sanitize(dto: CreateClientDto | UpdateClientDto) {
     const clean = (value?: string | null) => {
@@ -126,7 +135,7 @@ export class ClientsService {
     };
     return {
       email: dto.email !== undefined ? clean(dto.email) : undefined,
-      cpf: dto.cpf !== undefined ? (dto.cpf ? dto.cpf.replace(/\D/g, "") : null) : undefined,
+      cpf: dto.cpf !== undefined ? this.cleanCpf(dto.cpf) : undefined,
       notes: dto.notes !== undefined ? clean(dto.notes) : undefined,
       birthDate:
         dto.birthDate !== undefined ? (dto.birthDate ? new Date(dto.birthDate) : null) : undefined,

@@ -1,3 +1,4 @@
+import { Trim } from "../../common/decorators/trim.decorator";
 import {
   IsIn,
   IsInt,
@@ -8,21 +9,23 @@ import {
   Min,
   MinLength,
   ValidateIf,
+  IsUUID,
 } from "class-validator";
 
 export class OpenTicketDto {
   // Abre a partir de um atendimento (copia os serviços) OU avulsa com cliente opcional.
   @IsOptional()
-  @IsString()
+  @IsUUID()
   appointmentId?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   clientId?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(1000)
+  @Trim()
   note?: string;
 }
 
@@ -31,17 +34,18 @@ export class AddTicketItemDto {
   kind!: "SERVICE" | "PRODUCT" | "CUSTOM";
 
   @ValidateIf((o) => o.kind === "SERVICE")
-  @IsString()
+  @IsUUID()
   serviceId?: string;
 
   @ValidateIf((o) => o.kind === "PRODUCT")
-  @IsString()
+  @IsUUID()
   productId?: string;
 
   @ValidateIf((o) => o.kind === "CUSTOM")
   @IsString()
   @MinLength(2)
   @MaxLength(120)
+  @Trim()
   description?: string;
 
   // Obrigatório para CUSTOM; override opcional para SERVICE/PRODUCT (senão usa o catálogo do
@@ -62,7 +66,7 @@ export class AddTicketItemDto {
   quantity?: number;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   professionalId?: string;
 }
 

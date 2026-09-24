@@ -1,14 +1,14 @@
-import { IsObject, IsOptional, IsString } from "class-validator";
+import { IsObject, IsOptional, IsString, IsUUID } from "class-validator";
 
 export class SubmitIntakeResponseDto {
-  @IsString()
+  @IsUUID()
   formId!: string;
 
-  @IsString()
+  @IsUUID()
   clientId!: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   appointmentId?: string;
 
   // { [fieldKey]: string | boolean }. Validado contra os campos do form no service.

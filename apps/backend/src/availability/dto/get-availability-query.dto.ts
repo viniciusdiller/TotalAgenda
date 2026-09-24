@@ -1,7 +1,7 @@
-import { IsDateString, IsString } from "class-validator";
+import { IsDateString, IsString, IsUUID } from "class-validator";
 
 export class GetAvailabilityQueryDto {
-  @IsString()
+  @IsUUID()
   serviceId!: string;
 
   @IsDateString({ strict: true }, { message: "date deve estar no formato YYYY-MM-DD" })

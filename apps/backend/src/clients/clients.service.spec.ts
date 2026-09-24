@@ -41,12 +41,12 @@ describe("ClientsService (M2)", () => {
     await service.create("t-1", {
       name: " Ana ",
       phone: "11988887777",
-      cpf: "123.456.789-00",
+      cpf: "529.982.247-25",
       tags: [" VIP ", "VIP", "coloração"],
     });
 
     const data = (prisma.client.create as jest.Mock).mock.calls[0][0].data;
-    expect(data.cpf).toBe("12345678900");
+    expect(data.cpf).toBe("52998224725");
     expect(data.tags).toEqual(["VIP", "coloração"]);
     expect(data.name).toBe("Ana");
   });

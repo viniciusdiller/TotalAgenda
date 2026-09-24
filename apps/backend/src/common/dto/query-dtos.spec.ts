@@ -23,7 +23,7 @@ describe("DTOs de @Query", () => {
   // não é capturado pelo PrismaExceptionFilter).
   it("professionalId só string; objeto/array viram 400 em vez de 500", () => {
     const range = { from: "2026-08-01T00:00:00.000Z", to: "2026-08-31T00:00:00.000Z" };
-    expect(isValid(RangeByProfessionalQueryDto, { ...range, professionalId: "p-1" })).toBe(true);
+    expect(isValid(RangeByProfessionalQueryDto, { ...range, professionalId: "3f2b8c1e-8a3d-4c55-9d5e-0a1b2c3d4e5f" })).toBe(true);
     expect(isValid(RangeByProfessionalQueryDto, { ...range, professionalId: { not: "x" } })).toBe(false);
     expect(isValid(RangeByProfessionalQueryDto, { ...range, professionalId: ["a"] })).toBe(false);
     expect(isValid(TimeBlocksQueryDto, { professionalId: { a: 1 } })).toBe(false);

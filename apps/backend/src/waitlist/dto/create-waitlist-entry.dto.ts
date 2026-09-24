@@ -1,11 +1,12 @@
-import { IsDateString, IsOptional, IsString, MaxLength } from "class-validator";
+import { Trim } from "../../common/decorators/trim.decorator";
+import { IsDateString, IsOptional, IsString, MaxLength, IsUUID } from "class-validator";
 
 export class CreateWaitlistEntryDto {
-  @IsString()
+  @IsUUID()
   serviceId!: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   professionalId?: string;
 
   @IsOptional()
@@ -15,5 +16,6 @@ export class CreateWaitlistEntryDto {
   @IsOptional()
   @IsString()
   @MaxLength(1000)
+  @Trim()
   notes?: string;
 }

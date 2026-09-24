@@ -1,3 +1,4 @@
+import { Trim } from "../../common/decorators/trim.decorator";
 import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
 
 export class CashMovementDto {
@@ -13,6 +14,7 @@ export class CashMovementDto {
   @IsOptional()
   @IsString()
   @MaxLength(1000)
+  @Trim()
   note?: string;
 }
 
@@ -25,5 +27,6 @@ export class CloseCashRegisterDto {
   @IsOptional()
   @IsString()
   @MaxLength(1000)
+  @Trim()
   note?: string;
 }

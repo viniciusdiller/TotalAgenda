@@ -5,6 +5,7 @@ import { NestExpressApplication } from "@nestjs/platform-express";
 import { ValidationPipe } from "@nestjs/common";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
+import { RejectNullBytesInterceptor } from "./common/interceptors/reject-null-bytes.interceptor";
 import { PrismaExceptionFilter } from "./common/filters/prisma-exception.filter";
 import { UPLOADS_DIR } from "./common/constants/uploads";
 
@@ -42,6 +43,7 @@ async function bootstrap() {
     }),
   );
   app.useGlobalFilters(new PrismaExceptionFilter());
+  app.useGlobalInterceptors(new RejectNullBytesInterceptor());
 
   const port = process.env.PORT ? Number(process.env.PORT) : 3001;
   await app.listen(port);

@@ -1,3 +1,4 @@
+import { Trim } from "../../common/decorators/trim.decorator";
 import {
   IsBoolean,
   IsIn,
@@ -9,19 +10,21 @@ import {
   MaxLength,
   Min,
   MinLength,
+  IsUUID,
 } from "class-validator";
 
 export class CreateCategoryDto {
   @IsString()
   @MinLength(2)
   @MaxLength(120)
+  @Trim()
   name!: string;
 
   @IsIn(["INCOME", "EXPENSE"])
   direction!: "INCOME" | "EXPENSE";
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   parentId?: string;
 }
 
@@ -30,6 +33,7 @@ export class UpdateCategoryDto {
   @IsString()
   @MinLength(2)
   @MaxLength(120)
+  @Trim()
   name?: string;
 
   @IsOptional()
@@ -44,6 +48,7 @@ export class CreateEntryDto {
   @IsString()
   @MinLength(2)
   @MaxLength(200)
+  @Trim()
   description!: string;
 
   @IsInt()
@@ -56,17 +61,19 @@ export class CreateEntryDto {
   dueDate!: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   categoryId?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(200)
+  @Trim()
   counterparty?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(1000)
+  @Trim()
   notes?: string;
 
   // Se informado, o lançamento já nasce quitado nesta data.
@@ -84,6 +91,7 @@ export class UpdateEntryDto {
   @IsString()
   @MinLength(2)
   @MaxLength(200)
+  @Trim()
   description?: string;
 
   @IsOptional()
@@ -97,17 +105,19 @@ export class UpdateEntryDto {
   dueDate?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   categoryId?: string | null;
 
   @IsOptional()
   @IsString()
   @MaxLength(200)
+  @Trim()
   counterparty?: string | null;
 
   @IsOptional()
   @IsString()
   @MaxLength(1000)
+  @Trim()
   notes?: string | null;
 }
 

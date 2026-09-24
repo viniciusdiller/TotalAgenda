@@ -9,8 +9,8 @@ async function validateDto(plain: Record<string, unknown>) {
 }
 
 const validBase = {
-  professionalId: "prof-1",
-  serviceId: "svc-1",
+  professionalId: "3f2b8c1e-8a3d-4c55-9d5e-0a1b2c3d4e5f",
+  serviceId: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
   startAt: "2026-01-01T10:00:00-03:00",
 };
 

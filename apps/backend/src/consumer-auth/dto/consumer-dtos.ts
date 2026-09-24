@@ -1,3 +1,6 @@
+import { NormalizeEmail } from "../../common/decorators/normalize-email.decorator";
+import { IsBrazilianPhone } from "../../common/validators/br-validators";
+import { Trim } from "../../common/decorators/trim.decorator";
 import { IsBoolean, IsEmail, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 
 // 72 = limite de entrada do bcrypt (bytes além disso são ignorados silenciosamente, então
@@ -9,15 +12,15 @@ export class RegisterConsumerDto {
   @IsString()
   @MinLength(2)
   @MaxLength(120)
+  @Trim()
   name!: string;
 
-  @IsString()
-  @MinLength(8)
-  @MaxLength(20)
+  @IsBrazilianPhone()
   phone!: string;
 
   @IsEmail()
   @MaxLength(254)
+  @NormalizeEmail()
   email!: string;
 
   @IsString()
@@ -37,6 +40,7 @@ export class ConsumerLoginDto {
   @IsString()
   @MinLength(3)
   @MaxLength(254)
+  @Trim()
   identifier!: string;
 
   @IsString()
@@ -50,11 +54,13 @@ export class UpdateConsumerProfileDto {
   @IsString()
   @MinLength(2)
   @MaxLength(120)
+  @Trim()
   name?: string;
 
   @IsOptional()
   @IsEmail()
   @MaxLength(254)
+  @NormalizeEmail()
   email?: string;
 }
 

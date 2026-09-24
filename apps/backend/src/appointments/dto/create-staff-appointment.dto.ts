@@ -1,3 +1,5 @@
+import { IsBrazilianPhone } from "../../common/validators/br-validators";
+import { Trim } from "../../common/decorators/trim.decorator";
 import { Type } from "class-transformer";
 import {
   ArrayMaxSize,
@@ -10,10 +12,11 @@ import {
   MaxLength,
   MinLength,
   ValidateNested,
+  IsUUID,
 } from "class-validator";
 
 class StaffAppointmentItemDto {
-  @IsString()
+  @IsUUID()
   serviceId!: string;
 }
 
@@ -21,7 +24,7 @@ class StaffAppointmentItemDto {
 // serviços em sequência e o cliente pode ser um já cadastrado (clientId) OU um cadastro
 // rápido (clientName + clientPhone).
 export class CreateStaffAppointmentDto {
-  @IsString()
+  @IsUUID()
   professionalId!: string;
 
   @IsDateString()
@@ -35,24 +38,24 @@ export class CreateStaffAppointmentDto {
   items!: StaffAppointmentItemDto[];
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   clientId?: string;
 
   @IsOptional()
   @IsString()
   @MinLength(2)
   @MaxLength(120)
+  @Trim()
   clientName?: string;
 
   @IsOptional()
-  @IsString()
-  @MinLength(8)
-  @MaxLength(20)
+  @IsBrazilianPhone()
   clientPhone?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(1000)
+  @Trim()
   notes?: string;
 
   // SCHEDULED (default) = encaixe ainda não confirmado; CONFIRMED = já firme.

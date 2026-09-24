@@ -1,4 +1,4 @@
-import { IsDateString, IsOptional, IsString } from "class-validator";
+import { IsDateString, IsOptional, IsString, IsUUID } from "class-validator";
 
 export class RescheduleAppointmentDto {
   @IsDateString()
@@ -6,6 +6,6 @@ export class RescheduleAppointmentDto {
 
   // Opcional: remarcar trocando de profissional. Ausente = mantém o atual.
   @IsOptional()
-  @IsString()
+  @IsUUID()
   professionalId?: string;
 }

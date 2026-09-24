@@ -1,4 +1,4 @@
-import { IsISO8601, IsOptional, IsString, MaxLength } from "class-validator";
+import { IsISO8601, IsOptional, IsString, MaxLength, IsUUID } from "class-validator";
 
 // @Query("campo") solto não passa pelo ValidationPipe: `?professionalId[a]=b` ou
 // `?search=a&search=b` chegam como objeto/array, vão cru pro Prisma/`.trim()` e viram 500 em
@@ -33,13 +33,11 @@ export class RequiredDateRangeQueryDto {
 // no controller/service, nunca é fonte de autorização.
 export class RangeByProfessionalQueryDto extends RequiredDateRangeQueryDto {
   @IsOptional()
-  @IsString()
-  @MaxLength(64)
+  @IsUUID()
   professionalId?: string;
 }
 
 export class TimeBlocksQueryDto {
-  @IsString()
-  @MaxLength(64)
+  @IsUUID()
   professionalId!: string;
 }

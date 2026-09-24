@@ -1,6 +1,6 @@
 import {
+  ArrayMaxSize,
   IsArray,
-  IsDateString,
   IsEmail,
   IsOptional,
   IsString,
@@ -8,36 +8,37 @@ import {
   MinLength,
   ValidateIf,
 } from "class-validator";
+import { Trim } from "../../common/decorators/trim.decorator";
+import { IsBirthDate, IsBrazilianPhone, IsCpf } from "../../common/validators/br-validators";
+import { CleanTags, MAX_CLIENT_TAGS, MAX_TAG_LENGTH } from "./create-client.dto";
 
-// Todos os campos opcionais: PATCH parcial. birthDate/email/cpf/notes aceitam ""/null
-// como "limpar" (tratado no service) — por isso o ValidateIf em email só valida formato
-// quando o valor é "truthy" (envio de "" ou null pula @IsEmail(), do contrário nunca daria
-// pra limpar o campo).
+// `null` limpa o campo (o formulário manda null quando o campo fica em branco).
 export class UpdateClientDto {
   @IsOptional()
+  @Trim()
   @IsString()
   @MinLength(2)
   @MaxLength(120)
   name?: string;
 
   @IsOptional()
-  @IsString()
-  @MinLength(8)
-  @MaxLength(20)
+  @IsBrazilianPhone()
   phone?: string;
 
   @IsOptional()
+  @Trim()
   @ValidateIf((o) => !!o.email)
   @IsEmail()
+  @MaxLength(254)
   email?: string | null;
 
   @IsOptional()
-  @IsDateString()
+  @IsBirthDate()
   birthDate?: string | null;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(20)
+  @ValidateIf((o) => !!o.cpf)
+  @IsCpf()
   cpf?: string | null;
 
   @IsOptional()
@@ -46,7 +47,10 @@ export class UpdateClientDto {
   notes?: string | null;
 
   @IsOptional()
+  @CleanTags()
   @IsArray()
+  @ArrayMaxSize(MAX_CLIENT_TAGS)
   @IsString({ each: true })
+  @MaxLength(MAX_TAG_LENGTH, { each: true })
   tags?: string[];
 }
