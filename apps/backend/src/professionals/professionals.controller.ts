@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
+  HttpCode,
   Get,
   Param,
   Patch,
@@ -51,6 +53,13 @@ export class ProfessionalsController {
     @Body() dto: UpdateProfessionalDto,
   ) {
     return this.professionalsService.update(user.tenantId, id, dto);
+  }
+
+  @Roles(Role.OWNER)
+  @HttpCode(204)
+  @Delete(":id")
+  async remove(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+    await this.professionalsService.remove(user.tenantId, id);
   }
 
   @Put(":id/working-hours")

@@ -114,6 +114,42 @@ export class ProfessionalsService {
     });
   }
 
+  // Exclusão DEFINITIVA, só de quem não tem histórico. O schema protege o histórico de propósito
+  // (Appointment e CommissionEntry usam onDelete: Restrict, e o User não some se abriu comanda/caixa
+  // ou criou lançamento): apagar em cascata quebraria relatórios e o caixa. Quem tem histórico é
+  // desativado (PATCH isActive=false), que preserva tudo.
+  async remove(tenantId: string, professionalId: string) {
+    const professional = await this.findOneOrThrow(tenantId, professionalId);
+    const userId = professional.userId;
+
+    // O dono também pode ser um profissional: apagar o User dele apagaria a conta de acesso.
+    // O papel precisa ser lido aqui: findOneOrThrow só seleciona id/nome/e-mail do usuário, então
+    // checar `professional.user.role` daria sempre undefined e a proteção nunca dispararia.
+    const owner = await this.prisma.user.findFirst({
+      where: { id: userId, tenantId, role: Role.OWNER },
+      select: { id: true },
+    });
+    if (owner) {
+      throw new ConflictException("O dono da conta não pode ser excluído.");
+    }
+
+    const [appointments, commissions, tickets, cashRegisters, financialEntries] = await Promise.all([
+      this.prisma.appointment.count({ where: { professionalId: professional.id } }),
+      this.prisma.commissionEntry.count({ where: { professionalId: professional.id } }),
+      this.prisma.ticket.count({ where: { openedByUserId: userId } }),
+      this.prisma.cashRegister.count({ where: { openedByUserId: userId } }),
+      this.prisma.financialEntry.count({ where: { createdByUserId: userId } }),
+    ]);
+    if (appointments + commissions + tickets + cashRegisters + financialEntries > 0) {
+      throw new ConflictException(
+        "Este profissional tem histórico (agendamentos, comissões, comandas ou lançamentos) e não pode ser excluído. Desative-o para preservar o histórico.",
+      );
+    }
+
+    // Apaga o User: o Professional, horários, bloqueios e vínculos de serviço saem em cascata.
+    await this.prisma.user.delete({ where: { id: userId } });
+  }
+
   async setWorkingHours(tenantId: string, professionalId: string, dto: SetWorkingHoursDto) {
     const professional = await this.findOneOrThrow(tenantId, professionalId);
 
