@@ -32,6 +32,7 @@ import { ConsumerAuthModule } from "./consumer-auth/consumer-auth.module";
 import { MarketplaceModule } from "./marketplace/marketplace.module";
 import { ReviewsModule } from "./reviews/reviews.module";
 import { SignupModule } from "./signup/signup.module";
+import { InternalModule } from "./internal/internal.module";
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { SignupModule } from "./signup/signup.module";
     MarketplaceModule,
     ReviewsModule,
     SignupModule,
+    InternalModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ClientIpThrottlerGuard },

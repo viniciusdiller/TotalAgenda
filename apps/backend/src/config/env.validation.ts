@@ -56,6 +56,14 @@ class EnvironmentVariables {
   @MinLength(32)
   CLIENT_IP_SECRET?: string;
 
+  // Segredo compartilhado com o Admin-TotalSoftware para assinar as chamadas da API interna de suporte
+  // (/internal/*, ver InternalAuthGuard). Opcional em dev (sem ele a API interna responde 403 a tudo);
+  // OBRIGATÓRIO em produção. 32+ caracteres.
+  @ValidateIf((o) => o.NODE_ENV === "production" || o.INTERNAL_API_SECRET !== undefined)
+  @IsString()
+  @MinLength(32)
+  INTERNAL_API_SECRET?: string;
+
   // Cobrança (Stripe). Opcionais em desenvolvimento (as rotas de cobrança respondem 503 "cobrança não
   // configurada"); OBRIGATÓRIAS em produção (o boot falha). O prefixo é conferido para pegar chave
   // trocada (ex.: colar a chave pública no lugar da secreta).
