@@ -9,7 +9,33 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 // Renova o access token perto do vencimento (12h no backend) usando o refresh token (30d).
 // Revalida o usuário no banco a cada troca (ver AuthService.refresh) — não é só reassinar
 // as claims antigas.
-async function refreshAccessToken(token: JWT): Promise<JWT> {
+// O Next chama o callback `jwt` várias vezes por navegação (proxy, layout, página, Server Actions), todas com o
+// MESMO cookie. Sem isto cada uma faria um POST /auth/refresh: gasta o limite de 10/min por IP do backend (um
+// salão inteiro atrás do mesmo IP) e, com rotação, cria um token irmão por chamada. Aqui as chamadas com o mesmo
+// refresh token dividem UMA renovação (em andamento ou concluída há poucos segundos). O resultado só é entregue
+// a quem apresenta o token antigo (prova de posse) e vive só em memória deste processo; entre processos quem
+// protege é a janela de tolerância do backend (RefreshTokenService).
+const RENEWAL_SHARE_MS = 10_000;
+const renewals = new Map<string, { promise: Promise<JWT>; expiresAt: number }>();
+
+function refreshAccessToken(token: JWT): Promise<JWT> {
+  const key = token.refreshToken;
+  const now = Date.now();
+  for (const [k, v] of renewals) if (v.expiresAt <= now) renewals.delete(k);
+
+  const shared = key ? renewals.get(key) : undefined;
+  if (shared) return shared.promise;
+
+  const promise = renewAccessToken(token);
+  if (key) renewals.set(key, { promise, expiresAt: now + RENEWAL_SHARE_MS });
+  // Falha não fica guardada: a próxima requisição tenta de novo em vez de herdar o erro por 10s.
+  promise.then((result) => {
+    if (result.error && key) renewals.delete(key);
+  });
+  return promise;
+}
+
+async function renewAccessToken(token: JWT): Promise<JWT> {
   try {
     const response = await backendFetch(`${API_URL}/auth/refresh`, {
       method: "POST",
@@ -17,9 +43,11 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       body: JSON.stringify({ refreshToken: token.refreshToken }),
     });
 
-    if (!response.ok) {
-      throw new Error("Falha ao renovar o access token.");
-    }
+    // 401 = o backend recusou ESTE refresh token (vencido, revogado, reutilizado, usuário desativado): a
+    // sessão acabou de verdade. Qualquer outra falha (429, 5xx) é transitória: mantém a sessão e tenta de
+    // novo na próxima requisição em vez de deslogar o usuário por um soluço do servidor.
+    if (response.status === 401) return { ...token, error: "RefreshAccessTokenError" };
+    if (!response.ok) return token;
 
     const data = (await response.json()) as {
       accessToken: string;
@@ -42,14 +70,30 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       error: undefined,
     };
   } catch {
-    // Access token velho fica no token, mas authedFetch trata `error` derrubando a sessão
-    // em vez de mandar um Bearer morto pro backend.
-    return { ...token, error: "RefreshAccessTokenError" };
+    // Rede/backend fora: transitório. A próxima requisição tenta de novo (o token velho fica como está).
+    return token;
   }
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
+  events: {
+    // Logout de verdade: revoga a família do refresh token no backend. Só apagar o cookie deixava o token
+    // copiado válido por 30 dias. Melhor esforço: se o backend estiver fora, o cookie some do mesmo jeito.
+    async signOut(message) {
+      const refreshToken = "token" in message ? message.token?.refreshToken : undefined;
+      if (!refreshToken) return;
+      try {
+        await backendFetch(`${API_URL}/auth/logout`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        });
+      } catch {
+        // sem sorte: o token vence sozinho e a rotação limita o estrago
+      }
+    },
+  },
   pages: { signIn: "/entrar" },
   providers: [
     Credentials({
