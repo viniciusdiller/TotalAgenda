@@ -10,8 +10,7 @@ import { LoginDto } from "./dto/login.dto";
 import { RefreshDto } from "./dto/refresh.dto";
 import { SetPasswordDto } from "./dto/set-password.dto";
 import { JwtPayload, RefreshTokenPayload } from "./types/auth-user";
-
-const REFRESH_TOKEN_EXPIRES_IN = "30d";
+import { RefreshTokenService, TokenFamily } from "./refresh-token.service";
 
 const BCRYPT_ROUNDS = 12;
 
@@ -27,6 +26,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly refreshTokens: RefreshTokenService,
   ) {}
 
   async login(dto: LoginDto) {
@@ -61,6 +61,7 @@ export class AuthService {
       });
     }
 
+    await this.refreshTokens.purgeExpired(user.id);
     return this.buildAuthResponse(
       user.id,
       user.tenantId,
@@ -123,6 +124,11 @@ export class AuthService {
       throw new UnauthorizedException("Sessão expirada. Faça login novamente.");
     }
 
+    // Rotação: gasta este refresh token e emite o sucessor na mesma família. Reuso fora da janela de
+    // tolerância revoga a família inteira (ver RefreshTokenService). Roda por último de propósito: só
+    // gasta o token depois de todas as outras checagens passarem.
+    const family = await this.refreshTokens.consume(payload);
+
     return this.buildAuthResponse(
       user.id,
       user.tenantId,
@@ -130,7 +136,22 @@ export class AuthService {
       user.email,
       user.name,
       user.professional?.id,
+      family,
     );
+  }
+
+  // Logout de verdade: revoga a família do refresh token, em vez de só apagar o cookie no navegador
+  // (o token copiado seguiria válido). Sempre "sucesso", com token válido, inválido ou já revogado —
+  // não é um oráculo de "este token existe".
+  async logout(refreshToken: string): Promise<void> {
+    try {
+      const payload = this.jwtService.verify<RefreshTokenPayload>(refreshToken);
+      if (payload.type === "refresh" && payload.fid) {
+        await this.refreshTokens.revokeFamily(payload.fid);
+      }
+    } catch {
+      // Token vencido/inválido: nada a revogar.
+    }
   }
 
   // Usado pela tela de "definir senha" antes de mostrar o formulário — confirma que o
@@ -157,6 +178,9 @@ export class AuthService {
         lockedUntil: null,
       },
     });
+    // Recuperação de conta: nenhuma família de refresh token anterior sobrevive (o passwordChangedAt já
+    // barra os antigos por iat; isto os marca como revogados no banco também).
+    await this.refreshTokens.revokeAllForUser(user.id);
 
     return this.buildAuthResponse(
       user.id,
@@ -187,21 +211,20 @@ export class AuthService {
     return user;
   }
 
-  private buildAuthResponse(
+  private async buildAuthResponse(
     userId: string,
     tenantId: string,
     role: Role,
     email: string,
     name: string,
     professionalId?: string,
+    family?: TokenFamily,
   ) {
     const payload: JwtPayload = { sub: userId, tenantId, role, professionalId };
     const accessToken = this.jwtService.sign(payload);
 
-    const refreshPayload: RefreshTokenPayload = { sub: userId, type: "refresh" };
-    const refreshToken = this.jwtService.sign(refreshPayload, {
-      expiresIn: REFRESH_TOKEN_EXPIRES_IN,
-    });
+    // Sem `family` (login, definir senha) começa uma família nova; com ela (refresh) continua a mesma.
+    const refreshToken = await this.refreshTokens.issue(userId, family);
 
     return {
       accessToken,

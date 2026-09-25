@@ -5,6 +5,7 @@ import { PassportModule } from "@nestjs/passport";
 import { AuthService } from "./auth.service";
 import { AuthController } from "./auth.controller";
 import { JwtStrategy } from "./strategies/jwt.strategy";
+import { RefreshTokenService } from "./refresh-token.service";
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { JwtStrategy } from "./strategies/jwt.strategy";
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, RefreshTokenService, JwtStrategy],
   // JwtModule exportado para o consumer-auth reaproveitar o mesmo JwtService (mesmo
   // JWT_SECRET) sem reconfigurar — ver consumer-auth/consumer-auth.module.ts.
   exports: [AuthService, JwtModule],

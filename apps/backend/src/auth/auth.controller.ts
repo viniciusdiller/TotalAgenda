@@ -33,6 +33,14 @@ export class AuthController {
 
   @Public()
   @Throttle(AUTH_THROTTLE)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Post("logout")
+  logout(@Body() dto: RefreshDto) {
+    return this.authService.logout(dto.refreshToken);
+  }
+
+  @Public()
+  @Throttle(AUTH_THROTTLE)
   @Get("set-password/:token")
   checkSetPasswordToken(@Param("token") token: string) {
     return this.authService.checkSetPasswordToken(token);

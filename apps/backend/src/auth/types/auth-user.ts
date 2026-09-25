@@ -13,6 +13,8 @@ export interface JwtPayload {
 export interface RefreshTokenPayload {
   sub: string; // userId
   type: "refresh";
+  jti?: string; // id da linha em RefreshToken (rotação); ausente = formato antigo, não aceito
+  fid?: string; // familyId: um por login, compartilhado pelos tokens derivados
   iat?: number;
 }
 

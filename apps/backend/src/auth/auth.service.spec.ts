@@ -45,6 +45,17 @@ function buildJwtService(overrides: Record<string, unknown> = {}) {
   } as any;
 }
 
+// RefreshTokenService é testado à parte (refresh-token.service.spec.ts); aqui só o contrato que o AuthService usa.
+function buildRefreshTokens() {
+  return {
+    issue: jest.fn().mockResolvedValue("novo-refresh-token"),
+    consume: jest.fn().mockResolvedValue({ familyId: "fam-1", familyStartedAt: new Date("2026-09-01T00:00:00Z") }),
+    revokeFamily: jest.fn().mockResolvedValue(undefined),
+    revokeAllForUser: jest.fn().mockResolvedValue(undefined),
+    purgeExpired: jest.fn().mockResolvedValue(undefined),
+  } as any;
+}
+
 const ACTIVE_USER = {
   id: "u-1",
   tenantId: "t-1",
@@ -61,7 +72,7 @@ const ACTIVE_USER = {
 describe("AuthService.login", () => {
   it("rejeita e-mail inexistente com a mesma UnauthorizedException genérica", async () => {
     const prisma = buildPrisma(null);
-    const service = new AuthService(prisma, buildJwtService());
+    const service = new AuthService(prisma, buildJwtService(), buildRefreshTokens());
 
     await expect(
       service.login({ email: "nao-existe@example.com", password: "qualquer" }),
@@ -70,7 +81,7 @@ describe("AuthService.login", () => {
 
   it("rejeita usuário desativado", async () => {
     const prisma = buildPrisma({ ...ACTIVE_USER, isActive: false });
-    const service = new AuthService(prisma, buildJwtService());
+    const service = new AuthService(prisma, buildJwtService(), buildRefreshTokens());
 
     await expect(
       service.login({ email: ACTIVE_USER.email, password: CORRECT_PASSWORD }),
@@ -79,7 +90,7 @@ describe("AuthService.login", () => {
 
   it("rejeita senha errada e incrementa failedLoginAttempts", async () => {
     const prisma = buildPrisma({ ...ACTIVE_USER });
-    const service = new AuthService(prisma, buildJwtService());
+    const service = new AuthService(prisma, buildJwtService(), buildRefreshTokens());
 
     await expect(
       service.login({ email: ACTIVE_USER.email, password: "senha-errada" }),
@@ -99,7 +110,7 @@ describe("AuthService.login", () => {
       ...ACTIVE_USER,
       failedLoginAttempts: 4, // essa vai ser a 5ª
     });
-    const service = new AuthService(prisma, buildJwtService());
+    const service = new AuthService(prisma, buildJwtService(), buildRefreshTokens());
 
     await expect(
       service.login({ email: ACTIVE_USER.email, password: "senha-errada" }),
@@ -122,7 +133,7 @@ describe("AuthService.login", () => {
   // quando cada uma leu o estado.
   it("incrementa corretamente sob duas tentativas de login concorrentes (mesma conta)", async () => {
     const prisma = buildPrisma({ ...ACTIVE_USER, failedLoginAttempts: 0 });
-    const service = new AuthService(prisma, buildJwtService());
+    const service = new AuthService(prisma, buildJwtService(), buildRefreshTokens());
 
     await Promise.all([
       service.login({ email: ACTIVE_USER.email, password: "errada-1" }).catch(() => {}),
@@ -139,7 +150,7 @@ describe("AuthService.login", () => {
       failedLoginAttempts: 6,
       lockedUntil: new Date(Date.now() + 5 * 60_000),
     });
-    const service = new AuthService(prisma, buildJwtService());
+    const service = new AuthService(prisma, buildJwtService(), buildRefreshTokens());
 
     // Mesma senha que funcionaria se a conta não estivesse travada.
     await expect(
@@ -159,7 +170,7 @@ describe("AuthService.login", () => {
       lockedUntil: new Date(Date.now() - 1000), // já expirou
     });
     const jwtService = buildJwtService();
-    const service = new AuthService(prisma, jwtService);
+    const service = new AuthService(prisma, jwtService, buildRefreshTokens());
 
     const result = await service.login({ email: ACTIVE_USER.email, password: CORRECT_PASSWORD });
 
@@ -175,7 +186,7 @@ describe("AuthService.login", () => {
       ...ACTIVE_USER,
       failedLoginAttempts: 3,
     });
-    const service = new AuthService(prisma, buildJwtService());
+    const service = new AuthService(prisma, buildJwtService(), buildRefreshTokens());
 
     await service.login({ email: ACTIVE_USER.email, password: CORRECT_PASSWORD });
 
@@ -187,7 +198,7 @@ describe("AuthService.login", () => {
 
   it("login bem-sucedido sem tentativas falhas anteriores não chama update à toa", async () => {
     const prisma = buildPrisma({ ...ACTIVE_USER });
-    const service = new AuthService(prisma, buildJwtService());
+    const service = new AuthService(prisma, buildJwtService(), buildRefreshTokens());
 
     await service.login({ email: ACTIVE_USER.email, password: CORRECT_PASSWORD });
 
@@ -202,7 +213,7 @@ describe("AuthService.refresh", () => {
         throw new Error("jwt expired");
       }),
     });
-    const service = new AuthService(buildPrisma(), jwtService);
+    const service = new AuthService(buildPrisma(), jwtService, buildRefreshTokens());
 
     await expect(service.refresh({ refreshToken: "garbage" })).rejects.toThrow(
       UnauthorizedException,
@@ -213,7 +224,7 @@ describe("AuthService.refresh", () => {
     const jwtService = buildJwtService({
       verify: jest.fn().mockReturnValue({ sub: "u-1", tenantId: "t-1", role: Role.OWNER }),
     });
-    const service = new AuthService(buildPrisma(), jwtService);
+    const service = new AuthService(buildPrisma(), jwtService, buildRefreshTokens());
 
     await expect(service.refresh({ refreshToken: "access-token" })).rejects.toThrow(
       UnauthorizedException,
@@ -226,7 +237,7 @@ describe("AuthService.refresh", () => {
     });
     const prisma = buildPrisma();
     (prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...ACTIVE_USER, isActive: false });
-    const service = new AuthService(prisma, jwtService);
+    const service = new AuthService(prisma, jwtService, buildRefreshTokens());
 
     await expect(service.refresh({ refreshToken: "valid-but-user-deactivated" })).rejects.toThrow(
       UnauthorizedException,
@@ -239,7 +250,7 @@ describe("AuthService.refresh", () => {
     });
     const prisma = buildPrisma();
     (prisma.user.findUnique as jest.Mock).mockResolvedValue(ACTIVE_USER);
-    const service = new AuthService(prisma, jwtService);
+    const service = new AuthService(prisma, jwtService, buildRefreshTokens());
 
     const result = await service.refresh({ refreshToken: "valid" });
 
@@ -248,7 +259,7 @@ describe("AuthService.refresh", () => {
       include: { professional: true },
     });
     expect(result.accessToken).toBe("signed-token");
-    expect(result.refreshToken).toBe("signed-token");
+    expect(result.refreshToken).toBe("novo-refresh-token");
     expect(result.user).toMatchObject({ id: "u-1", tenantId: "t-1", role: Role.OWNER });
   });
 });
@@ -262,7 +273,7 @@ describe("AuthService.setPassword", () => {
   it("resgata o convite de um usuário ativo e devolve sessão", async () => {
     const prisma = buildPrisma();
     (prisma.user.findUnique as jest.Mock).mockResolvedValue(validInvite);
-    const service = new AuthService(prisma, buildJwtService());
+    const service = new AuthService(prisma, buildJwtService(), buildRefreshTokens());
 
     const result = await service.setPassword({ token: "convite", password: "nova-senha-123" });
 
@@ -275,7 +286,7 @@ describe("AuthService.setPassword", () => {
     const prisma = buildPrisma();
     (prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...validInvite, isActive: false });
     const jwt = buildJwtService();
-    const service = new AuthService(prisma, jwt);
+    const service = new AuthService(prisma, jwt, buildRefreshTokens());
 
     await expect(
       service.setPassword({ token: "convite", password: "nova-senha-123" }),
@@ -298,7 +309,7 @@ describe("AuthService: sessões antigas caem depois da redefinição de senha", 
       lockedUntil: new Date(Date.now() + 60_000),
       passwordSetTokenExpiresAt: new Date(Date.now() + 60_000),
     });
-    const service = new AuthService(prisma, buildJwtService());
+    const service = new AuthService(prisma, buildJwtService(), buildRefreshTokens());
 
     await service.setPassword({ token: "convite", password: "nova-senha-123" });
 
@@ -313,7 +324,7 @@ describe("AuthService: sessões antigas caem depois da redefinição de senha", 
       verify: jest.fn().mockReturnValue({ sub: "u-1", type: "refresh", iat: changedAtSec - 3600 }),
     });
 
-    await expect(new AuthService(prisma, jwt).refresh({ refreshToken: "antigo" })).rejects.toThrow(
+    await expect(new AuthService(prisma, jwt, buildRefreshTokens()).refresh({ refreshToken: "antigo" })).rejects.toThrow(
       UnauthorizedException,
     );
     expect(jwt.sign).not.toHaveBeenCalled();
@@ -324,7 +335,7 @@ describe("AuthService: sessões antigas caem depois da redefinição de senha", 
       const prisma = buildPrisma({ ...ACTIVE_USER, passwordChangedAt: changedAt });
       const jwt = buildJwtService({ verify: jest.fn().mockReturnValue({ sub: "u-1", type: "refresh", iat }) });
 
-      await expect(new AuthService(prisma, jwt).refresh({ refreshToken: "novo" })).resolves.toMatchObject({
+      await expect(new AuthService(prisma, jwt, buildRefreshTokens()).refresh({ refreshToken: "novo" })).resolves.toMatchObject({
         accessToken: "signed-token",
       });
     }
@@ -334,6 +345,93 @@ describe("AuthService: sessões antigas caem depois da redefinição de senha", 
     const prisma = buildPrisma({ ...ACTIVE_USER, passwordChangedAt: null });
     const jwt = buildJwtService({ verify: jest.fn().mockReturnValue({ sub: "u-1", type: "refresh", iat: 1 }) });
 
-    await expect(new AuthService(prisma, jwt).refresh({ refreshToken: "qualquer" })).resolves.toBeDefined();
+    await expect(new AuthService(prisma, jwt, buildRefreshTokens()).refresh({ refreshToken: "qualquer" })).resolves.toBeDefined();
+  });
+});
+
+describe("AuthService: rotação do refresh token", () => {
+  it("refresh gasta o token DEPOIS das outras checagens e emite o sucessor na mesma família", async () => {
+    const prisma = buildPrisma(ACTIVE_USER);
+    const refreshTokens = buildRefreshTokens();
+    const payload = { sub: "u-1", type: "refresh", jti: "j-1", fid: "fam-1", iat: 1 };
+    const jwt = buildJwtService({ verify: jest.fn().mockReturnValue(payload) });
+
+    const result = await new AuthService(prisma, jwt, refreshTokens).refresh({ refreshToken: "t" });
+
+    expect(refreshTokens.consume).toHaveBeenCalledWith(payload);
+    expect(refreshTokens.issue).toHaveBeenCalledWith("u-1", { familyId: "fam-1", familyStartedAt: expect.any(Date) });
+    expect(result.refreshToken).toBe("novo-refresh-token");
+  });
+
+  // Se o usuário foi desativado, gastar o token só queimaria o registro sem devolver nada útil — e uma
+  // checagem que falha depois de gastar o token poderia deslogar uma sessão legítima por engano.
+  it("usuário desativado: nem chega a gastar o token", async () => {
+    const prisma = buildPrisma({ ...ACTIVE_USER, isActive: false });
+    const refreshTokens = buildRefreshTokens();
+    const jwt = buildJwtService({ verify: jest.fn().mockReturnValue({ sub: "u-1", type: "refresh", jti: "j", fid: "f" }) });
+
+    await expect(new AuthService(prisma, jwt, refreshTokens).refresh({ refreshToken: "t" })).rejects.toThrow(
+      UnauthorizedException,
+    );
+    expect(refreshTokens.consume).not.toHaveBeenCalled();
+  });
+
+  it("token reutilizado (consume recusa) → 401 e nada é emitido", async () => {
+    const prisma = buildPrisma(ACTIVE_USER);
+    const refreshTokens = buildRefreshTokens();
+    refreshTokens.consume.mockRejectedValue(new UnauthorizedException("Sessão expirada. Faça login novamente."));
+    const jwt = buildJwtService({ verify: jest.fn().mockReturnValue({ sub: "u-1", type: "refresh", jti: "j", fid: "f" }) });
+
+    await expect(new AuthService(prisma, jwt, refreshTokens).refresh({ refreshToken: "t" })).rejects.toThrow(
+      UnauthorizedException,
+    );
+    expect(refreshTokens.issue).not.toHaveBeenCalled();
+  });
+
+  it("login começa uma família nova (issue sem família) e limpa tokens vencidos do usuário", async () => {
+    const prisma = buildPrisma(ACTIVE_USER);
+    const refreshTokens = buildRefreshTokens();
+
+    await new AuthService(prisma, buildJwtService(), refreshTokens).login({ email: ACTIVE_USER.email, password: CORRECT_PASSWORD });
+
+    expect(refreshTokens.purgeExpired).toHaveBeenCalledWith("u-1");
+    expect(refreshTokens.issue).toHaveBeenCalledWith("u-1", undefined);
+  });
+
+  it("setPassword revoga TODAS as sessões anteriores do usuário antes de emitir a nova", async () => {
+    const prisma = buildPrisma();
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      ...ACTIVE_USER,
+      passwordSetTokenExpiresAt: new Date(Date.now() + 60_000),
+    });
+    const refreshTokens = buildRefreshTokens();
+
+    await new AuthService(prisma, buildJwtService(), refreshTokens).setPassword({ token: "convite", password: "nova-senha-123" });
+
+    expect(refreshTokens.revokeAllForUser).toHaveBeenCalledWith("u-1");
+    const revokeOrder = refreshTokens.revokeAllForUser.mock.invocationCallOrder[0];
+    const issueOrder = refreshTokens.issue.mock.invocationCallOrder[0];
+    expect(revokeOrder).toBeLessThan(issueOrder);
+  });
+});
+
+describe("AuthService.logout", () => {
+  it("revoga a família do refresh token", async () => {
+    const refreshTokens = buildRefreshTokens();
+    const jwt = buildJwtService({ verify: jest.fn().mockReturnValue({ sub: "u-1", type: "refresh", jti: "j", fid: "fam-9" }) });
+
+    await new AuthService(buildPrisma(), jwt, refreshTokens).logout("t");
+
+    expect(refreshTokens.revokeFamily).toHaveBeenCalledWith("fam-9");
+  });
+
+  it("não vaza nada: token inválido, vencido ou de outro tipo termina igual, sem lançar", async () => {
+    const refreshTokens = buildRefreshTokens();
+    const boom = buildJwtService({ verify: jest.fn().mockImplementation(() => { throw new Error("jwt expired"); }) });
+    await expect(new AuthService(buildPrisma(), boom, refreshTokens).logout("lixo")).resolves.toBeUndefined();
+
+    const access = buildJwtService({ verify: jest.fn().mockReturnValue({ sub: "u-1", role: Role.OWNER }) });
+    await expect(new AuthService(buildPrisma(), access, refreshTokens).logout("access")).resolves.toBeUndefined();
+    expect(refreshTokens.revokeFamily).not.toHaveBeenCalled();
   });
 });
