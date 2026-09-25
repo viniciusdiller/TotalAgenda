@@ -271,6 +271,25 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
   professionalId vêm do BANCO, não das claims; `isActive=false` → 401). O token só prova quem é —
   desativar/rebaixar vale na hora, não em até 12h. Convite de "definir senha" também recusa
   usuário desativado.
+- **Refresh token de staff com ROTAÇÃO** (`auth/refresh-token.service.ts`, tabela `RefreshToken`): cada token
+  (JWT com `jti` + `fid`) vale uma vez; `/auth/refresh` o troca por outro da mesma família (uma por login).
+  Reapresentar um token JÁ USADO fora da janela de tolerância (60 s) = cópia: a família inteira é revogada
+  (dono e ladrão caem; o dono entra de novo). A janela existe porque o Next dispara proxy + layout + página +
+  Server Actions ao mesmo tempo com o MESMO cookie: reuso dentro dela emite um token irmão em vez de deslogar.
+  `POST /auth/logout` revoga a família (NextAuth `events.signOut`); redefinir a senha revoga todas as do
+  usuário; teto absoluto de 90 dias por família (rotacionar não estende a sessão para sempre). Só o `jti`
+  fica no banco (o JWT é assinado): vazamento do banco não entrega token utilizável. Refresh no formato antigo
+  (sem `jti`) NÃO é aceito: o deploy desloga todo mundo uma vez. No frontend (`lib/auth.ts`) as renovações
+  simultâneas com o mesmo refresh token dividem UMA chamada ao backend; só 401 encerra a sessão, 429/5xx/rede
+  são transitórios (mantém a sessão e tenta na próxima requisição). O access token (12 h) continua valendo
+  até vencer mesmo após revogar a família — o que o derruba na hora é `isActive=false` (relido a cada request).
+- **CSP com nonce** (`lib/csp.ts`, montado em `proxy.ts` a cada requisição): `script-src 'self' 'nonce-…'
+  'strict-dynamic'` — script injetado sem o nonce não executa. Depende de render dinâmico (o layout raiz lê
+  `cookies()`, então toda página é dinâmica; **não** torne uma página estática sem rever o CSP). `style-src`
+  mantém `'unsafe-inline'` (atributos `style={{}}`, ex.: `--tenant-accent`, não aceitam nonce). Origem da API em
+  `connect-src`/`img-src`; `frame-src` só Google Maps (seção de contato). Ao adicionar script/embed/host
+  externo, ajuste `buildCsp` e o teste `csp.test.ts`; sem isso o navegador bloqueia em silêncio (console:
+  "Refused to ...").
 - **Cliente (Consumer)**: o JWT carrega `pv` (prefixo do sha256 do `passwordHash`) e o
   `ConsumerJwtAuthGuard` confere no banco que a conta existe e que `pv` bate. Trocar a senha ou
   excluir a conta derruba as sessões antigas; a troca devolve sessão nova (a Server Action grava
@@ -318,7 +337,8 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
     `@Sse()`. Rever ao migrar pro Nest 11 ou se algum endpoint SSE for criado.
 
 ### Riscos conhecidos (aceitos por ora)
-- Refresh token de staff sem rotação/revogação (30d); só `isActive` o derruba.
+- Access token de staff (12 h) não é revogável antes de vencer (só `isActive=false` o derruba na hora); o
+  refresh token é rotativo e revogável (ver Auth / sessão). Reduzir `JWT_EXPIRES_IN` encurta a janela.
 - Lockout por conta permite travar a conta alheia (DoS) — mitigado por throttle por IP.
 - Abrir caixa não é atômico (dois `open` simultâneos podem criar dois caixas abertos); estoque
   pode ficar negativo (regra de negócio, não checada).
@@ -385,6 +405,11 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
   Prisma mockado (unit) — ver `tickets.service.spec.ts`, `availability.service.spec.ts`.
 - Regra do projeto: validação de segurança, tratamento de erro em boundary e casos
   críticos **têm** teste — não são cortados por "simplicidade".
+- **Smoke E2E** (`apps/backend/scripts/smoke/`, fora do jest): `functional.mjs` (fluxos de negócio com os formatos
+  que o frontend envia) e `rotation.mjs` (refresh rotativo) contra um backend REAL. Rode num schema descartável
+  (`DATABASE_URL` com `?schema=e2e` + `prisma migrate deploy`; nunca no banco de dev em uso), com o backend
+  buildado subindo com `TRUST_PROXY_HOPS=1`: `API_URL=http://localhost:3101 node scripts/smoke/functional.mjs`.
+  Rode antes de mexer em validação de DTO, auth ou dinheiro.
 
 ### Git
 - Branch dedicada por feature/fix (`feat/...`, `fix/...`), nunca commit direto em `main`.
