@@ -28,10 +28,11 @@ pnpm --filter @totalagenda/database db:seed
 pnpm dev                                # backend :3001, frontend :3000
 ```
 
-Os três planos (Essencial/Profissional/Premium) entram por **migration** (`seed_plans`, idempotente), não só pelo
-seed de demonstração: sem eles o dono em trial não consegue adicionar profissional (o Essencial é o teto do
-trial) e `/dashboard/plano` fica vazio. O Price real do Stripe vem de `STRIPE_PRICE_*`, não da coluna
-`stripePriceId` (placeholder só para a constraint UNIQUE).
+Os três planos (Essencial/Profissional/Premium) existem em qualquer banco: a migration `seed_plans` os cria (valores
+antigos, de propósito) e o **`PlanCatalogService` os regrava a cada boot** a partir do catálogo (ver Billing). Sem
+eles o dono em trial não consegue adicionar profissional (o Essencial é o teto do trial) e `/dashboard/plano`
+fica vazio. O Price real do Stripe vem de `STRIPE_PRICE_*`; a coluna `stripePriceId` só guarda o id
+(placeholder `price_<tier>_pending` até haver env).
 
 `.env` obrigatório em `apps/backend/` e `packages/database/` (ver `DATABASE_URL`,
 `JWT_SECRET` e, em produção, as do Stripe e `CLIENT_IP_SECRET`, em `apps/backend/src/config/env.validation.ts`).
@@ -79,6 +80,19 @@ depois" (evita janela de IDOR).
 ### Billing
 **Em migração** (plano em `docs/roadmap.md`): o TotalAgenda passa a cadastrar, dar trial e cobrar
 sozinho (Stripe direto), e o Admin-TotalSoftware vira só back-office.
+
+- **Preço e limite de cada plano: UMA definição só** — `PLAN_CATALOG` em `packages/shared-types/src/index.ts`
+  (dinheiro em centavos; `maxProfessionals: null` = ilimitado). Antes o valor estava em 4 lugares (migration, seed,
+  Stripe e site) e o cliente podia ver um valor e pagar outro. Agora: (1) `PlanCatalogService` regrava a tabela
+  `Plan` a cada boot; `GET /plans` e o app leem a tabela; o seed lê o catálogo; (2) o site institucional lê
+  `GET /plans` (CORS por `SITE_URL`) e mantém uma cópia estática só como fallback; (3) **antes de cobrar**, checkout
+  e troca de plano chamam `StripeService.assertPriceMatchesCatalog`: o Price do Stripe precisa ter o mesmo valor,
+  BRL, recorrência mensal e estar ativo, senão 503 sem tocar no Stripe (no boot só avisa no log).
+  **Para mudar um preço:** edite o catálogo → **crie um Price NOVO no Stripe** (o valor de um Price é imutável)
+  → aponte `STRIPE_PRICE_<TIER>` para ele → deploy → atualize a cópia de fallback do site. Quem já assina segue no
+  Price antigo (não migra sozinho): com clientes reais, reajuste com Price novo + migração deliberada das
+  assinaturas (grandfathering), nunca só trocando o env. Preços atuais: Essencial R$ 49,90 (até 2), Profissional
+  R$ 99,90 (até 5), Premium R$ 189,90 (ilimitado).
 
 - **Cadastro e trial (já em vigor):** `POST /public/signup` (`src/signup`, frontend em `/cadastro`)
   cria `Tenant` + `User` OWNER numa transação, com `trialEndsAt = agora + TRIAL_DAYS` (14 dias,
