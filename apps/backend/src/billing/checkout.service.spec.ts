@@ -29,6 +29,7 @@ function build(options: { tenant?: Record<string, unknown>; updateCount?: number
   const stripe = {
     sdk,
     priceIdForTier: jest.fn((tier: PlanTier) => `price_${tier.toLowerCase()}`),
+    assertPriceMatchesCatalog: jest.fn().mockResolvedValue(undefined),
     frontendUrl: jest.fn().mockReturnValue("https://app.test"),
     ...options.stripeOverrides,
   } as unknown as StripeService;
@@ -174,5 +175,29 @@ describe("CheckoutService.createPortal", () => {
     sdk.billingPortal.sessions.create.mockRejectedValue(new Error("boom interno"));
 
     await expect(service.createPortal(USER)).rejects.toBeInstanceOf(BadGatewayException);
+  });
+});
+
+// O valor MOSTRADO vem do catálogo; o COBRADO, do Price do Stripe. Se divergirem, ninguém é cobrado: 503 antes de
+// criar customer ou sessão de checkout.
+describe("CheckoutService: Price do Stripe diferente do catálogo", () => {
+  it("recusa com 503 e não cria customer nem sessão", async () => {
+    const { service, sdk } = build({
+      stripeOverrides: {
+        assertPriceMatchesCatalog: jest.fn().mockRejectedValue(new ServiceUnavailableException("indisponível")),
+      },
+    });
+
+    await expect(service.createCheckout(USER, PlanTier.PROFISSIONAL)).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(sdk.customers.create).not.toHaveBeenCalled();
+    expect(sdk.checkout.sessions.create).not.toHaveBeenCalled();
+  });
+
+  it("confere o Price do plano ESCOLHIDO", async () => {
+    const { service, stripe } = build();
+
+    await service.createCheckout(USER, PlanTier.PROFISSIONAL);
+
+    expect(stripe.assertPriceMatchesCatalog).toHaveBeenCalledWith(PlanTier.PROFISSIONAL);
   });
 });

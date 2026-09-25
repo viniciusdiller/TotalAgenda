@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ConflictException,
   NotFoundException,
+  ServiceUnavailableException,
 } from "@nestjs/common";
 import { PlanTier } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
@@ -95,6 +96,7 @@ function build(o: Options = {}) {
   const stripe = {
     sdk,
     priceIdForTier: jest.fn((tier: PlanTier) => `price_${tier.toLowerCase()}`),
+    assertPriceMatchesCatalog: jest.fn().mockResolvedValue(undefined),
     ...o.stripeOverrides,
   } as unknown as StripeService;
 
@@ -309,5 +311,22 @@ describe("PlanChangeService.change", () => {
     await service.change(TENANT, { tier: PlanTier.PREMIUM });
 
     expect(prisma.subscription.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId: TENANT } }));
+  });
+});
+
+describe("PlanChangeService.change: Price do Stripe diferente do catálogo", () => {
+  it("recusa com 503 antes de ler ou alterar a assinatura no Stripe (e sem desativar ninguém)", async () => {
+    const { service, sdk, tx } = build({
+      current: "ESSENCIAL",
+      activeCount: 2,
+      stripeOverrides: {
+        assertPriceMatchesCatalog: jest.fn().mockRejectedValue(new ServiceUnavailableException("indisponível")),
+      },
+    });
+
+    await expect(service.change(TENANT, { tier: PlanTier.PREMIUM })).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(sdk.subscriptions.retrieve).not.toHaveBeenCalled();
+    expect(sdk.subscriptions.update).not.toHaveBeenCalled();
+    expect(tx.professional.updateMany).not.toHaveBeenCalled();
   });
 });

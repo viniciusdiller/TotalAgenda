@@ -45,6 +45,8 @@ export class CheckoutService {
 
     // Antes de criar qualquer coisa no Stripe: sem configuração, 503 sem efeito colateral.
     const priceId = this.stripe.priceIdForTier(tier);
+    // Também sem efeito colateral: se o Price do Stripe não tiver o valor do catálogo, ninguém é cobrado.
+    await this.stripe.assertPriceMatchesCatalog(tier);
     const customerId = await this.ensureCustomer(tenant.id, tenant.name, tenant.stripeCustomerId, user.userId);
     const base = this.stripe.frontendUrl();
     const metadata = { tenantId: tenant.id, product: "totalagenda" };

@@ -84,6 +84,8 @@ export class PlanChangeService {
       throw new ConflictException("Sua assinatura ainda não foi confirmada pelo serviço de pagamento.");
     }
     const newPriceId = this.stripe.priceIdForTier(dto.tier);
+    // A troca cobra o Price novo na hora (crédito proporcional): mesma conferência do checkout.
+    await this.stripe.assertPriceMatchesCatalog(dto.tier);
 
     // O item da assinatura (a ser trocado de Price) vem do Stripe; conferimos que a assinatura é
     // mesmo deste tenant e deste produto antes de mexer nela.
