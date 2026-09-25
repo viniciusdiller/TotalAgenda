@@ -38,6 +38,12 @@ class EnvironmentVariables {
   @IsUrl({ require_tld: false, require_protocol: true, protocols: ["http", "https"] })
   FRONTEND_URL?: string;
 
+  // Origem do site institucional (TotalSoftware), que busca GET /plans para exibir os mesmos preços do app.
+  // Opcional: sem ela o site usa a cópia estática dos preços. Entra na lista de CORS (main.ts).
+  @IsOptional()
+  @IsUrl({ require_tld: false, require_protocol: true, protocols: ["http", "https"] })
+  SITE_URL?: string;
+
   // Nº de proxies confiáveis à frente do backend (ver main.ts). Ausente = não confia em nenhum.
   @IsOptional()
   @IsInt()

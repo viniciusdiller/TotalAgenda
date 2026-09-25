@@ -8,6 +8,7 @@ import {
   Weekday,
 } from "@prisma/client";
 import * as bcrypt from "bcrypt";
+import { PLAN_CATALOG } from "../../shared-types/src/plans";
 
 const prisma = new PrismaClient();
 
@@ -15,35 +16,15 @@ const prisma = new PrismaClient();
 const SEED_PASSWORD = "senha123";
 const BCRYPT_ROUNDS = 12;
 
-const plans: Array<{
-  tier: PlanTier;
-  name: string;
-  priceCents: number;
-  maxProfessionals: number | null;
-  stripePriceId: string;
-}> = [
-  {
-    tier: PlanTier.ESSENCIAL,
-    name: "Essencial",
-    priceCents: 2990,
-    maxProfessionals: 2,
-    stripePriceId: process.env.STRIPE_PRICE_ESSENCIAL ?? "price_essencial_placeholder",
-  },
-  {
-    tier: PlanTier.PROFISSIONAL,
-    name: "Profissional",
-    priceCents: 7990,
-    maxProfessionals: 5,
-    stripePriceId: process.env.STRIPE_PRICE_PROFISSIONAL ?? "price_profissional_placeholder",
-  },
-  {
-    tier: PlanTier.PREMIUM,
-    name: "Premium",
-    priceCents: 14990,
-    maxProfessionals: null,
-    stripePriceId: process.env.STRIPE_PRICE_PREMIUM ?? "price_premium_placeholder",
-  },
-];
+// Preço, limite e nome dos planos vêm do CATÁLOGO ÚNICO (packages/shared-types/src/plans.ts): este seed não tem valores
+// próprios. Import relativo de propósito: o pacote do banco não depende de shared-types (nem o contrário).
+const plans = PLAN_CATALOG.map((entry) => ({
+  tier: entry.tier as PlanTier,
+  name: entry.name,
+  priceCents: entry.priceCents,
+  maxProfessionals: entry.maxProfessionals,
+  stripePriceId: process.env[`STRIPE_PRICE_${entry.tier}`] ?? `price_${entry.tier.toLowerCase()}_placeholder`,
+}));
 
 const WEEKDAYS_MON_TO_FRI: Weekday[] = [
   Weekday.MONDAY,
