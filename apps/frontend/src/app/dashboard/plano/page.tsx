@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { PLAN_COOKIE, parsePlanCookie } from "@/lib/signup-plan";
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
 import {
@@ -46,6 +48,9 @@ function statusSummary(billing: BillingStatusResponse): string {
 export default async function PlanoPage({ searchParams }: { searchParams: Promise<{ checkout?: string }> }) {
   const { checkout } = await searchParams;
   const session = await auth();
+  // Plano que o dono marcou ao se cadastrar (cookie de preferência, validado: só um dos três tiers). Só destaca
+  // o card; não muda nada no que é cobrado nem no acesso.
+  const suggestedTier = parsePlanCookie((await cookies()).get(PLAN_COOKIE)?.value);
   const isOwner = session?.user.role === "OWNER";
 
   const [billing, plans] = await Promise.all([
@@ -99,7 +104,7 @@ export default async function PlanoPage({ searchParams }: { searchParams: Promis
           <section className="mt-8">
             <h2 className="font-display text-lg font-semibold text-zinc-900 dark:text-white">Planos</h2>
             <div className="mt-4">
-              <PlanCards plans={plans} billing={billing} isOwner={isOwner} />
+              <PlanCards plans={plans} billing={billing} isOwner={isOwner} suggestedTier={suggestedTier} />
             </div>
             <p className="mt-4 text-xs text-zinc-500 dark:text-stone-400">
               Cobrança mensal no cartão, processada pela Stripe. Você pode cancelar quando quiser e mantém o acesso

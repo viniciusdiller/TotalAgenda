@@ -21,10 +21,12 @@ export function PlanCards({
   plans,
   billing,
   isOwner,
+  suggestedTier = null,
 }: {
   plans: PlanInfo[];
   billing: BillingStatusResponse;
   isOwner: boolean;
+  suggestedTier?: PlanTier | null;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [changeTier, setChangeTier] = useState<PlanTier | null>(null);
@@ -53,6 +55,7 @@ export function PlanCards({
       <ul className="grid gap-4 md:grid-cols-3">
         {plans.map((plan) => {
           const action = planCardAction(billing, plan.tier);
+          const isSuggested = plan.tier === suggestedTier && action !== "CURRENT";
           return (
             <li
               key={plan.tier}
@@ -60,9 +63,16 @@ export function PlanCards({
                 "flex flex-col rounded-2xl border p-5",
                 action === "CURRENT"
                   ? "border-accent-500 bg-accent-50/50 dark:border-accent-400 dark:bg-accent-500/10"
-                  : "border-zinc-200 bg-white dark:border-white/10 dark:bg-zinc-900",
+                  : isSuggested
+                    ? "border-accent-300 bg-white ring-2 ring-accent-500/30 dark:border-accent-400/60 dark:bg-zinc-900"
+                    : "border-zinc-200 bg-white dark:border-white/10 dark:bg-zinc-900",
               )}
             >
+              {isSuggested ? (
+                <span className="mb-3 inline-block w-fit rounded-full bg-accent-100 px-2.5 py-1 text-xs font-semibold text-accent-700 dark:bg-accent-500/20 dark:text-accent-200">
+                  Sua escolha no cadastro
+                </span>
+              ) : null}
               <h3 className="font-display text-lg font-bold text-zinc-900 dark:text-white">{plan.name}</h3>
               <p className="mt-2 text-3xl font-bold text-zinc-900 dark:text-white">
                 {formatBRL(plan.priceCents)}
