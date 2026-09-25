@@ -248,6 +248,7 @@ model User {
   openedTickets Ticket[]
   cashRegisters CashRegister[]
   financialEntries FinancialEntry[]
+  refreshTokens RefreshToken[]
 
   @@index([tenantId])
 }
@@ -928,6 +929,27 @@ model StripeEvent {
   processedAt DateTime @default(now()) @db.Timestamptz(6)
 
   @@index([processedAt])
+}
+
+// Refresh token de staff com ROTAÇÃO. Cada token (JWT com jti = id desta linha e fid = familyId) só vale uma
+// vez: usar troca por um novo da mesma família. Reapresentar um token já usado FORA da janela de tolerância
+// (ver RefreshTokenService) indica cópia do token e revoga a família inteira. Não guarda o token, só o id
+// (o JWT é assinado): um vazamento do banco não entrega nenhum token utilizável.
+model RefreshToken {
+  id              String    @id // = jti do JWT
+  userId          String
+  familyId        String // uma família por login; todos os tokens derivados dele compartilham
+  familyStartedAt DateTime  @db.Timestamptz(6) // teto absoluto da sessão, não some com a rotação
+  expiresAt       DateTime  @db.Timestamptz(6)
+  usedAt          DateTime? @db.Timestamptz(6)
+  revokedAt       DateTime? @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
 }
 
 // Trilha de auditoria das ações do suporte (Admin-TotalSoftware) sobre contas de tenants. Nunca guarda
