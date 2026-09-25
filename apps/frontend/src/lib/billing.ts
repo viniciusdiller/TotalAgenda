@@ -20,6 +20,21 @@ export interface PlanInfo {
   maxProfessionals: number | null;
 }
 
+// A resposta de GET /plans vem de fora do TypeScript: confere a forma antes de usar (tier conhecido, preço e
+// limite coerentes) em vez de confiar no cast.
+export function isPlanInfo(value: unknown): value is PlanInfo {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    (v.tier === "ESSENCIAL" || v.tier === "PROFISSIONAL" || v.tier === "PREMIUM") &&
+    typeof v.name === "string" &&
+    typeof v.priceCents === "number" &&
+    Number.isInteger(v.priceCents) &&
+    v.priceCents >= 0 &&
+    (v.maxProfessionals === null || (typeof v.maxProfessionals === "number" && Number.isInteger(v.maxProfessionals) && v.maxProfessionals > 0))
+  );
+}
+
 export interface BillingStatusResponse {
   status: BillingStatus;
   trialEndsAt: string;

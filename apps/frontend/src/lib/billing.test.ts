@@ -10,6 +10,7 @@ import {
   formatBRL,
   formatDate,
   hasBillingAccess,
+  isPlanInfo,
   planCardAction,
 } from "./billing.ts";
 
@@ -130,5 +131,25 @@ describe("formatação", () => {
   it("data no fuso do Brasil (23h em SP não vira o dia seguinte)", () => {
     // 2026-10-09T02:30Z = 08/10 às 23:30 em São Paulo.
     assert.equal(formatDate("2026-10-09T02:30:00Z"), "08/10/2026");
+  });
+});
+
+describe("isPlanInfo", () => {
+  const ok = { tier: "PROFISSIONAL", name: "Profissional", priceCents: 7990, maxProfessionals: 5 };
+
+  it("aceita a forma que GET /plans devolve (com e sem limite)", () => {
+    assert.equal(isPlanInfo(ok), true);
+    assert.equal(isPlanInfo({ ...ok, tier: "PREMIUM", maxProfessionals: null }), true);
+  });
+
+  // A resposta vem de fora do TypeScript: forma errada não pode chegar à tela como se fosse um plano.
+  it("recusa tier desconhecido, preço inválido e limite incoerente", () => {
+    for (const bad of [
+      null, "x", 1, {}, { ...ok, tier: "GRATIS" }, { ...ok, name: 3 }, { ...ok, priceCents: -1 },
+      { ...ok, priceCents: 79.9 }, { ...ok, priceCents: "7990" }, { ...ok, maxProfessionals: 0 },
+      { ...ok, maxProfessionals: 2.5 }, { ...ok, maxProfessionals: undefined },
+    ]) {
+      assert.equal(isPlanInfo(bad), false, JSON.stringify(bad));
+    }
   });
 });
