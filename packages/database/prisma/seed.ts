@@ -8,7 +8,7 @@ import {
   Weekday,
 } from "@prisma/client";
 import * as bcrypt from "bcrypt";
-import { PLAN_CATALOG } from "../../shared-types/src/plans";
+import { PLAN_CATALOG } from "../../shared-types/src/index";
 
 const prisma = new PrismaClient();
 
@@ -16,7 +16,7 @@ const prisma = new PrismaClient();
 const SEED_PASSWORD = "senha123";
 const BCRYPT_ROUNDS = 12;
 
-// Preço, limite e nome dos planos vêm do CATÁLOGO ÚNICO (packages/shared-types/src/plans.ts): este seed não tem valores
+// Preço, limite e nome dos planos vêm do CATÁLOGO ÚNICO (packages/shared-types/src/index.ts): este seed não tem valores
 // próprios. Import relativo de propósito: o pacote do banco não depende de shared-types (nem o contrário).
 const plans = PLAN_CATALOG.map((entry) => ({
   tier: entry.tier as PlanTier,

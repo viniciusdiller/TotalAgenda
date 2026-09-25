@@ -11,7 +11,7 @@ const PRICE_ENV_BY_TIER: Record<PlanTier, string> = {
   [PlanTier.PREMIUM]: "STRIPE_PRICE_PREMIUM",
 };
 
-// A tabela `Plan` é ESPELHO do catálogo (packages/shared-types/src/plans.ts): a cada boot ela é regravada a partir
+// A tabela `Plan` é ESPELHO do catálogo (packages/shared-types/src/index.ts): a cada boot ela é regravada a partir
 // dele. Mudar preço ou limite = editar o catálogo + deploy; nada de UPDATE manual nem migration (a migration
 // `seed_plans` guarda valores antigos de propósito, e este sync os corrige no primeiro boot).
 @Injectable()
