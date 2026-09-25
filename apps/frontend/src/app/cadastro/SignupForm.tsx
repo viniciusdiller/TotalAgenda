@@ -7,6 +7,8 @@ import { LEGAL_DOCS_VERSION } from "@totalagenda/shared-types";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { ApiError, publicApi } from "@/lib/api";
+import type { PlanTier } from "@/lib/billing";
+import { planCookieValue } from "@/lib/signup-plan";
 import { loginAction } from "../entrar/actions";
 
 // Espelham SignupDto (backend): a validação de verdade é lá; isto só evita ida e volta.
@@ -29,7 +31,7 @@ function signupErrorMessage(error: unknown): string {
   return "Não foi possível criar a conta. Tente novamente.";
 }
 
-export function SignupForm() {
+export function SignupForm({ selectedTier = null }: { selectedTier?: PlanTier | null }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +73,10 @@ export function SignupForm() {
         setError(signupErrorMessage(err));
         return;
       }
+
+      // Guarda o plano escolhido só para a tela de plano destacá-lo (preferência de apresentação; o cadastro
+      // não envia plano ao backend e nada é cobrado por isto).
+      if (selectedTier) document.cookie = planCookieValue(selectedTier);
 
       // Conta criada: já entra (mesma sessão NextAuth do /entrar). Se o login falhar por algum
       // motivo, a conta existe e o usuário só precisa entrar manualmente.
@@ -172,7 +178,7 @@ export function SignupForm() {
       ) : null}
 
       <Button type="submit" disabled={pending} className="mt-2 w-full disabled:opacity-60">
-        {pending ? "Criando sua conta..." : "Criar conta grátis"}
+        {pending ? "Criando sua conta..." : "Criar conta e começar o teste grátis"}
       </Button>
 
       <p className="text-center text-sm text-zinc-500 dark:text-stone-400">

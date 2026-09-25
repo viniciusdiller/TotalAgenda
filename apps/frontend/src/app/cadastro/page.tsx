@@ -1,32 +1,52 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { SignupForm } from "./SignupForm";
+import { SignupFlow } from "./SignupFlow";
 import { Logo } from "@/components/brand/Logo";
 import { Footer } from "@/components/marketing/Footer";
 import { BackLink } from "@/components/ui/BackLink";
+import { type PlanInfo, isPlanInfo } from "@/lib/billing";
+import { parsePlanParam } from "@/lib/signup-plan";
 
 export const metadata: Metadata = { title: "Criar conta - TotalAgenda" };
 
-export default function CadastroPage() {
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+const TIER_ORDER = ["ESSENCIAL", "PROFISSIONAL", "PREMIUM"];
+
+// Os planos vêm do backend (GET /plans, público) para o preço mostrado ser o que o dono vai pagar: nada
+// hardcoded aqui. Se a API estiver fora do ar, o cadastro segue sem a etapa de plano em vez de travar.
+async function fetchPlans(): Promise<PlanInfo[]> {
+  try {
+    const res = await fetch(`${API_URL}/plans`, { next: { revalidate: 300 } });
+    if (!res.ok) return [];
+    const data: unknown = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.filter(isPlanInfo).sort((a, b) => TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier));
+  } catch {
+    return [];
+  }
+}
+
+export default async function CadastroPage({ searchParams }: { searchParams: Promise<{ plano?: string | string[] }> }) {
+  const [{ plano }, plans] = await Promise.all([searchParams, fetchPlans()]);
+
   return (
     <div className="flex min-h-dvh flex-col">
-      <main className="flex flex-1 items-center justify-center bg-stone-50 px-6 py-16 dark:bg-zinc-950">
-        <div className="w-full max-w-sm">
+      <main className="flex-1 bg-stone-50 px-5 py-8 sm:px-6 sm:py-10 dark:bg-zinc-950">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between">
           <BackLink href="/" label="Voltar" />
-          <Link href="/" className="mt-6 inline-block">
+          <Link href="/" aria-label="TotalAgenda, página inicial">
             <Logo />
           </Link>
-          <h1 className="mt-6 font-display text-2xl font-bold text-zinc-900 dark:text-white">
-            Crie a conta do seu negócio
-          </h1>
-          {/* 14 dias = TRIAL_DAYS no backend (billing/trial.constants.ts). */}
-          <p className="mt-1 text-sm text-zinc-500 dark:text-stone-400">
-            Teste o TotalAgenda por 14 dias, sem cartão de crédito.
-          </p>
+          <Link
+            href="/entrar"
+            className="rounded-lg px-1 py-1.5 text-sm font-semibold text-zinc-600 hover:text-zinc-900 dark:text-stone-300 dark:hover:text-white"
+          >
+            Já tenho conta
+          </Link>
+        </div>
 
-          <div className="mt-8">
-            <SignupForm />
-          </div>
+        <div className="mt-8 pb-8">
+          <SignupFlow plans={plans} initialTier={parsePlanParam(plano)} />
         </div>
       </main>
       <Footer />
