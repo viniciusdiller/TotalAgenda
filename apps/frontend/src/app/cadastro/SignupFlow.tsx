@@ -5,7 +5,8 @@ import clsx from "clsx";
 import { ArrowRight, CalendarCheck, Check, CheckCircle, Clock, CreditCard, Gift } from "@phosphor-icons/react/dist/ssr";
 import { Button } from "@/components/ui/Button";
 import { type PlanInfo, type PlanTier, formatBRL } from "@/lib/billing";
-import { INCLUDED_IN_ALL_PLANS, TRIAL_DAYS_LABEL, planPitch } from "@/lib/signup-plan";
+import { planCatalogEntry } from "@totalagenda/shared-types";
+import { INCLUDED_IN_ALL_PLANS, TRIAL_DAYS_LABEL, teamLabel } from "@/lib/signup-plan";
 import { SignupForm } from "./SignupForm";
 
 type Step = "plan" | "account";
@@ -136,7 +137,6 @@ function PlanStep({
 
       <div role="radiogroup" aria-label="Planos disponíveis" className="mt-10 grid gap-4 md:grid-cols-3">
         {plans.map((plan) => {
-          const pitch = planPitch(plan.tier, plan.maxProfessionals);
           const isSelected = plan.tier === tier;
           return (
             <button
@@ -166,7 +166,9 @@ function PlanStep({
               </span>
 
               <h2 className="font-display text-xl font-bold text-zinc-900 dark:text-white">{plan.name}</h2>
-              <p className="mt-1 min-h-10 text-sm text-zinc-500 dark:text-stone-400">{pitch.audience}</p>
+              <p className="mt-1 min-h-10 text-sm text-zinc-500 dark:text-stone-400">
+                {planCatalogEntry(plan.tier)?.audience}
+              </p>
 
               <p className="mt-5 flex items-baseline gap-1">
                 <span className="font-display text-4xl font-bold tracking-tight text-zinc-900 dark:text-white">
@@ -183,7 +185,7 @@ function PlanStep({
                     : "bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-200",
                 )}
               >
-                {pitch.teamLabel}
+                {teamLabel(plan.maxProfessionals)}
               </p>
 
               <ul className="mt-5 flex flex-col gap-2.5 border-t border-zinc-100 pt-5 dark:border-white/10">
@@ -231,8 +233,6 @@ function AccountStep({
   canChoosePlan: boolean;
   onChangePlan: () => void;
 }) {
-  const pitch = plan ? planPitch(plan.tier, plan.maxProfessionals) : null;
-
   const timeline = [
     { icon: CalendarCheck, title: "Hoje", text: "Crie sua conta e já comece a usar agenda, clientes e caixa." },
     { icon: Clock, title: `Por ${TRIAL_DAYS_LABEL}`, text: "Teste tudo sem cartão e sem cobrança." },
@@ -254,7 +254,7 @@ function AccountStep({
         />
         <div className="relative">
           <p className="text-xs font-semibold tracking-wide text-accent-100 uppercase">Seu plano</p>
-          {plan && pitch ? (
+          {plan ? (
             <>
               <div className="mt-2 flex items-baseline justify-between gap-3">
                 <h2 className="font-display text-2xl font-bold">{plan.name}</h2>
@@ -263,7 +263,7 @@ function AccountStep({
                   <span className="text-sm text-accent-100"> /mês</span>
                 </p>
               </div>
-              <p className="mt-1 text-sm text-accent-50">{pitch.teamLabel}</p>
+              <p className="mt-1 text-sm text-accent-50">{teamLabel(plan.maxProfessionals)}</p>
             </>
           ) : (
             <p className="mt-2 font-display text-xl font-bold">Você escolhe depois</p>

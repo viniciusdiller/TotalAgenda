@@ -37,26 +37,13 @@ export function parsePlanCookie(value: string | undefined | null): PlanTier | nu
   return value && isPlanTier(value) ? value : null;
 }
 
-export interface PlanPitch {
-  audience: string;
-  teamLabel: string;
-}
-
 // Tudo é igual entre os planos, menos o tamanho da equipe (backend: Plan.maxProfessionals). Por isso o texto
-// de cada plano fala de equipe, e não de recursos que os outros "não têm".
-export function planPitch(tier: PlanTier, maxProfessionals: number | null): PlanPitch {
-  const teamLabel =
-    maxProfessionals === null
-      ? "Profissionais ilimitados"
-      : maxProfessionals === 1
-        ? "1 profissional"
-        : `Até ${maxProfessionals} profissionais`;
-  const audience: Record<PlanTier, string> = {
-    ESSENCIAL: "Para quem trabalha sozinho ou em dupla.",
-    PROFISSIONAL: "Para salões e barbearias com equipe pequena.",
-    PREMIUM: "Para equipes grandes e negócios em crescimento.",
-  };
-  return { audience: audience[tier], teamLabel };
+// de cada plano fala de equipe, e não de recursos que os outros "não têm". A frase de apresentação de cada plano
+// (`audience`) vem do catálogo único (@totalagenda/shared-types); os PREÇOS vêm de GET /plans, nunca daqui.
+export function teamLabel(maxProfessionals: number | null): string {
+  if (maxProfessionals === null) return "Profissionais ilimitados";
+  if (maxProfessionals === 1) return "1 profissional";
+  return `Até ${maxProfessionals} profissionais`;
 }
 
 // Incluído em TODOS os planos (as telas existem no painel; nenhum plano as remove).

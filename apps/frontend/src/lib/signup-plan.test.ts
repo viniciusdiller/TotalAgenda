@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { PLAN_COOKIE, isPlanTier, parsePlanCookie, parsePlanParam, planCookieValue, planPitch } from "./signup-plan.ts";
+import { PLAN_COOKIE, isPlanTier, parsePlanCookie, parsePlanParam, planCookieValue, teamLabel } from "./signup-plan.ts";
 
 describe("parsePlanParam", () => {
   it("aceita o NOME que o site institucional manda e o tier, sem caixa nem acento", () => {
@@ -40,11 +40,11 @@ describe("parsePlanCookie / isPlanTier", () => {
   });
 });
 
-describe("planPitch", () => {
+describe("teamLabel", () => {
   it("descreve a equipe conforme o limite do backend", () => {
-    assert.equal(planPitch("ESSENCIAL", 2).teamLabel, "Até 2 profissionais");
-    assert.equal(planPitch("PROFISSIONAL", 5).teamLabel, "Até 5 profissionais");
-    assert.equal(planPitch("PREMIUM", null).teamLabel, "Profissionais ilimitados");
-    assert.equal(planPitch("ESSENCIAL", 1).teamLabel, "1 profissional");
+    assert.equal(teamLabel(2), "Até 2 profissionais");
+    assert.equal(teamLabel(5), "Até 5 profissionais");
+    assert.equal(teamLabel(null), "Profissionais ilimitados");
+    assert.equal(teamLabel(1), "1 profissional");
   });
 });
