@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { decodeJwtExpiryMs } from "@/lib/jwt-decode";
 import { signedVisitorHeaders } from "@/lib/client-ip";
 import { CONSUMER_COOKIE_NAME, consumerCookieOptions } from "@/lib/consumer-cookie";
+import { buildCsp, generateNonce } from "@/lib/csp";
 
 const AUTH_PAGES = ["/entrar"];
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -60,6 +61,15 @@ export default auth(async (req) => {
   const isDashboardRoute = pathname.startsWith("/dashboard");
   const isAuthPage = AUTH_PAGES.some((page) => pathname.startsWith(page));
 
+  // CSP com nonce por requisição (lib/csp.ts). O Next lê o nonce do cabeçalho CSP da REQUISIÇÃO e o aplica
+  // aos scripts dele durante o render; por isso o cabeçalho vai tanto na requisição repassada quanto na
+  // resposta. Exige render dinâmico (o layout raiz já lê cookies, então toda página é dinâmica).
+  const nonce = generateNonce();
+  const csp = buildCsp({ nonce, isDev: process.env.NODE_ENV === "development", apiUrl: API_URL });
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", csp);
+
   let response: NextResponse;
   if (isDashboardRoute && !isLoggedIn) {
     response = NextResponse.redirect(new URL("/entrar", req.nextUrl));
@@ -70,8 +80,9 @@ export default auth(async (req) => {
     // Next.js (vercel/next.js#48438), travando a navegação.
     response = NextResponse.redirect(new URL("/dashboard/agenda", req.nextUrl));
   } else {
-    response = NextResponse.next();
+    response = NextResponse.next({ request: { headers: requestHeaders } });
   }
+  response.headers.set("Content-Security-Policy", csp);
 
   // Independente da lógica de staff acima: roda em toda navegação que não seja asset.
   await renewConsumerSessionIfNeeded(req, response);
