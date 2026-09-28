@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import clsx from "clsx";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toggleProfessionalActiveAction } from "./actions";
 
 export function ProfessionalRow({
@@ -20,6 +21,15 @@ export function ProfessionalRow({
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDeactivate, setConfirmingDeactivate] = useState(false);
+
+  function toggleActive() {
+    startTransition(async () => {
+      setError(null);
+      const result = await toggleProfessionalActiveAction(id, !isActive);
+      if (result?.error) setError(result.error);
+    });
+  }
 
   return (
     <li className="flex flex-col gap-1 py-4">
@@ -57,13 +67,7 @@ export function ProfessionalRow({
             <button
               type="button"
               disabled={isPending}
-              onClick={() =>
-                startTransition(async () => {
-                  setError(null);
-                  const result = await toggleProfessionalActiveAction(id, !isActive);
-                  if (result?.error) setError(result.error);
-                })
-              }
+              onClick={() => (isActive ? setConfirmingDeactivate(true) : toggleActive())}
               className="text-sm font-medium text-zinc-500 hover:text-zinc-800 disabled:opacity-50 dark:text-stone-400 dark:hover:text-stone-200"
             >
               {isActive ? "Desativar" : "Ativar"}
@@ -72,6 +76,20 @@ export function ProfessionalRow({
         </div>
       </div>
       {error ? <p className="text-xs text-red-600 dark:text-red-400">{error}</p> : null}
+
+      <ConfirmDialog
+        open={confirmingDeactivate}
+        onOpenChange={setConfirmingDeactivate}
+        title="Desativar este profissional?"
+        description={`${name} deixa de aparecer pra novos agendamentos. Se já tiver atendimento futuro marcado, não vai dar pra desativar até remarcar ou cancelar. Dá pra reativar depois.`}
+        confirmLabel="Desativar"
+        cancelLabel="Voltar"
+        tone="danger"
+        onConfirm={() => {
+          setConfirmingDeactivate(false);
+          toggleActive();
+        }}
+      />
     </li>
   );
 }
