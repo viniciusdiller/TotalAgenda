@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { DateTime } from "luxon";
 import { Trash } from "@phosphor-icons/react/dist/ssr";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { MoneyInput } from "@/components/ui/MoneyInput";
 import { formatCentsBRL, moneyToCents } from "@/lib/masks";
 import type { AdminProduct, PaymentMethod, Ticket } from "@totalagenda/shared-types";
@@ -60,6 +61,10 @@ export function TicketPdv({
   );
   const [payMethod, setPayMethod] = useState<PaymentMethod>("PIX");
   const [payAmount, setPayAmount] = useState("");
+  const [removingItem, setRemovingItem] = useState<{ id: string; description: string } | null>(
+    null,
+  );
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const readOnly = ticket.status !== "OPEN";
 
@@ -133,7 +138,9 @@ export function TicketPdv({
                   {!readOnly ? (
                     <button
                       type="button"
-                      onClick={() => run(() => removeItemAction(ticket.id, item.id))}
+                      onClick={() =>
+                        setRemovingItem({ id: item.id, description: item.description })
+                      }
                       className="text-zinc-300 hover:text-red-500"
                       aria-label="Remover item"
                     >
@@ -349,13 +356,45 @@ export function TicketPdv({
           <button
             type="button"
             disabled={isPending || ticket.payments.length > 0}
-            onClick={() => run(() => cancelTicketAction(ticket.id))}
+            onClick={() => setConfirmingCancel(true)}
             className="rounded-full border border-red-200 px-6 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-40 dark:border-red-500/20 dark:text-red-400"
           >
             Cancelar
           </button>
         </div>
       ) : null}
+
+      <ConfirmDialog
+        open={removingItem !== null}
+        onOpenChange={(open) => !open && setRemovingItem(null)}
+        title="Remover este item?"
+        description={
+          removingItem ? `"${removingItem.description}" sai da comanda. Não tem como desfazer.` : undefined
+        }
+        confirmLabel="Remover item"
+        cancelLabel="Voltar"
+        tone="danger"
+        onConfirm={() => {
+          if (!removingItem) return;
+          const id = removingItem.id;
+          setRemovingItem(null);
+          run(() => removeItemAction(ticket.id, id));
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirmingCancel}
+        onOpenChange={setConfirmingCancel}
+        title="Cancelar esta comanda?"
+        description="Todos os itens são descartados e a comanda vira 'cancelada'. Não tem como desfazer."
+        confirmLabel="Cancelar comanda"
+        cancelLabel="Voltar"
+        tone="danger"
+        onConfirm={() => {
+          setConfirmingCancel(false);
+          run(() => cancelTicketAction(ticket.id));
+        }}
+      />
     </div>
   );
 }
