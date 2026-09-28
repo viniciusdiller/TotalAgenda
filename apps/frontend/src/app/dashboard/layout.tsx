@@ -4,11 +4,18 @@ import { ArrowSquareOut, SignOut } from "@phosphor-icons/react/dist/ssr";
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
 import { SidebarNav } from "./SidebarNav";
+import { MobileSidebar } from "./MobileSidebar";
 import { signOutAction } from "./actions";
 import { Logo } from "@/components/brand/Logo";
 import { type BillingStatusResponse, hasBillingAccess } from "@/lib/billing";
 import { BillingBanner } from "./BillingBanner";
 import { BillingGate } from "./BillingGate";
+
+const ROLE_LABEL: Record<string, string> = {
+  OWNER: "Dono do negócio",
+  RECEPTIONIST: "Recepção",
+  PROFESSIONAL: "Profissional",
+};
 
 interface TenantMe {
   name: string;
@@ -26,9 +33,19 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
     authedFetch<BillingStatusResponse>("/billing/status").catch(() => null),
   ]);
 
+  const userName = session.user?.name ?? "";
+  const initials =
+    userName
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase() || "?";
+
   return (
     <div className="flex min-h-dvh bg-stone-50 dark:bg-zinc-950">
-      <aside className="hidden w-64 shrink-0 border-r border-zinc-200 p-5 md:block dark:border-white/10">
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 overflow-y-auto border-r border-zinc-200 p-5 md:block dark:border-white/10">
         <Logo />
         {tenant ? (
           <>
@@ -53,35 +70,35 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-zinc-200 px-6 py-4 dark:border-white/10">
-          <div>
-            <p className="text-sm font-medium text-zinc-900 dark:text-white">
-              {session.user?.name}
-            </p>
-            <p className="text-xs text-zinc-500 dark:text-stone-400">
-              {session.user.role === "OWNER"
-                ? "Dono do negócio"
-                : session.user.role === "RECEPTIONIST"
-                  ? "Recepção"
-                  : "Profissional"}
-            </p>
+        <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-zinc-200 bg-stone-50/85 px-4 py-3 backdrop-blur-md md:px-6 md:py-4 dark:border-white/10 dark:bg-zinc-950/85">
+          <div className="flex min-w-0 items-center gap-1 md:gap-3">
+            <MobileSidebar tenant={tenant} />
+            <div className="flex min-w-0 items-center gap-2.5 md:gap-3">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-100 text-xs font-semibold text-accent-700 md:size-9 dark:bg-accent-500/15 dark:text-accent-300">
+                {initials}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-zinc-900 dark:text-white">{userName}</p>
+                <p className="truncate text-xs text-zinc-500 dark:text-stone-400">
+                  {ROLE_LABEL[session.user.role] ?? session.user.role}
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <form action={signOutAction}>
-              <button
-                type="submit"
-                className="flex items-center gap-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-800 dark:text-stone-400 dark:hover:text-stone-200"
-              >
-                <SignOut size={16} />
-                Sair
-              </button>
-            </form>
-          </div>
+          <form action={signOutAction}>
+            <button
+              type="submit"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-zinc-500 hover:bg-zinc-900/5 hover:text-zinc-800 dark:text-stone-400 dark:hover:bg-white/5 dark:hover:text-stone-200"
+            >
+              <SignOut size={16} />
+              <span className="hidden sm:inline">Sair</span>
+            </button>
+          </form>
         </header>
 
         {billing ? <BillingBanner billing={billing} /> : null}
 
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-4 md:p-6">
           <BillingGate blocked={billing ? !hasBillingAccess(billing.status) : false}>{children}</BillingGate>
         </main>
       </div>
