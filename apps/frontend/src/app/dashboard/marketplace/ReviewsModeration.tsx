@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { DateTime } from "luxon";
 import { Star } from "@phosphor-icons/react/dist/ssr";
 import type { OwnerReview } from "@totalagenda/shared-types";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { hideReviewAction, reportReviewAction } from "./actions";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -16,6 +17,7 @@ export function ReviewsModeration({ reviews }: { reviews: OwnerReview[] }) {
   const [isPending, startTransition] = useTransition();
   const [reporting, setReporting] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  const [confirmingHide, setConfirmingHide] = useState<string | null>(null);
 
   if (reviews.length === 0) {
     return (
@@ -50,7 +52,7 @@ export function ReviewsModeration({ reviews }: { reviews: OwnerReview[] }) {
               <button
                 type="button"
                 disabled={isPending}
-                onClick={() => startTransition(() => void hideReviewAction(r.id))}
+                onClick={() => setConfirmingHide(r.id)}
                 className="font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-stone-200"
               >
                 Ocultar
@@ -91,6 +93,22 @@ export function ReviewsModeration({ reviews }: { reviews: OwnerReview[] }) {
           ) : null}
         </li>
       ))}
+
+      <ConfirmDialog
+        open={confirmingHide !== null}
+        onOpenChange={(open) => !open && setConfirmingHide(null)}
+        title="Ocultar esta avaliação?"
+        description="Ela some da página pública. Hoje não tem como reexibir depois de ocultada."
+        confirmLabel="Ocultar"
+        cancelLabel="Voltar"
+        tone="danger"
+        onConfirm={() => {
+          if (!confirmingHide) return;
+          const id = confirmingHide;
+          setConfirmingHide(null);
+          startTransition(() => void hideReviewAction(id));
+        }}
+      />
     </ul>
   );
 }
