@@ -94,7 +94,7 @@ export function IntakeSection({
   if (activeForms.length === 0) {
     return (
       <p className="text-sm text-zinc-500 dark:text-stone-400">
-        Nenhuma ficha de anamnese cadastrada. O dono cria fichas nas configurações.
+        Nenhuma ficha de anamnese cadastrada. O dono cria fichas na tela de Fichas.
       </p>
     );
   }
