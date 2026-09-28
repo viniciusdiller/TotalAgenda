@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { DateTime } from "luxon";
 import type { CashRegisterSummary } from "@totalagenda/shared-types";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Input } from "@/components/ui/Input";
 import { MaskedInput } from "@/components/ui/MaskedInput";
 import { MoneyInput } from "@/components/ui/MoneyInput";
@@ -36,6 +37,8 @@ export function CaixaView({ summary }: { summary: CashRegisterSummary }) {
   const [openState, openAction, openPending] = useActionState(openCashAction, initial);
   const [moveState, moveAction, movePending] = useActionState(cashMovementAction, initial);
   const [closeState, closeFormAction, closePending] = useActionState(closeCashAction, initial);
+  const closeFormRef = useRef<HTMLFormElement>(null);
+  const [confirmingClose, setConfirmingClose] = useState(false);
 
   if (!summary.open) {
     return (
@@ -138,11 +141,18 @@ export function CaixaView({ summary }: { summary: CashRegisterSummary }) {
 
       <div>
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">Fechar caixa</h2>
-        <form action={closeFormAction} className="mt-3 flex flex-wrap items-end gap-2">
+        <form ref={closeFormRef} action={closeFormAction} className="mt-3 flex flex-wrap items-end gap-2">
           <MaskedInput mask="money" label="Dinheiro contado (R$)" name="counted" required />
           <button
             type="submit"
             disabled={closePending}
+            onClick={(event) => {
+              // Fechar caixa não tem volta (não dá pra reabrir ou editar os lançamentos
+              // depois) — sem isto era um clique só. Sem JS o form ainda funciona: o
+              // preventDefault só roda se o handler executar.
+              event.preventDefault();
+              setConfirmingClose(true);
+            }}
             className="rounded-full bg-zinc-900 px-6 py-2.5 text-sm font-semibold text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900"
           >
             {closePending ? "Fechando..." : "Fechar"}
@@ -168,6 +178,20 @@ export function CaixaView({ summary }: { summary: CashRegisterSummary }) {
           </p>
         ) : null}
       </div>
+
+      <ConfirmDialog
+        open={confirmingClose}
+        onOpenChange={setConfirmingClose}
+        title="Fechar o caixa?"
+        description="Confira o valor contado antes de confirmar — depois de fechado não dá pra reabrir nem editar os lançamentos deste caixa."
+        confirmLabel="Fechar caixa"
+        cancelLabel="Voltar"
+        tone="neutral"
+        onConfirm={() => {
+          setConfirmingClose(false);
+          closeFormRef.current?.requestSubmit();
+        }}
+      />
     </div>
   );
 }
