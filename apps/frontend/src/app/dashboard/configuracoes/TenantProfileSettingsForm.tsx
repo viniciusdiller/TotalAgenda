@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Input } from "@/components/ui/Input";
 import { MaskedInput } from "@/components/ui/MaskedInput";
 import { Button } from "@/components/ui/Button";
@@ -44,12 +45,18 @@ const SECTION_TOGGLES = [
 const profileInitialState: UpdateProfileState = {};
 const uploadInitialState: UploadLogoState = {};
 
-function RemoveLogoButton() {
+function RemoveLogoButton({ onRequestConfirm }: { onRequestConfirm: () => void }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
       disabled={pending}
+      onClick={(event) => {
+        // Sem confirmação era um clique só. Sem JS o botão continua type=submit e remove
+        // direto — o handler só roda se o JS carregar.
+        event.preventDefault();
+        onRequestConfirm();
+      }}
       className="rounded-md text-sm font-medium text-red-600 hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40 disabled:cursor-wait disabled:opacity-60 dark:text-red-400"
     >
       {pending ? "Removendo..." : "Remover"}
@@ -68,6 +75,8 @@ export function TenantProfileSettingsForm({ tenant }: { tenant: TenantProfile })
   );
   const [removeLogoState, removeLogoFormAction] = useActionState(removeLogoAction, {});
   const [compressing, setCompressing] = useState(false);
+  const removeLogoFormRef = useRef<HTMLFormElement>(null);
+  const [confirmingRemoveLogo, setConfirmingRemoveLogo] = useState(false);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -122,8 +131,8 @@ export function TenantProfileSettingsForm({ tenant }: { tenant: TenantProfile })
           </form>
 
           {tenant.logoUrl ? (
-            <form action={removeLogoFormAction}>
-              <RemoveLogoButton />
+            <form ref={removeLogoFormRef} action={removeLogoFormAction}>
+              <RemoveLogoButton onRequestConfirm={() => setConfirmingRemoveLogo(true)} />
             </form>
           ) : null}
         </div>
@@ -135,6 +144,20 @@ export function TenantProfileSettingsForm({ tenant }: { tenant: TenantProfile })
           <p className="mt-2 text-sm text-red-600 dark:text-red-400">{removeLogoState.error}</p>
         ) : null}
       </div>
+
+      <ConfirmDialog
+        open={confirmingRemoveLogo}
+        onOpenChange={setConfirmingRemoveLogo}
+        title="Remover a logo?"
+        description="A página pública do seu negócio fica sem logo até você enviar outra."
+        confirmLabel="Remover"
+        cancelLabel="Voltar"
+        tone="danger"
+        onConfirm={() => {
+          setConfirmingRemoveLogo(false);
+          removeLogoFormRef.current?.requestSubmit();
+        }}
+      />
 
       <form
         action={profileAction}
@@ -207,25 +230,6 @@ export function TenantProfileSettingsForm({ tenant }: { tenant: TenantProfile })
           <p className="text-xs text-zinc-400 dark:text-stone-500">
             Uma seção só aparece se também tiver conteúdo cadastrado.
           </p>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="accentColor" className="text-sm font-medium text-zinc-700 dark:text-stone-200">
-            Cor de destaque
-          </label>
-          <div className="flex items-center gap-3">
-            <input
-              type="color"
-              id="accentColor"
-              name="accentColor"
-              defaultValue={tenant.accentColor ?? "#6c3bf4"}
-              className="h-10 w-14 cursor-pointer rounded-lg border border-zinc-300 dark:border-white/15"
-            />
-            <p className="text-sm text-zinc-500 dark:text-stone-400">
-              Salva no seu cadastro, mas não é mais aplicada na página pública — ela segue
-              sempre a identidade visual do TotalAgenda.
-            </p>
-          </div>
         </div>
 
         {profileState?.error ? (

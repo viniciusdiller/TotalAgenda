@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
 import { compressImageFile } from "@/lib/image-compression";
 import {
@@ -17,12 +18,18 @@ const uploadInitialState: UploadGalleryImageState = {};
 // desperdício, o backend ia reduzir de novo do mesmo jeito.
 const MAX_DIMENSION = 1600;
 
-function RemoveImageButton() {
+function RemoveImageButton({ onRequestConfirm }: { onRequestConfirm: () => void }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
       disabled={pending}
+      onClick={(event) => {
+        // Sem confirmação era um clique só. Sem JS o botão continua type=submit e remove
+        // direto — o handler só roda se o JS carregar.
+        event.preventDefault();
+        onRequestConfirm();
+      }}
       className="absolute inset-0 flex items-center justify-center bg-black/50 text-sm font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 disabled:cursor-wait"
     >
       {pending ? "Removendo..." : "Remover"}
@@ -32,18 +39,35 @@ function RemoveImageButton() {
 
 function GalleryImage({ image }: { image: { id: string; url: string } }) {
   const [state, action] = useActionState(removeGalleryImageAction.bind(null, image.id), {});
+  const formRef = useRef<HTMLFormElement>(null);
+  const [confirming, setConfirming] = useState(false);
+
   return (
     <div className="group relative aspect-square overflow-hidden rounded-xl">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={`${API_URL}${image.url}`} alt="" className="h-full w-full object-cover" />
-      <form action={action}>
-        <RemoveImageButton />
+      <form ref={formRef} action={action}>
+        <RemoveImageButton onRequestConfirm={() => setConfirming(true)} />
       </form>
       {state?.error ? (
         <p className="absolute inset-x-0 bottom-0 bg-red-600/90 px-2 py-1 text-center text-xs text-white">
           {state.error}
         </p>
       ) : null}
+
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title="Remover esta foto?"
+        description="Ela some da galeria da página pública."
+        confirmLabel="Remover"
+        cancelLabel="Voltar"
+        tone="danger"
+        onConfirm={() => {
+          setConfirming(false);
+          formRef.current?.requestSubmit();
+        }}
+      />
     </div>
   );
 }
