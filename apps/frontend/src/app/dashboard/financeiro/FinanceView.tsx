@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { DateTime } from "luxon";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { MoneyInput } from "@/components/ui/MoneyInput";
 import type {
   CashFlowReport,
@@ -60,6 +61,10 @@ export function FinanceView({
   const [reportPending, startReport] = useTransition();
   const [from, setFrom] = useState(DateTime.now().startOf("month").toISODate()!);
   const [to, setTo] = useState(DateTime.now().endOf("month").toISODate()!);
+  const [confirmingAction, setConfirmingAction] = useState<{
+    entry: FinancialEntry;
+    kind: "settle" | "cancel";
+  } | null>(null);
 
   const isOwner = role === "OWNER";
   const payables = entries.filter((e) => e.direction === "EXPENSE" && e.status === "PENDING");
@@ -111,7 +116,7 @@ export function FinanceView({
                   <>
                     <button
                       type="button"
-                      onClick={() => startTransition(() => void settleEntryAction(e.id))}
+                      onClick={() => setConfirmingAction({ entry: e, kind: "settle" })}
                       className={
                         overdue
                           ? "rounded-md bg-amber-500 px-2 py-1 text-xs font-medium text-white"
@@ -123,7 +128,7 @@ export function FinanceView({
                     {e.source === "MANUAL" ? (
                       <button
                         type="button"
-                        onClick={() => startTransition(() => void cancelEntryAction(e.id))}
+                        onClick={() => setConfirmingAction({ entry: e, kind: "cancel" })}
                         className="text-xs text-zinc-400 hover:text-red-500"
                       >
                         cancelar
@@ -273,6 +278,30 @@ export function FinanceView({
           ) : null}
         </div>
       ) : null}
+
+      <ConfirmDialog
+        open={confirmingAction !== null}
+        onOpenChange={(open) => !open && setConfirmingAction(null)}
+        title={confirmingAction?.kind === "cancel" ? "Cancelar este lançamento?" : "Dar baixa neste lançamento?"}
+        description={
+          confirmingAction
+            ? confirmingAction.kind === "cancel"
+              ? `"${confirmingAction.entry.description}" (${brl(confirmingAction.entry.amountCents)}) é descartado. Não tem como desfazer.`
+              : `Marca "${confirmingAction.entry.description}" (${brl(confirmingAction.entry.amountCents)}) como pago/recebido. Não tem "desfazer baixa" — se for engano, é preciso lançar de novo.`
+            : undefined
+        }
+        confirmLabel={confirmingAction?.kind === "cancel" ? "Cancelar lançamento" : "Dar baixa"}
+        cancelLabel="Voltar"
+        tone={confirmingAction?.kind === "cancel" ? "danger" : "neutral"}
+        onConfirm={() => {
+          if (!confirmingAction) return;
+          const { entry, kind } = confirmingAction;
+          setConfirmingAction(null);
+          startTransition(() =>
+            void (kind === "cancel" ? cancelEntryAction(entry.id) : settleEntryAction(entry.id)),
+          );
+        }}
+      />
     </div>
   );
 }
