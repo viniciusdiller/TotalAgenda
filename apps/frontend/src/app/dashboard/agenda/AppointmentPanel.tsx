@@ -13,6 +13,7 @@ import {
 } from "./actions";
 import { openTicketAction } from "../comandas/actions";
 import { STATUS_LABEL, getStatusBadgeClasses, getStatusLabel } from "@/lib/appointment-status";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 const TIMEZONE = "America/Sao_Paulo";
 
@@ -44,6 +45,7 @@ export function AppointmentPanel({
   const [rescheduleProfessionalId, setRescheduleProfessionalId] = useState(
     appointment.professionalId,
   );
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
   const reduceMotion = useReducedMotion();
   // datetime-local não tem granularidade de segundo — usar o minuto atual (não "agora"
   // exato) como piso evita rejeitar o próprio minuto em que o campo foi aberto.
@@ -260,7 +262,7 @@ export function AppointmentPanel({
               <button
                 type="button"
                 disabled={isPending}
-                onClick={() => run("cancel", () => cancelAppointmentAction(appointment.id))}
+                onClick={() => setConfirmingCancel(true)}
                 className="w-full rounded-full border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-500/20 dark:text-red-400"
               >
                 {isPending && pendingLabel === "cancel" ? "Cancelando..." : "Cancelar atendimento"}
@@ -269,6 +271,21 @@ export function AppointmentPanel({
           </div>
         ) : null}
       </motion.aside>
+
+      <ConfirmDialog
+        open={confirmingCancel}
+        onOpenChange={setConfirmingCancel}
+        title="Cancelar este atendimento?"
+        description={`O horário de ${appointment.clientName} será liberado. Essa ação não pode ser desfeita.`}
+        confirmLabel="Cancelar atendimento"
+        cancelLabel="Voltar"
+        tone="danger"
+        isLoading={isPending && pendingLabel === "cancel"}
+        onConfirm={() => {
+          setConfirmingCancel(false);
+          run("cancel", () => cancelAppointmentAction(appointment.id));
+        }}
+      />
     </motion.div>
   );
 }
