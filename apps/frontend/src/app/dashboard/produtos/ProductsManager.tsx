@@ -3,6 +3,7 @@
 import { useActionState, useState, useTransition } from "react";
 import { Package, Plus } from "@phosphor-icons/react/dist/ssr";
 import type { AdminProduct } from "@totalagenda/shared-types";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Input } from "@/components/ui/Input";
 import { MaskedInput } from "@/components/ui/MaskedInput";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -21,6 +22,7 @@ const initial: ProductActionState = {};
 function StockControl({ product }: { product: AdminProduct }) {
   const [qty, setQty] = useState(1);
   const [isPending, startTransition] = useTransition();
+  const [confirmingOut, setConfirmingOut] = useState(false);
 
   function move(kind: "IN" | "OUT") {
     startTransition(() => {
@@ -48,11 +50,25 @@ function StockControl({ product }: { product: AdminProduct }) {
       <button
         type="button"
         disabled={isPending}
-        onClick={() => move("OUT")}
+        onClick={() => setConfirmingOut(true)}
         className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium dark:border-white/15 dark:text-stone-200"
       >
         − saída
       </button>
+
+      <ConfirmDialog
+        open={confirmingOut}
+        onOpenChange={setConfirmingOut}
+        title="Registrar saída de estoque?"
+        description={`Tira ${qty} unidade${qty > 1 ? "s" : ""} de "${product.name}" do estoque (estoque atual: ${product.stock}). Não tem como desfazer — se for engano, lance uma entrada depois pra corrigir.`}
+        confirmLabel="Registrar saída"
+        cancelLabel="Voltar"
+        tone="danger"
+        onConfirm={() => {
+          setConfirmingOut(false);
+          move("OUT");
+        }}
+      />
     </div>
   );
 }
@@ -61,6 +77,7 @@ export function ProductsManager({ products }: { products: AdminProduct[] }) {
   const [state, formAction, pending] = useActionState(createProductAction, initial);
   const [showForm, setShowForm] = useState(false);
   const [, startTransition] = useTransition();
+  const [confirmingDeactivate, setConfirmingDeactivate] = useState<AdminProduct | null>(null);
 
   return (
     <div className="mt-6">
@@ -151,9 +168,11 @@ export function ProductsManager({ products }: { products: AdminProduct[] }) {
                     <button
                       type="button"
                       onClick={() =>
-                        startTransition(() => {
-                          void updateProductAction(product.id, { isActive: !product.isActive });
-                        })
+                        product.isActive
+                          ? setConfirmingDeactivate(product)
+                          : startTransition(() => {
+                              void updateProductAction(product.id, { isActive: true });
+                            })
                       }
                       className="text-xs font-medium text-zinc-400 hover:text-zinc-700 dark:hover:text-stone-200"
                     >
@@ -166,6 +185,28 @@ export function ProductsManager({ products }: { products: AdminProduct[] }) {
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmingDeactivate !== null}
+        onOpenChange={(open) => !open && setConfirmingDeactivate(null)}
+        title="Desativar este produto?"
+        description={
+          confirmingDeactivate
+            ? `"${confirmingDeactivate.name}" some das opções de venda em comanda. Dá pra reativar depois.`
+            : undefined
+        }
+        confirmLabel="Desativar"
+        cancelLabel="Voltar"
+        tone="danger"
+        onConfirm={() => {
+          if (!confirmingDeactivate) return;
+          const id = confirmingDeactivate.id;
+          setConfirmingDeactivate(null);
+          startTransition(() => {
+            void updateProductAction(id, { isActive: false });
+          });
+        }}
+      />
     </div>
   );
 }
