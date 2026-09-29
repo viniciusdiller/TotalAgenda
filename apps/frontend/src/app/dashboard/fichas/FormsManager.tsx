@@ -10,7 +10,7 @@ const TYPE_LABEL: Record<IntakeFieldDef["type"], string> = {
   text: "Texto curto",
   textarea: "Texto longo",
   boolean: "Sim/Não",
-  select: "Escolha",
+  select: "Lista de opções",
 };
 
 function slugify(label: string) {
@@ -79,6 +79,12 @@ function Editor({
         placeholder="Nome da ficha (ex.: Anamnese capilar)"
         className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium dark:border-white/15 dark:bg-zinc-900 dark:text-white"
       />
+
+      <p className="mt-3 text-xs text-zinc-400 dark:text-stone-500">
+        Cada campo vira uma pergunta que aparece pro profissional preencher na ficha do
+        cliente (ex.: "Alergias conhecidas" como texto, "Fez química recente?" como
+        Sim/Não).
+      </p>
 
       <div className="mt-3 space-y-2">
         {fields.map((field, i) => (
