@@ -117,8 +117,12 @@ export function CaixaView({ summary }: { summary: CashRegisterSummary }) {
 
         {summary.movements && summary.movements.length > 0 ? (
           <ul className="mt-4 divide-y divide-zinc-100 text-sm dark:divide-white/5">
-            {summary.movements.map((m) => (
-              <li key={m.id} className="flex justify-between py-2">
+            {summary.movements.map((m, i) => (
+              <li
+                key={m.id}
+                style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
+                className="animate-rise-in flex justify-between py-2"
+              >
                 <span className="text-zinc-600 dark:text-stone-300">
                   {MOVEMENT_LABEL[m.kind] ?? m.kind}
                   {m.note ? ` · ${m.note}` : ""}

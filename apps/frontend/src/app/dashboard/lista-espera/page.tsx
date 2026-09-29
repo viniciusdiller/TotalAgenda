@@ -53,13 +53,14 @@ export default async function WaitlistPage() {
         </div>
       ) : (
         <ul className="mt-8 flex flex-col divide-y divide-zinc-200 dark:divide-white/10">
-          {entries.map((entry) => (
+          {entries.map((entry, i) => (
             <WaitlistRow
               key={entry.id}
               id={entry.id}
               clientName={entry.clientName}
               clientPhone={entry.clientPhone}
               serviceName={entry.service.name}
+              index={i}
             />
           ))}
         </ul>
