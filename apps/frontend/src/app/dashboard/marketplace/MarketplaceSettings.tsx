@@ -12,10 +12,16 @@ export function MarketplaceSettings({ settings }: { settings: Settings }) {
 
   return (
     <form action={formAction} className="mt-4 space-y-4">
-      <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-stone-200">
-        <input type="checkbox" name="listed" defaultChecked={settings.listedInMarketplace} />
-        Aparecer no marketplace de descoberta (/descobrir)
-      </label>
+      <div>
+        <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-stone-200">
+          <input type="checkbox" name="listed" defaultChecked={settings.listedInMarketplace} />
+          Aparecer no marketplace de descoberta (/descobrir)
+        </label>
+        <p className="mt-1 text-xs text-zinc-400 dark:text-stone-500">
+          É opcional e vem desligado por padrão. Só muda quem consegue te encontrar
+          buscando por serviço/cidade — não afeta seu plano nem cobrança.
+        </p>
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Input label="Cidade" name="city" maxLength={120} autoComplete="address-level2" defaultValue={settings.city ?? ""} />
