@@ -75,8 +75,8 @@ export default async function ClientsPage({
         </div>
       ) : (
         <ul className="mt-6 flex flex-col divide-y divide-zinc-200 dark:divide-white/10">
-          {clients.map((client) => (
-            <li key={client.id}>
+          {clients.map((client, i) => (
+            <li key={client.id} style={{ "--i": Math.min(i, 8) } as React.CSSProperties} className="animate-rise-in">
               <Link
                 href={`/dashboard/clientes/${client.id}`}
                 className="-mx-3 flex items-center justify-between gap-4 rounded-lg px-3 py-3.5 transition-colors hover:bg-zinc-900/5 dark:hover:bg-white/5"

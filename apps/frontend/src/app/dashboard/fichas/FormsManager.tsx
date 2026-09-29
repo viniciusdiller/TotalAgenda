@@ -175,13 +175,14 @@ export function FormsManager({ initialForms }: { initialForms: IntakeFormSummary
 
   return (
     <div className="mt-6 space-y-4">
-      {initialForms.map((form) =>
+      {initialForms.map((form, i) =>
         editing !== null && editing !== "new" && editing.id === form.id ? (
           <Editor key={form.id} form={form} onDone={() => setEditing(null)} />
         ) : (
           <div
             key={form.id}
-            className="flex items-center justify-between rounded-xl border border-zinc-200 p-4 dark:border-white/10"
+            style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
+            className="animate-rise-in flex items-center justify-between rounded-xl border border-zinc-200 p-4 dark:border-white/10"
           >
             <div>
               <p className="font-medium text-zinc-900 dark:text-white">{form.name}</p>
