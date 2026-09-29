@@ -22,7 +22,12 @@ export default async function ComandasPage() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-2xl font-bold text-zinc-900 dark:text-white">Comandas</h1>
+        <div>
+          <h1 className="font-display text-2xl font-bold text-zinc-900 dark:text-white">Comandas</h1>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-stone-400">
+            A conta de um atendimento — itens, desconto e pagamento até fechar.
+          </p>
+        </div>
         <OpenTicketButton />
       </div>
 
