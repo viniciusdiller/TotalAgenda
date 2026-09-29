@@ -266,15 +266,23 @@ export function FinanceView({
           ) : null}
 
           {tab === "DRE" && dre ? (
-            <dl className="mt-4 space-y-1 text-sm">
-              <Row label="Receita bruta" value={brl(dre.revenueCents)} />
-              <Row label="(−) Custo de produtos (CMV)" value={brl(dre.cogsCents)} />
-              <Row label="= Lucro bruto" value={brl(dre.grossProfitCents)} bold />
-              {dre.expensesByCategory.map((e) => (
-                <Row key={e.name} label={`(−) ${e.name}`} value={brl(e.totalCents)} />
-              ))}
-              <Row label="= Resultado" value={brl(dre.resultCents)} bold />
-            </dl>
+            <>
+              <p className="mt-4 text-xs text-zinc-400 dark:text-stone-500">
+                DRE (Demonstração do Resultado do Exercício) é o resumo contábil do seu
+                lucro no período: quanto entrou, quanto custou o que você vendeu e o que
+                sobrou. CMV (Custo da Mercadoria Vendida) é o custo de compra dos produtos
+                que saíram do estoque nas vendas do período — não inclui os serviços.
+              </p>
+              <dl className="mt-3 space-y-1 text-sm">
+                <Row label="Receita bruta" value={brl(dre.revenueCents)} />
+                <Row label="(−) Custo de produtos (CMV)" value={brl(dre.cogsCents)} />
+                <Row label="= Lucro bruto" value={brl(dre.grossProfitCents)} bold />
+                {dre.expensesByCategory.map((e) => (
+                  <Row key={e.name} label={`(−) ${e.name}`} value={brl(e.totalCents)} />
+                ))}
+                <Row label="= Resultado" value={brl(dre.resultCents)} bold />
+              </dl>
+            </>
           ) : null}
         </div>
       ) : null}
