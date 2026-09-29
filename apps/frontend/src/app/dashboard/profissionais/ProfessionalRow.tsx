@@ -12,12 +12,14 @@ export function ProfessionalRow({
   email,
   isActive,
   canManage,
+  index = 0,
 }: {
   id: string;
   name: string;
   email: string;
   isActive: boolean;
   canManage: boolean;
+  index?: number;
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +34,10 @@ export function ProfessionalRow({
   }
 
   return (
-    <li className="flex flex-col gap-1 py-4">
+    <li
+      style={{ "--i": Math.min(index, 8) } as React.CSSProperties}
+      className="animate-rise-in flex flex-col gap-1 py-4"
+    >
       <div className="flex items-center justify-between gap-4">
         <div>
           <Link

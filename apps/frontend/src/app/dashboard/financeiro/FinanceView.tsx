@@ -84,10 +84,14 @@ export function FinanceView({
       return <p className="mt-4 text-sm text-zinc-500 dark:text-stone-400">Nada por aqui.</p>;
     return (
       <ul className="mt-4 divide-y divide-zinc-100 text-sm dark:divide-white/5">
-        {items.map((e) => {
+        {items.map((e, i) => {
           const overdue = e.status === "PENDING" && DateTime.fromISO(e.dueDate) < DateTime.now();
           return (
-            <li key={e.id} className="flex items-center justify-between gap-3 py-2.5">
+            <li
+              key={e.id}
+              style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
+              className="animate-rise-in flex items-center justify-between gap-3 py-2.5"
+            >
               <div>
                 <p className="font-medium text-zinc-900 dark:text-white">{e.description}</p>
                 <p className="text-xs text-zinc-400">

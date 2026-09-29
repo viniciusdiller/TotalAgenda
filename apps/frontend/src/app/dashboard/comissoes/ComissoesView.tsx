@@ -83,8 +83,12 @@ export function ComissoesView({
         {rules.length > 0 ? (
           <>
             <ul className="mt-3 divide-y divide-zinc-100 text-sm dark:divide-white/5">
-              {rules.map((rule) => (
-                <li key={rule.id} className="py-2 text-zinc-700 dark:text-stone-200">
+              {rules.map((rule, i) => (
+                <li
+                  key={rule.id}
+                  style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
+                  className="animate-rise-in py-2 text-zinc-700 dark:text-stone-200"
+                >
                   {ruleSentence(rule)}
                   {rule.isActive ? "" : " · inativa"}
                 </li>
@@ -203,8 +207,12 @@ export function ComissoesView({
               <span className="text-sm font-normal text-zinc-400">no período</span>
             </p>
             <ul className="mt-2 divide-y divide-zinc-100 text-sm dark:divide-white/5">
-              {report.byProfessional.map((row) => (
-                <li key={row.professionalId} className="flex justify-between py-2">
+              {report.byProfessional.map((row, i) => (
+                <li
+                  key={row.professionalId}
+                  style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
+                  className="animate-rise-in flex justify-between py-2"
+                >
                   <span className="text-zinc-700 dark:text-stone-200">
                     {row.name}{" "}
                     <span className="text-zinc-400">({row.count})</span>

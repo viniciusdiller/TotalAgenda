@@ -46,7 +46,7 @@ export default async function ProfessionalsPage() {
         </div>
       ) : (
         <ul className="mt-8 flex flex-col divide-y divide-zinc-200 dark:divide-white/10">
-          {professionals.map((professional) => (
+          {professionals.map((professional, i) => (
             <ProfessionalRow
               key={professional.id}
               id={professional.id}
@@ -54,6 +54,7 @@ export default async function ProfessionalsPage() {
               email={professional.user.email}
               isActive={professional.isActive}
               canManage={isOwner}
+              index={i}
             />
           ))}
         </ul>
