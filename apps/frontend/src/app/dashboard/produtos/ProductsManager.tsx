@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
+import clsx from "clsx";
 import { Package, Plus } from "@phosphor-icons/react/dist/ssr";
 import type { AdminProduct } from "@totalagenda/shared-types";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -141,8 +142,12 @@ export function ProductsManager({ products }: { products: AdminProduct[] }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
-              {products.map((product) => (
-                <tr key={product.id} className={product.isActive ? "" : "opacity-50"}>
+              {products.map((product, i) => (
+                <tr
+                  key={product.id}
+                  style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
+                  className={clsx("animate-rise-in", !product.isActive && "opacity-50")}
+                >
                   <td className="py-2.5 font-medium text-zinc-900 dark:text-white">
                     {product.name}
                     {product.sku ? (

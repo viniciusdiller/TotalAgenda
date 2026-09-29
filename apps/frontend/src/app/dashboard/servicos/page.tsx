@@ -47,7 +47,7 @@ export default async function ServicesPage() {
         </div>
       ) : (
         <ul className="mt-8 flex flex-col divide-y divide-zinc-200 dark:divide-white/10">
-          {services.map((service) => (
+          {services.map((service, i) => (
             <ServiceRow
               key={service.id}
               id={service.id}
@@ -57,6 +57,7 @@ export default async function ServicesPage() {
               priceCents={service.priceCents}
               isActive={service.isActive}
               canManage={isOwner}
+              index={i}
             />
           ))}
         </ul>
