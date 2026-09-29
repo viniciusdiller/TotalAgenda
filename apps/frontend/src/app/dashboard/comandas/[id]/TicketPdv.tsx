@@ -163,6 +163,7 @@ export function TicketPdv({
               setPickKind(e.target.value as typeof pickKind);
               setPickId("");
             }}
+            aria-label="Tipo de item"
             className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white"
           >
             <option value="SERVICE">Serviço</option>
