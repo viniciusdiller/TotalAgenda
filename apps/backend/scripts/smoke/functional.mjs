@@ -63,8 +63,14 @@ r = await call("POST", "/cash-register/movements", { kind: "DEPOSIT", amountCent
 check("suprimento R$ 123,45", r.status === 201, r);
 r = await call("POST", "/cash-register/movements", { kind: "DEPOSIT", amountCents: 0 }, T);
 check("movimento de R$ 0 → 400", r.status === 400, r);
+r = await call("POST", "/cash-register/movements", { kind: "WITHDRAWAL", amountCents: 9_999_999 }, T);
+check("sangria maior que o saldo em caixa → 400", r.status === 400, r);
 r = await call("POST", "/cash-register/close", { closingCountedCents: 12345 }, T);
 check("fecha caixa sem diferença", r.status === 201 && r.json?.differenceCents === 0, r);
+r = await call("POST", "/cash-register/open", { openingFloatCents: 0 }, T);
+check("reabre caixa pra testar fechamento com diferença", r.status === 201, r);
+r = await call("POST", "/cash-register/close", { closingCountedCents: 500 }, T);
+check("fecha com diferença (contado > esperado)", r.status === 201 && r.json?.differenceCents === 500, r);
 r = await call("POST", "/finance/entries", { direction: "EXPENSE", description: "  Luz  ", amountCents: 25000, dueDate: "2030-01-10" }, T);
 check("lança despesa", r.status === 201 && r.json?.description === "Luz", r);
 r = await call("GET", "/finance/entries?direction=EXPENSE&status=PENDING", undefined, T);
@@ -99,6 +105,45 @@ check("pagamento", r.status === 201, r);
 r = await call("POST", `/tickets/${ticketId}/close`, {}, T);
 check("fecha comanda", r.status === 201 && r.json?.status === "CLOSED", r);
 
+console.log("== lista de espera");
+const waitPhone = "(31) 98888-" + String(stamp).slice(-4);
+r = await call("POST", "/public/consumer/register", { name: "Carla Espera", phone: waitPhone, email: `carla${stamp}@e2e.com`, password: "senha-carla-123", consent: true });
+check("cadastro do consumidor pra lista de espera", r.status === 201, r);
+const consumerToken = r.json?.accessToken;
+check("token do consumidor emitido no cadastro", !!consumerToken, r);
+r = await call("POST", `/public/tenants/${slug}/waitlist`, { serviceId }, consumerToken);
+check("entra na lista de espera", r.status === 201, r);
+const waitlistId = r.json?.id;
+r = await call("GET", "/waitlist?status=PENDING", undefined, T);
+check("dono vê a entrada pendente", r.status === 200 && r.json.some((w) => w.id === waitlistId), r);
+r = await call("PATCH", `/waitlist/${waitlistId}/status`, { status: "CONTACTED" }, T);
+check("marca como contatado (continua na lista)", r.status === 200 && r.json?.status === "CONTACTED", r);
+r = await call("PATCH", `/waitlist/${waitlistId}/status`, { status: "RESOLVED" }, T);
+check("resolve a entrada", r.status === 200 && r.json?.status === "RESOLVED", r);
+r = await call("GET", "/waitlist?status=PENDING", undefined, T);
+check("resolvida não aparece mais como pendente", r.status === 200 && !r.json.some((w) => w.id === waitlistId), r);
+
+console.log("== avaliação e moderação");
+r = await call("POST", `/professionals/${professionalId}/services`, { serviceId }, T);
+check("vincula profissional ao serviço (exigido pra agendar)", [200, 201].includes(r.status), r);
+const bookAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+r = await call("POST", `/public/tenants/${slug}/bookings`, { professionalId, serviceId, startAt: bookAt }, consumerToken);
+check("consumidor agenda pelo link público", r.status === 201, r);
+const appointmentId = r.json?.id;
+r = await call("PATCH", `/appointments/${appointmentId}/status`, { status: "COMPLETED" }, T);
+check("dono marca o atendimento como concluído", r.status === 200 && r.json?.status === "COMPLETED", r);
+r = await call("POST", "/public/consumer/reviews", { appointmentId, rating: 5, comment: "  Adorei o atendimento!  " }, consumerToken);
+check("consumidor avalia o atendimento concluído", r.status === 201, r);
+const reviewId = r.json?.id;
+r = await call("POST", "/public/consumer/reviews", { appointmentId, rating: 4 }, consumerToken);
+check("avaliar o mesmo atendimento de novo → 400", r.status === 400, r);
+r = await call("GET", "/reviews", undefined, T);
+check("dono vê a avaliação na moderação", r.status === 200 && r.json.some((rv) => rv.id === reviewId), r);
+r = await call("PATCH", `/reviews/${reviewId}/report`, { reason: "Teste de denúncia" }, T);
+check("denuncia a avaliação", r.status === 200 && r.json?.status === "PENDING_REPORT", r);
+r = await call("PATCH", `/reviews/${reviewId}/hide`, {}, T);
+check("oculta a avaliação", r.status === 200 && r.json?.status === "HIDDEN", r);
+
 console.log("== perfil público");
 r = await call("PATCH", "/tenants/me", { whatsappNumber: "5511912345678", instagramUrl: "https://instagram.com/salaoe2e", description: "Bem-vindo", address: "Rua A, 1" }, T);
 check("WhatsApp (DDI) e Instagram normalizado", r.status === 200 && r.json?.whatsappNumber === "5511912345678", r);
@@ -115,6 +160,22 @@ check("campos em branco LIMPAM (null)", r.status === 200 && r.json?.description 
 check("página pública carrega", (await call("GET", `/public/tenants/${slug}`)).status === 200);
 check("marketplace com coordenadas", (await call("PATCH", "/tenants/me/marketplace", { city: "  São Paulo ", latitude: -23.5505, longitude: -46.6333, priceRange: 2 }, T)).status === 200);
 check("latitude fora da faixa → 400", (await call("PATCH", "/tenants/me/marketplace", { latitude: 95 }, T)).status === 400);
+
+console.log("== busca pública do marketplace");
+r = await call("PATCH", "/tenants/me/marketplace", { listedInMarketplace: true, categorySlugs: ["barbearia"] }, T);
+check("liga a listagem com cidade e categoria já preenchidas", r.status === 200 && r.json?.listedInMarketplace === true, r);
+r = await call("GET", `/public/marketplace/search?city=${encodeURIComponent("São Paulo")}`);
+check("busca por cidade encontra o tenant listado", r.status === 200 && r.json.some((t) => t.slug === slug), r);
+r = await call("GET", "/public/marketplace/search?category=barbearia");
+check("busca por categoria encontra o tenant listado", r.status === 200 && r.json.some((t) => t.slug === slug), r);
+r = await call("GET", "/public/marketplace/search?lat=999&lng=0");
+check("latitude fora da faixa na busca pública → 400", r.status === 400, r);
+r = await call("GET", `/public/marketplace/establishments/${slug}`);
+// A avaliação foi ocultada na seção anterior — não deve contar na nota pública.
+check("perfil público carrega e avaliação oculta não conta na nota", r.status === 200 && r.json?.slug === slug && r.json?.rating?.count === 0, r);
+r = await call("GET", "/public/marketplace/establishments/slug-que-nao-existe");
+check("estabelecimento inexistente → 404", r.status === 404, r);
+check("PATCH marketplace sem token → 401", (await call("PATCH", "/tenants/me/marketplace", { listedInMarketplace: false })).status === 401);
 
 console.log("== fichas (intake)");
 r = await call("POST", "/intake/forms", { name: "Anamnese", fields: [{ key: "1o_retorno", label: "Primeiro retorno", type: "text" }, { key: "alergias", label: "Alergias", type: "select", options: ["Sim", "Não"], required: true }] }, T);

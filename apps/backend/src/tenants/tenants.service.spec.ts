@@ -147,6 +147,37 @@ describe("TenantsService", () => {
       );
       expect(prisma.tenantCategory.deleteMany).toHaveBeenCalledWith({ where: { tenantId: "tenant-1" } });
     });
+
+    // Regressão: a resposta devolvida pro dono após ligar a listagem mostrava o estado de
+    // ANTES da mudança (listedInMarketplace: false, sem categorias) mesmo a escrita tendo
+    // sido feita com sucesso — porque a releitura final chamava this.prisma em vez de tx, e
+    // uma conexão fora da transação não enxerga o que ela ainda não comitou.
+    it("lê o resultado final pela MESMA transação da escrita, não por this.prisma", async () => {
+      const txOnly = {
+        tenant: {
+          update: jest.fn().mockResolvedValue({ id: "tenant-1" }),
+          findUniqueOrThrow: jest
+            .fn()
+            .mockResolvedValueOnce({ listedInMarketplace: true, city: "São Paulo", _count: { categories: 1 } })
+            .mockResolvedValueOnce({
+              listedInMarketplace: true,
+              city: "São Paulo",
+              categories: [{ category: { slug: "barbearia" } }],
+            }),
+        },
+        serviceCategory: { findMany: jest.fn().mockResolvedValue([]) },
+        tenantCategory: { deleteMany: jest.fn(), createMany: jest.fn() },
+      };
+      (prisma.$transaction as jest.Mock).mockImplementation((fn: any) => fn(txOnly));
+
+      await service.updateMarketplace("tenant-1", { listedInMarketplace: true } as any);
+
+      // A releitura final tem que ter acontecido em txOnly (2 chamadas: a checagem de
+      // city/categoria + o getMarketplaceSettings do retorno) — nenhuma no prisma raiz.
+      expect(txOnly.tenant.findUniqueOrThrow).toHaveBeenCalledTimes(2);
+      expect(prisma.tenant.findUniqueOrThrow).not.toHaveBeenCalled();
+      expect(prisma.serviceCategory.findMany).not.toHaveBeenCalled();
+    });
   });
 
   describe("updateLogo", () => {

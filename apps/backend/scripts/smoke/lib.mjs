@@ -4,6 +4,10 @@
 //   1. DATABASE_URL com `?schema=e2e` + `prisma migrate deploy`; suba o backend (`node dist/main.js`) com
 //      TRUST_PROXY_HOPS=1 (o script varia o IP de cada chamada via X-Forwarded-For para não bater no
 //      limite de 10 tentativas/min das rotas de auth);
+//      `ServiceCategory` (categorias do marketplace) só existe via `prisma db seed`, NÃO por
+//      migration — sem rodar o seed (ou upsertar as categorias manualmente), os checks de
+//      "busca pública do marketplace" em functional.mjs falham por não ter categoria pra
+//      vincular (`updateMarketplace` exige cidade + ao menos 1 categoria pra listar).
 //   2. API_URL=http://localhost:3101 node scripts/smoke/functional.mjs
 //      API_URL=http://localhost:3101 node scripts/smoke/rotation.mjs   (lê DATABASE_URL e JWT_SECRET do .env)
 import { readFileSync } from "node:fs";

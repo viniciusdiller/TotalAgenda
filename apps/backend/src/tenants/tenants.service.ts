@@ -2,6 +2,7 @@ import { join } from "path";
 import { mkdir, unlink } from "fs/promises";
 import { randomUUID } from "crypto";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { Prisma } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdateTenantProfileDto } from "./dto/update-tenant-profile.dto";
 import { UpdateMarketplaceDto } from "./dto/update-marketplace.dto";
@@ -95,9 +96,13 @@ export class TenantsService {
     });
   }
 
-  async getMarketplaceSettings(tenantId: string) {
+  // Aceita a própria transação (tx) quando chamado de dentro de updateMarketplace — usar
+  // this.prisma ali leria por uma conexão separada, que ainda não enxerga a escrita recém
+  // feita (não comitada), e devolveria pro cliente HTTP o estado de ANTES da atualização
+  // mesmo com o banco já correto por baixo.
+  async getMarketplaceSettings(tenantId: string, db: Prisma.TransactionClient | PrismaService = this.prisma) {
     const [tenant, categories] = await Promise.all([
-      this.prisma.tenant.findUniqueOrThrow({
+      db.tenant.findUniqueOrThrow({
         where: { id: tenantId },
         select: {
           listedInMarketplace: true,
@@ -109,7 +114,7 @@ export class TenantsService {
           categories: { select: { category: { select: { slug: true } } } },
         },
       }),
-      this.prisma.serviceCategory.findMany({ orderBy: { position: "asc" } }),
+      db.serviceCategory.findMany({ orderBy: { position: "asc" } }),
     ]);
     return {
       ...tenant,
@@ -150,7 +155,7 @@ export class TenantsService {
         );
       }
 
-      return this.getMarketplaceSettings(tenantId);
+      return this.getMarketplaceSettings(tenantId, tx);
     });
   }
 
