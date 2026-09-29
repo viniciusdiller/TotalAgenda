@@ -25,6 +25,9 @@ interface NavLink {
   href: string;
   label: string;
   icon: typeof CalendarBlank;
+  // Tooltip no hover (title nativo) — só ícone + nome não dizia pra que cada tela serve;
+  // "Comissões" e "Marketplace" são os exemplos mais confusos, mas o gap era geral.
+  description: string;
 }
 
 // Agrupado por fluxo de trabalho (não ordem alfabética) — com 14 destinos, uma lista plana
@@ -33,40 +36,110 @@ const sections: { label: string; links: NavLink[] }[] = [
   {
     label: "Operação do dia",
     links: [
-      { href: "/dashboard/agenda", label: "Agenda", icon: CalendarBlank },
-      { href: "/dashboard/comandas", label: "Comandas", icon: Receipt },
-      { href: "/dashboard/caixa", label: "Caixa", icon: CashRegister },
-      { href: "/dashboard/lista-espera", label: "Lista de espera", icon: ClockCounterClockwise },
+      {
+        href: "/dashboard/agenda",
+        label: "Agenda",
+        icon: CalendarBlank,
+        description: "Calendário de horários e atendimentos do dia",
+      },
+      {
+        href: "/dashboard/comandas",
+        label: "Comandas",
+        icon: Receipt,
+        description: "Conta de um atendimento — itens, pagamentos e fechamento",
+      },
+      {
+        href: "/dashboard/caixa",
+        label: "Caixa",
+        icon: CashRegister,
+        description: "Abertura, sangria/suprimento e fechamento do caixa do dia",
+      },
+      {
+        href: "/dashboard/lista-espera",
+        label: "Lista de espera",
+        icon: ClockCounterClockwise,
+        description: "Clientes esperando vaga quando a agenda está cheia",
+      },
     ],
   },
   {
     label: "Clientes",
     links: [
-      { href: "/dashboard/clientes", label: "Clientes", icon: IdentificationCard },
-      { href: "/dashboard/fichas", label: "Fichas", icon: ClipboardText },
+      {
+        href: "/dashboard/clientes",
+        label: "Clientes",
+        icon: IdentificationCard,
+        description: "Cadastro, histórico e contato dos seus clientes",
+      },
+      {
+        href: "/dashboard/fichas",
+        label: "Fichas",
+        icon: ClipboardText,
+        description: "Formulários personalizados pra preencher no atendimento (ex.: anamnese)",
+      },
     ],
   },
   {
     label: "Catálogo",
     links: [
-      { href: "/dashboard/servicos", label: "Serviços", icon: Scissors },
-      { href: "/dashboard/produtos", label: "Produtos", icon: Package },
+      {
+        href: "/dashboard/servicos",
+        label: "Serviços",
+        icon: Scissors,
+        description: "Catálogo de serviços, preço e duração",
+      },
+      {
+        href: "/dashboard/produtos",
+        label: "Produtos",
+        icon: Package,
+        description: "Catálogo e estoque dos produtos vendidos",
+      },
     ],
   },
   {
     label: "Equipe e financeiro",
     links: [
-      { href: "/dashboard/profissionais", label: "Profissionais", icon: Users },
-      { href: "/dashboard/comissoes", label: "Comissões", icon: Percent },
-      { href: "/dashboard/financeiro", label: "Financeiro", icon: ChartLineUp },
+      {
+        href: "/dashboard/profissionais",
+        label: "Profissionais",
+        icon: Users,
+        description: "Equipe, horários de trabalho e serviços que cada um atende",
+      },
+      {
+        href: "/dashboard/comissoes",
+        label: "Comissões",
+        icon: Percent,
+        description: "Regras de comissão por profissional sobre o que é vendido",
+      },
+      {
+        href: "/dashboard/financeiro",
+        label: "Financeiro",
+        icon: ChartLineUp,
+        description: "Contas a pagar/receber, fluxo de caixa e resultado do negócio",
+      },
     ],
   },
   {
     label: "Negócio",
     links: [
-      { href: "/dashboard/marketplace", label: "Marketplace", icon: Storefront },
-      { href: "/dashboard/plano", label: "Plano e cobrança", icon: CreditCard },
-      { href: "/dashboard/configuracoes", label: "Configurações", icon: Gear },
+      {
+        href: "/dashboard/marketplace",
+        label: "Marketplace",
+        icon: Storefront,
+        description: "Apareça pra novos clientes buscando salão perto deles",
+      },
+      {
+        href: "/dashboard/plano",
+        label: "Plano e cobrança",
+        icon: CreditCard,
+        description: "Seu plano, pagamento e troca de assinatura",
+      },
+      {
+        href: "/dashboard/configuracoes",
+        label: "Configurações",
+        icon: Gear,
+        description: "Dados públicos do negócio: logo, endereço, contato e galeria",
+      },
     ],
   },
 ];
@@ -98,6 +171,7 @@ export function SidebarNav({ onNavigate, scope = "desktop" }: SidebarNavProps) {
                   key={link.href}
                   href={link.href}
                   onClick={onNavigate}
+                  title={link.description}
                   className={clsx(
                     "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                     isActive
