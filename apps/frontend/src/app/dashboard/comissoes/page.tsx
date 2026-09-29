@@ -30,8 +30,9 @@ export default async function ComissoesPage() {
     <div className="max-w-2xl">
       <h1 className="font-display text-2xl font-bold text-zinc-900 dark:text-white">Comissões</h1>
       <p className="mt-1 text-sm text-zinc-500 dark:text-stone-400">
-        Regras por profissional e relatório por período. Lançamentos são gerados ao fechar
-        cada comanda.
+        Defina quanto cada profissional ganha por venda. A comissão é calculada sozinha
+        quando uma comanda fecha, mas só vira conta a pagar de verdade quando você clicar
+        em "Fechar comissões do período" lá no Financeiro.
       </p>
       <ComissoesView
         rules={rules}

@@ -49,6 +49,20 @@ export function ComissoesView({
       rule.targetId
     );
   };
+  // Frase em português corrido em vez de "profissional · base (alvo)" — a lista crua não
+  // dizia em linguagem simples o que a regra realmente faz, nem qual delas vale quando
+  // duas se aplicam ao mesmo item (a mais específica vence — ver aviso abaixo da lista).
+  const ruleSentence = (rule: CommissionRule) => {
+    const amount = rule.kind === "PERCENT" ? `${rule.value}%` : brl(rule.value);
+    const pro = proName(rule.professionalId);
+    if (rule.base === "ALL") return `${amount} sobre qualquer venda de ${pro}.`;
+    const what = rule.targetId
+      ? targetName(rule)
+      : rule.base === "SERVICE"
+        ? "qualquer serviço"
+        : "qualquer produto";
+    return `${amount} sobre cada venda de ${what} por ${pro}.`;
+  };
 
   function loadReport() {
     startTransition(async () => {
@@ -67,21 +81,25 @@ export function ComissoesView({
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">Regras</h2>
 
         {rules.length > 0 ? (
-          <ul className="mt-3 divide-y divide-zinc-100 text-sm dark:divide-white/5">
-            {rules.map((rule) => (
-              <li key={rule.id} className="flex justify-between py-2">
-                <span className="text-zinc-700 dark:text-stone-200">
-                  {proName(rule.professionalId)} · {rule.base.toLowerCase()} ({targetName(rule)})
-                </span>
-                <span className="text-zinc-500 dark:text-stone-400">
-                  {rule.kind === "PERCENT" ? `${rule.value}%` : brl(rule.value)}
+          <>
+            <ul className="mt-3 divide-y divide-zinc-100 text-sm dark:divide-white/5">
+              {rules.map((rule) => (
+                <li key={rule.id} className="py-2 text-zinc-700 dark:text-stone-200">
+                  {ruleSentence(rule)}
                   {rule.isActive ? "" : " · inativa"}
-                </span>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-xs text-zinc-400 dark:text-stone-500">
+              Se mais de uma regra vale pra mesma venda, ganha a mais específica: um alvo
+              exato (ex.: "Corte masculino") vale mais que "qualquer serviço", que vale mais
+              que "qualquer venda". As regras não se somam — só uma é aplicada por item.
+            </p>
+          </>
         ) : (
-          <p className="mt-3 text-sm text-zinc-500 dark:text-stone-400">Nenhuma regra.</p>
+          <p className="mt-3 text-sm text-zinc-500 dark:text-stone-400">
+            Nenhuma regra ainda — sem regra, ninguém recebe comissão. Cadastre uma abaixo.
+          </p>
         )}
 
         <form action={formAction} className="mt-4 flex flex-wrap items-end gap-2">
