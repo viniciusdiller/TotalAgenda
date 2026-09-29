@@ -29,8 +29,12 @@ export function ReviewsModeration({ reviews }: { reviews: OwnerReview[] }) {
 
   return (
     <ul className="mt-4 space-y-3">
-      {reviews.map((r) => (
-        <li key={r.id} className="rounded-xl border border-zinc-200 p-3 dark:border-white/10">
+      {reviews.map((r, i) => (
+        <li
+          key={r.id}
+          style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
+          className="animate-rise-in rounded-xl border border-zinc-200 p-3 dark:border-white/10"
+        >
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-0.5 text-amber-500">
               {Array.from({ length: 5 }).map((_, i) => (

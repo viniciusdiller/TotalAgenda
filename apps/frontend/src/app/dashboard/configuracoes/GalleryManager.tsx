@@ -37,13 +37,22 @@ function RemoveImageButton({ onRequestConfirm }: { onRequestConfirm: () => void 
   );
 }
 
-function GalleryImage({ image }: { image: { id: string; url: string } }) {
+function GalleryImage({
+  image,
+  index = 0,
+}: {
+  image: { id: string; url: string };
+  index?: number;
+}) {
   const [state, action] = useActionState(removeGalleryImageAction.bind(null, image.id), {});
   const formRef = useRef<HTMLFormElement>(null);
   const [confirming, setConfirming] = useState(false);
 
   return (
-    <div className="group relative aspect-square overflow-hidden rounded-xl">
+    <div
+      style={{ "--i": Math.min(index, 8) } as React.CSSProperties}
+      className="animate-rise-in group relative aspect-square overflow-hidden rounded-xl"
+    >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={`${API_URL}${image.url}`} alt="" className="h-full w-full object-cover" />
       <form ref={formRef} action={action}>
@@ -99,8 +108,8 @@ export function GalleryManager({ images }: { images: { id: string; url: string }
 
       {images.length > 0 ? (
         <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
-          {images.map((image) => (
-            <GalleryImage key={image.id} image={image} />
+          {images.map((image, i) => (
+            <GalleryImage key={image.id} image={image} index={i} />
           ))}
         </div>
       ) : null}

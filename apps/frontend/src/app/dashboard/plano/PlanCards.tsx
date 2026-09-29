@@ -53,14 +53,15 @@ export function PlanCards({
   return (
     <div>
       <ul className="grid gap-4 md:grid-cols-3">
-        {plans.map((plan) => {
+        {plans.map((plan, i) => {
           const action = planCardAction(billing, plan.tier);
           const isSuggested = plan.tier === suggestedTier && action !== "CURRENT";
           return (
             <li
               key={plan.tier}
+              style={{ "--i": i } as React.CSSProperties}
               className={clsx(
-                "flex flex-col rounded-2xl border p-5",
+                "animate-rise-in flex flex-col rounded-2xl border p-5",
                 action === "CURRENT"
                   ? "border-accent-500 bg-accent-50/50 dark:border-accent-400 dark:bg-accent-500/10"
                   : isSuggested
