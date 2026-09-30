@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default async function ClientsPage({
   searchParams,
@@ -30,18 +31,16 @@ export default async function ClientsPage({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-zinc-900 dark:text-white">Clientes</h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-stone-400">
-            Cadastro, histórico de atendimentos e fichas de cada cliente.
-          </p>
-        </div>
-        <Button href="/dashboard/clientes/novo" className="px-5 py-2.5 text-sm">
-          <Plus size={16} weight="bold" />
-          Novo cliente
-        </Button>
-      </div>
+      <PageHeader
+        title="Clientes"
+        description="Cadastro, histórico de atendimentos e fichas de cada cliente."
+        action={
+          <Button href="/dashboard/clientes/novo" className="px-5 py-2.5 text-sm">
+            <Plus size={16} weight="bold" />
+            Novo cliente
+          </Button>
+        }
+      />
 
       <form className="mt-6 flex max-w-sm items-center gap-2 rounded-lg border border-zinc-300 px-3 py-2 dark:border-white/15">
         <MagnifyingGlass size={16} className="text-zinc-400" />
