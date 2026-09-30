@@ -1,5 +1,6 @@
 // Fluxos de negócio ponta a ponta, com os MESMOS formatos que o frontend envia (telefone/CPF mascarados,
 // dinheiro em centavos vindo de moneyToCents, Instagram normalizado). Ver lib.mjs para como rodar.
+import { randomUUID } from "node:crypto";
 import { LEGAL_VERSION, call, createChecker } from "./lib.mjs";
 
 const { check, finish } = createChecker();
@@ -31,6 +32,31 @@ check("cria profissional (planos vêm da migration; e-mail minúsculo)", r.statu
 const professionalId = r.json?.id;
 r = await call("POST", "/products", { name: "Shampoo", priceCents: 3500, costCents: 1500, initialStock: 10 }, T);
 check("cria produto", r.status === 201, r);
+
+console.log("== controle de acesso por papel (RBAC)");
+// Contra o backend REAL (guard incluído, não um mock de teste unitário) — prova que o
+// RolesGuard + as duas checagens de dono adicionadas nesta rodada bloqueiam de verdade.
+r = await call("POST", "/auth/login", { email: `pro${stamp}@e2e.com`, password: "senha-pro-123" });
+check("profissional loga normalmente", r.status === 200, r);
+const PT = r.json?.accessToken;
+r = await call("GET", "/professionals", undefined, PT);
+check(
+  "profissional NÃO vê e-mail de ninguém na listagem (nem o próprio)",
+  r.status === 200 && r.json.every((p) => p.user.email === undefined),
+  r,
+);
+r = await call("GET", `/professionals/${randomUUID()}/services`, undefined, PT);
+check("profissional pedindo serviços de OUTRO profissional → 403", r.status === 403, r);
+r = await call("GET", `/professionals/${professionalId}/services`, undefined, PT);
+check("profissional pedindo os PRÓPRIOS serviços → não é 403", r.status !== 403, r);
+r = await call("POST", "/services", { name: "Hack", durationMinutes: 30, priceCents: 100 }, PT);
+check("profissional criando serviço → 403 (OWNER-only)", r.status === 403, r);
+r = await call("POST", "/professionals", { name: "X", email: `x${stamp}@e2e.com`, initialPassword: "senha-x-12345" }, PT);
+check("profissional criando outro profissional → 403 (OWNER-only)", r.status === 403, r);
+r = await call("PATCH", "/tenants/me", { description: "hackeado" }, PT);
+check("profissional editando perfil do tenant → 403 (OWNER-only)", r.status === 403, r);
+r = await call("POST", "/commissions/rules", { professionalId, base: "ALL", kind: "FIXED", value: 100 }, PT);
+check("profissional criando regra de comissão → 403 (OWNER-only)", r.status === 403, r);
 
 console.log("== clientes (máscaras chegam formatadas)");
 r = await call("POST", "/clients", { name: "Ana Cliente", phone: "(11) 91234-5678", cpf: "529.982.247-25", email: "ana@e2e.com", birthDate: "1990-05-20", tags: ["vip", " retorno ", ""] }, T);
