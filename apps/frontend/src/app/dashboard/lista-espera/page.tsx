@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
 import { WaitlistRow } from "./WaitlistRow";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 interface AdminWaitlistEntry {
   id: string;
@@ -19,9 +20,7 @@ export default async function WaitlistPage() {
   if (!isOwner) {
     return (
       <div>
-        <h1 className="font-display text-2xl font-bold text-zinc-900 dark:text-white">
-          Lista de espera
-        </h1>
+        <PageHeader title="Lista de espera" />
         <div className="mt-4 flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600 dark:border-white/10 dark:bg-white/[0.03] dark:text-stone-300">
           <LockSimple size={18} />
           Apenas o dono do negócio tem acesso à lista de espera.
@@ -36,12 +35,10 @@ export default async function WaitlistPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-zinc-900 dark:text-white">
-        Lista de espera
-      </h1>
-      <p className="mt-1 text-sm text-zinc-500 dark:text-stone-400">
-        Clientes aguardando um horário livre. Entre em contato quando abrir uma vaga.
-      </p>
+      <PageHeader
+        title="Lista de espera"
+        description="Clientes aguardando um horário livre. Entre em contato quando abrir uma vaga."
+      />
 
       {entries.length === 0 ? (
         <div className="mt-8">

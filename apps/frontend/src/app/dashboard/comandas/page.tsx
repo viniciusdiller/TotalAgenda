@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import type { Ticket } from "@totalagenda/shared-types";
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { OpenTicketButton } from "./OpenTicketButton";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -21,15 +22,11 @@ export default async function ComandasPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-zinc-900 dark:text-white">Comandas</h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-stone-400">
-            A conta de um atendimento — itens, desconto e pagamento até fechar.
-          </p>
-        </div>
-        <OpenTicketButton />
-      </div>
+      <PageHeader
+        title="Comandas"
+        description="A conta de um atendimento — itens, desconto e pagamento até fechar."
+        action={<OpenTicketButton />}
+      />
 
       {tickets.length === 0 ? (
         <div className="mt-8">
