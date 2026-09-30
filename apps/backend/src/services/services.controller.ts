@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, ForbiddenException, Get, Param, Patch, Post } from "@nestjs/common";
 import { Role } from "@totalagenda/database";
 import { ServicesService } from "./services.service";
 import { CreateServiceDto } from "./dto/create-service.dto";
@@ -51,6 +51,9 @@ export class ProfessionalServicesController {
 
   @Get()
   list(@CurrentUser() user: AuthenticatedUser, @Param("professionalId") professionalId: string) {
+    if (user.role === Role.PROFESSIONAL && user.professionalId !== professionalId) {
+      throw new ForbiddenException("Você só pode ver os próprios serviços.");
+    }
     return this.servicesService.listByProfessional(user.tenantId, professionalId);
   }
 }
