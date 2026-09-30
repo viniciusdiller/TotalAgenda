@@ -2,6 +2,7 @@ import { Users } from "@phosphor-icons/react/dist/ssr";
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { CreateProfessionalForm } from "./CreateProfessionalForm";
 import { ProfessionalRow } from "./ProfessionalRow";
 
@@ -19,12 +20,10 @@ export default async function ProfessionalsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-zinc-900 dark:text-white">
-        Profissionais
-      </h1>
-      <p className="mt-1 text-sm text-zinc-500 dark:text-stone-400">
-        Cada profissional tem a própria agenda e horário de trabalho.
-      </p>
+      <PageHeader
+        title="Profissionais"
+        description="Cada profissional tem a própria agenda e horário de trabalho."
+      />
 
       {isOwner ? (
         <div className="mt-6">

@@ -6,6 +6,7 @@ import type {
 } from "@totalagenda/shared-types";
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { FinanceView } from "./FinanceView";
 
 export default async function FinanceiroPage() {
@@ -33,10 +34,10 @@ export default async function FinanceiroPage() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="font-display text-2xl font-bold text-zinc-900 dark:text-white">Financeiro</h1>
-      <p className="mt-1 text-sm text-zinc-500 dark:text-stone-400">
-        Receitas das comandas entram automáticas. Despesas e contas a pagar você lança aqui.
-      </p>
+      <PageHeader
+        title="Financeiro"
+        description="Receitas das comandas entram automáticas. Despesas e contas a pagar você lança aqui."
+      />
       <FinanceView
         overview={overview}
         entries={entries}
