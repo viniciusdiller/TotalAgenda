@@ -2,6 +2,7 @@ import { Scissors } from "@phosphor-icons/react/dist/ssr";
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { CreateServiceForm } from "./CreateServiceForm";
 import { ServiceRow } from "./ServiceRow";
 
@@ -22,10 +23,10 @@ export default async function ServicesPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-zinc-900 dark:text-white">Serviços</h1>
-      <p className="mt-1 text-sm text-zinc-500 dark:text-stone-400">
-        Depois de cadastrar, vincule cada serviço aos profissionais que o realizam.
-      </p>
+      <PageHeader
+        title="Serviços"
+        description="Depois de cadastrar, vincule cada serviço aos profissionais que o realizam."
+      />
 
       {isOwner ? (
         <div className="mt-6">
