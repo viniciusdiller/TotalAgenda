@@ -11,6 +11,7 @@ import {
   formatBRL,
   formatDate,
 } from "@/lib/billing";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { PlanCards } from "./PlanCards";
 import { PortalButton } from "./PortalButton";
 import { RefreshButton } from "./RefreshButton";
@@ -60,10 +61,10 @@ export default async function PlanoPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="max-w-5xl">
-      <h1 className="font-display text-2xl font-bold text-zinc-900 dark:text-white">Plano e cobrança</h1>
-      <p className="mt-1 text-sm text-zinc-500 dark:text-stone-400">
-        Escolha o plano do seu negócio e gerencie o pagamento.
-      </p>
+      <PageHeader
+        title="Plano e cobrança"
+        description="Escolha o plano do seu negócio e gerencie o pagamento."
+      />
 
       {checkout === "success" ? (
         <p

@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { TenantProfileSettingsForm } from "./TenantProfileSettingsForm";
 import { GalleryManager } from "./GalleryManager";
 
@@ -37,16 +38,18 @@ export default async function ConfiguracoesPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-zinc-900 dark:text-white">
-        Configurações
-      </h1>
-      <p className="mt-1 text-sm text-zinc-500 dark:text-stone-400">
-        Como seu negócio aparece em{" "}
-        <span className="font-medium text-zinc-700 dark:text-stone-200">
-          totalagenda.com/{tenant.slug}
-        </span>
-        .
-      </p>
+      <PageHeader
+        title="Configurações"
+        description={
+          <>
+            Como seu negócio aparece em{" "}
+            <span className="font-medium text-zinc-700 dark:text-stone-200">
+              totalagenda.com/{tenant.slug}
+            </span>
+            .
+          </>
+        }
+      />
 
       <div className="mt-6 flex flex-col gap-8">
         <TenantProfileSettingsForm tenant={tenant} />
