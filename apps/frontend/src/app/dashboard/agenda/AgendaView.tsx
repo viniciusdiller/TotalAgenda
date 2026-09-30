@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useMemo, useState, useTransition } from "react";
-import Link from "next/link";
 import { DateTime } from "luxon";
-import { CaretLeft, CaretRight, Plus, WarningCircle } from "@phosphor-icons/react/dist/ssr";
+import { CaretLeft, CaretRight, Plus, Users, WarningCircle } from "@phosphor-icons/react/dist/ssr";
 import clsx from "clsx";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type {
   CalendarResponse,
   PublicBooking,
@@ -206,13 +207,18 @@ export function AgendaView({
           </button>
         </div>
       ) : columns.length === 0 ? (
-        <p className="mt-10 text-sm text-zinc-500 dark:text-stone-400">
-          Nenhum profissional ativo.{" "}
-          <Link href="/dashboard/profissionais" className="font-medium text-accent-600 underline dark:text-accent-400">
-            Cadastre profissionais
-          </Link>{" "}
-          para usar a agenda.
-        </p>
+        <div className="mt-10">
+          <EmptyState
+            icon={Users}
+            title="Nenhum profissional ativo"
+            description="Cadastre profissionais pra usar a agenda."
+            action={
+              <Button href="/dashboard/profissionais" variant="ghost" className="px-5 py-2.5 text-sm">
+                Cadastrar profissionais
+              </Button>
+            }
+          />
+        </div>
       ) : (
         <>
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-zinc-500 dark:text-stone-400">

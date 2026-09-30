@@ -2,7 +2,9 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { DateTime } from "luxon";
+import { Receipt } from "@phosphor-icons/react/dist/ssr";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { MoneyInput } from "@/components/ui/MoneyInput";
 import { riseIn } from "@/lib/stagger";
 import type {
@@ -82,7 +84,11 @@ export function FinanceView({
 
   function EntryList({ items }: { items: FinancialEntry[] }) {
     if (items.length === 0)
-      return <p className="mt-4 text-sm text-zinc-500 dark:text-stone-400">Nada por aqui.</p>;
+      return (
+        <div className="mt-4">
+          <EmptyState icon={Receipt} title="Nada por aqui" />
+        </div>
+      );
     return (
       <ul className="mt-4 divide-y divide-zinc-100 text-sm dark:divide-white/5">
         {items.map((e, i) => {

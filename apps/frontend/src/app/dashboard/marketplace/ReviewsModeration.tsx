@@ -5,6 +5,7 @@ import { DateTime } from "luxon";
 import { Star } from "@phosphor-icons/react/dist/ssr";
 import type { OwnerReview } from "@totalagenda/shared-types";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { riseIn } from "@/lib/stagger";
 import { hideReviewAction, reportReviewAction } from "./actions";
 
@@ -22,9 +23,9 @@ export function ReviewsModeration({ reviews }: { reviews: OwnerReview[] }) {
 
   if (reviews.length === 0) {
     return (
-      <p className="mt-4 text-sm text-zinc-500 dark:text-stone-400">
-        Nenhuma avaliação ainda.
-      </p>
+      <div className="mt-4">
+        <EmptyState icon={Star} title="Nenhuma avaliação ainda" />
+      </div>
     );
   }
 

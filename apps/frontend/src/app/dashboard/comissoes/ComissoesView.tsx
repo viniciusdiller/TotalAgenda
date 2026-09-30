@@ -2,6 +2,8 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { DateTime } from "luxon";
+import { Percent } from "@phosphor-icons/react/dist/ssr";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { MoneyInput } from "@/components/ui/MoneyInput";
 import { riseIn } from "@/lib/stagger";
 import type { CommissionReport, CommissionRule } from "@totalagenda/shared-types";
@@ -102,9 +104,13 @@ export function ComissoesView({
             </p>
           </>
         ) : (
-          <p className="mt-3 text-sm text-zinc-500 dark:text-stone-400">
-            Nenhuma regra ainda — sem regra, ninguém recebe comissão. Cadastre uma abaixo.
-          </p>
+          <div className="mt-3">
+            <EmptyState
+              icon={Percent}
+              title="Nenhuma regra ainda"
+              description="Sem regra, ninguém recebe comissão. Cadastre uma abaixo."
+            />
+          </div>
         )}
 
         <form action={formAction} className="mt-4 flex flex-wrap items-end gap-2">
