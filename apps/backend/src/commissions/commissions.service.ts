@@ -3,6 +3,7 @@ import {
   CommissionBase,
   CommissionKind,
   Prisma,
+  Role,
   TicketItemKind,
 } from "@totalagenda/database";
 import { PrismaService } from "../prisma/prisma.service";
@@ -74,7 +75,20 @@ export class CommissionsService {
     });
   }
 
-  async report(tenantId: string, from: string, to: string, professionalId?: string) {
+  // O escopo por profissional é forçado AQUI (não só no controller): um PROFESSIONAL nunca
+  // deve conseguir ler comissão de outro colega, mesmo que um caller futuro (rota admin,
+  // script, teste com mock errado) chame o service direto sem passar pelo controller —
+  // mesmo padrão de "o service injeta o filtro quando role === PROFESSIONAL" que
+  // AppointmentsService.findOwnedByStaff já usa.
+  async report(
+    tenantId: string,
+    from: string,
+    to: string,
+    requestedProfessionalId: string | undefined,
+    caller: { role: Role; professionalId?: string },
+  ) {
+    const professionalId =
+      caller.role === Role.PROFESSIONAL ? caller.professionalId : requestedProfessionalId;
     const fromDate = new Date(from);
     const toDate = new Date(to);
     if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {

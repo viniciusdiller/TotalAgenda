@@ -1,4 +1,5 @@
 import { BadRequestException } from "@nestjs/common";
+import { Role } from "@totalagenda/database";
 import { CommissionsService } from "./commissions.service";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -83,7 +84,9 @@ describe("CommissionsService.report", () => {
     const svc = new CommissionsService({ commissionEntry: { findMany } } as unknown as PrismaService);
 
     await expect(
-      svc.report("t-1", "1970-01-01T00:00:00Z", "2100-01-01T00:00:00Z"),
+      svc.report("t-1", "1970-01-01T00:00:00Z", "2100-01-01T00:00:00Z", undefined, {
+        role: Role.OWNER,
+      }),
     ).rejects.toThrow(BadRequestException);
     expect(findMany).not.toHaveBeenCalled();
   });
@@ -92,13 +95,47 @@ describe("CommissionsService.report", () => {
     const findMany = jest.fn().mockResolvedValue([]);
     const svc = new CommissionsService({ commissionEntry: { findMany } } as unknown as PrismaService);
 
-    await svc.report("t-1", "2026-01-01T00:00:00Z", "2026-12-31T00:00:00Z", "prof-1");
+    await svc.report("t-1", "2026-01-01T00:00:00Z", "2026-12-31T00:00:00Z", "prof-1", {
+      role: Role.OWNER,
+    });
 
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ tenantId: "t-1", professionalId: "prof-1" }),
       }),
     );
+  });
+
+  // Regressão: o filtro por profissional para quem chama como PROFESSIONAL vivia só no
+  // controller (`CommissionsController.report`) — um caller que chamasse o service direto
+  // (rota admin futura, script, teste com mock errado) conseguia ler comissão de qualquer
+  // colega. Agora o service ignora o professionalId pedido e força o do próprio chamador.
+  it("PROFESSIONAL pedindo o professionalId de outro colega só vê o próprio, mesmo chamando o service direto", async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const svc = new CommissionsService({ commissionEntry: { findMany } } as unknown as PrismaService);
+
+    await svc.report("t-1", "2026-01-01T00:00:00Z", "2026-12-31T00:00:00Z", "prof-outro-colega", {
+      role: Role.PROFESSIONAL,
+      professionalId: "prof-eu-mesmo",
+    });
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ tenantId: "t-1", professionalId: "prof-eu-mesmo" }),
+      }),
+    );
+  });
+
+  it("OWNER sem professionalId na query vê o tenant inteiro (sem filtro de profissional)", async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const svc = new CommissionsService({ commissionEntry: { findMany } } as unknown as PrismaService);
+
+    await svc.report("t-1", "2026-01-01T00:00:00Z", "2026-12-31T00:00:00Z", undefined, {
+      role: Role.OWNER,
+    });
+
+    const where = findMany.mock.calls[0][0].where;
+    expect(where).not.toHaveProperty("professionalId");
   });
 });
 

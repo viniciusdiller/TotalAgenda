@@ -33,13 +33,17 @@ export class CommissionsController {
     return this.commissions.updateRule(user.tenantId, id, dto);
   }
 
-  // PROFESSIONAL vê só o próprio (filtro forçado); OWNER/RECEPTIONIST veem todos.
+  // PROFESSIONAL vê só o próprio; OWNER/RECEPTIONIST veem todos. O filtro é forçado dentro
+  // do CommissionsService.report (não aqui), pra valer mesmo se outro caller chamar o
+  // service direto no futuro.
   @Get("report")
   report(
     @CurrentUser() user: AuthenticatedUser,
     @Query() query: RangeByProfessionalQueryDto,
   ) {
-    const scoped = user.role === Role.PROFESSIONAL ? user.professionalId : query.professionalId;
-    return this.commissions.report(user.tenantId, query.from, query.to, scoped);
+    return this.commissions.report(user.tenantId, query.from, query.to, query.professionalId, {
+      role: user.role,
+      professionalId: user.professionalId,
+    });
   }
 }
