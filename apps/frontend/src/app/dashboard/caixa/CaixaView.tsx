@@ -8,15 +8,13 @@ import { Input } from "@/components/ui/Input";
 import { MaskedInput } from "@/components/ui/MaskedInput";
 import { MoneyInput } from "@/components/ui/MoneyInput";
 import { riseIn } from "@/lib/stagger";
+import { brl } from "@/lib/money";
 import {
   cashMovementAction,
   closeCashAction,
   openCashAction,
   type CashActionState,
 } from "./actions";
-
-const brl = (cents: number) =>
-  (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const MOVEMENT_LABEL: Record<string, string> = {
   OPENING: "Abertura",

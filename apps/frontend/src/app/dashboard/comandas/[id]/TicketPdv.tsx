@@ -6,6 +6,7 @@ import { Trash } from "@phosphor-icons/react/dist/ssr";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { MoneyInput } from "@/components/ui/MoneyInput";
 import { formatCentsBRL, moneyToCents } from "@/lib/masks";
+import { brl } from "@/lib/money";
 import type { AdminProduct, PaymentMethod, Ticket } from "@totalagenda/shared-types";
 import {
   addItemAction,
@@ -16,8 +17,6 @@ import {
   setDiscountAction,
 } from "../actions";
 
-const brl = (cents: number) =>
-  (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 // Texto BRL → centavos; valor mal formado dá null (nunca um 0 silencioso que zeraria desconto/pagamento).
 const centsFromReais = (v: string) => moneyToCents(v);
 

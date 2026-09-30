@@ -6,15 +6,13 @@ import { Percent } from "@phosphor-icons/react/dist/ssr";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MoneyInput } from "@/components/ui/MoneyInput";
 import { riseIn } from "@/lib/stagger";
+import { brl } from "@/lib/money";
 import type { CommissionReport, CommissionRule } from "@totalagenda/shared-types";
 import {
   createCommissionRuleAction,
   fetchCommissionReportAction,
   type CommissionRuleState,
 } from "./actions";
-
-const brl = (cents: number) =>
-  (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 interface Option {
   id: string;

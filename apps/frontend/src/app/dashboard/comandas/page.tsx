@@ -9,9 +9,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { OpenTicketButton } from "./OpenTicketButton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { riseIn } from "@/lib/stagger";
-
-const brl = (cents: number) =>
-  (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+import { brl } from "@/lib/money";
 
 export default async function ComandasPage() {
   const session = await auth();

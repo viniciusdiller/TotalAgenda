@@ -9,15 +9,13 @@ import { Input } from "@/components/ui/Input";
 import { MaskedInput } from "@/components/ui/MaskedInput";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { riseIn } from "@/lib/stagger";
+import { brl } from "@/lib/money";
 import {
   adjustStockAction,
   createProductAction,
   updateProductAction,
   type ProductActionState,
 } from "./actions";
-
-const brl = (cents: number) =>
-  (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const initial: ProductActionState = {};
 

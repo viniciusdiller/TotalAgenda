@@ -7,6 +7,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MoneyInput } from "@/components/ui/MoneyInput";
 import { riseIn } from "@/lib/stagger";
+import { brl } from "@/lib/money";
 import type {
   CashFlowReport,
   DreReport,
@@ -24,9 +25,6 @@ import {
   settleEntryAction,
   type FinanceActionState,
 } from "./actions";
-
-const brl = (c: number) =>
-  (c / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const TABS = ["Lançamentos", "A pagar", "A receber", "Fluxo de caixa", "DRE"] as const;
 type Tab = (typeof TABS)[number];
