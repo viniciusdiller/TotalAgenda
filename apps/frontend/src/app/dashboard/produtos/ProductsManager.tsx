@@ -8,6 +8,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Input } from "@/components/ui/Input";
 import { MaskedInput } from "@/components/ui/MaskedInput";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { riseIn } from "@/lib/stagger";
 import {
   adjustStockAction,
   createProductAction,
@@ -145,7 +146,7 @@ export function ProductsManager({ products }: { products: AdminProduct[] }) {
               {products.map((product, i) => (
                 <tr
                   key={product.id}
-                  style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
+                  style={riseIn(i)}
                   className={clsx("animate-rise-in", !product.isActive && "opacity-50")}
                 >
                   <td className="py-2.5 font-medium text-zinc-900 dark:text-white">

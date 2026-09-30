@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
 import { compressImageFile } from "@/lib/image-compression";
+import { riseIn } from "@/lib/stagger";
 import {
   uploadGalleryImageAction,
   removeGalleryImageAction,
@@ -50,7 +51,7 @@ function GalleryImage({
 
   return (
     <div
-      style={{ "--i": Math.min(index, 8) } as React.CSSProperties}
+      style={riseIn(index)}
       className="animate-rise-in group relative aspect-square overflow-hidden rounded-xl"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}

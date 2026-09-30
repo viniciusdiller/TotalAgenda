@@ -10,6 +10,7 @@ import {
   formatBRL,
   planCardAction,
 } from "@/lib/billing";
+import { riseIn } from "@/lib/stagger";
 import { ChangePlanDialog } from "./ChangePlanDialog";
 import { startCheckoutAction } from "./actions";
 
@@ -59,7 +60,7 @@ export function PlanCards({
           return (
             <li
               key={plan.tier}
-              style={{ "--i": i } as React.CSSProperties}
+              style={riseIn(i)}
               className={clsx(
                 "animate-rise-in flex flex-col rounded-2xl border p-5",
                 action === "CURRENT"

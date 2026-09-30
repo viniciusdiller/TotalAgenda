@@ -7,6 +7,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Input } from "@/components/ui/Input";
 import { MaskedInput } from "@/components/ui/MaskedInput";
 import { MoneyInput } from "@/components/ui/MoneyInput";
+import { riseIn } from "@/lib/stagger";
 import {
   cashMovementAction,
   closeCashAction,
@@ -120,7 +121,7 @@ export function CaixaView({ summary }: { summary: CashRegisterSummary }) {
             {summary.movements.map((m, i) => (
               <li
                 key={m.id}
-                style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
+                style={riseIn(i)}
                 className="animate-rise-in flex justify-between py-2"
               >
                 <span className="text-zinc-600 dark:text-stone-300">

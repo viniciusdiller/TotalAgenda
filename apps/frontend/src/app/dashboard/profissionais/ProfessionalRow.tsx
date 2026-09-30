@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { riseIn } from "@/lib/stagger";
 import { toggleProfessionalActiveAction } from "./actions";
 
 export function ProfessionalRow({
@@ -35,7 +36,7 @@ export function ProfessionalRow({
 
   return (
     <li
-      style={{ "--i": Math.min(index, 8) } as React.CSSProperties}
+      style={riseIn(index)}
       className="animate-rise-in flex flex-col gap-1 py-4"
     >
       <div className="flex items-center justify-between gap-4">

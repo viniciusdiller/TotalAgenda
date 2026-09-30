@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { riseIn } from "@/lib/stagger";
 import { updateWaitlistStatusAction } from "./actions";
 
 export function WaitlistRow({
@@ -29,7 +30,7 @@ export function WaitlistRow({
 
   return (
     <li
-      style={{ "--i": Math.min(index, 8) } as React.CSSProperties}
+      style={riseIn(index)}
       className="animate-rise-in flex flex-col gap-1 py-4"
     >
       <div className="flex items-center justify-between gap-4">

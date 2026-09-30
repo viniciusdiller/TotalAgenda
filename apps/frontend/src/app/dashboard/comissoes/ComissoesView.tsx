@@ -3,6 +3,7 @@
 import { useActionState, useState, useTransition } from "react";
 import { DateTime } from "luxon";
 import { MoneyInput } from "@/components/ui/MoneyInput";
+import { riseIn } from "@/lib/stagger";
 import type { CommissionReport, CommissionRule } from "@totalagenda/shared-types";
 import {
   createCommissionRuleAction,
@@ -86,7 +87,7 @@ export function ComissoesView({
               {rules.map((rule, i) => (
                 <li
                   key={rule.id}
-                  style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
+                  style={riseIn(i)}
                   className="animate-rise-in py-2 text-zinc-700 dark:text-stone-200"
                 >
                   {ruleSentence(rule)}
@@ -210,7 +211,7 @@ export function ComissoesView({
               {report.byProfessional.map((row, i) => (
                 <li
                   key={row.professionalId}
-                  style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
+                  style={riseIn(i)}
                   className="animate-rise-in flex justify-between py-2"
                 >
                   <span className="text-zinc-700 dark:text-stone-200">

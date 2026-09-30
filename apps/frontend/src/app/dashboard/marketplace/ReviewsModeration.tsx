@@ -5,6 +5,7 @@ import { DateTime } from "luxon";
 import { Star } from "@phosphor-icons/react/dist/ssr";
 import type { OwnerReview } from "@totalagenda/shared-types";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { riseIn } from "@/lib/stagger";
 import { hideReviewAction, reportReviewAction } from "./actions";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -32,7 +33,7 @@ export function ReviewsModeration({ reviews }: { reviews: OwnerReview[] }) {
       {reviews.map((r, i) => (
         <li
           key={r.id}
-          style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
+          style={riseIn(i)}
           className="animate-rise-in rounded-xl border border-zinc-200 p-3 dark:border-white/10"
         >
           <div className="flex items-center justify-between">

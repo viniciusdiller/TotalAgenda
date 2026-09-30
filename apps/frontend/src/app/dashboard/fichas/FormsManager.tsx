@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Plus, Trash } from "@phosphor-icons/react/dist/ssr";
 import type { IntakeFieldDef, IntakeFormSummary } from "@totalagenda/shared-types";
+import { riseIn } from "@/lib/stagger";
 import { saveIntakeFormAction } from "./actions";
 
 const FIELD_TYPES: IntakeFieldDef["type"][] = ["text", "textarea", "boolean", "select"];
@@ -181,7 +182,7 @@ export function FormsManager({ initialForms }: { initialForms: IntakeFormSummary
         ) : (
           <div
             key={form.id}
-            style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
+            style={riseIn(i)}
             className="animate-rise-in flex items-center justify-between rounded-xl border border-zinc-200 p-4 dark:border-white/10"
           >
             <div>

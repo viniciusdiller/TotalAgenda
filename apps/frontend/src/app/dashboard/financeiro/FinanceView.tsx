@@ -4,6 +4,7 @@ import { useActionState, useState, useTransition } from "react";
 import { DateTime } from "luxon";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { MoneyInput } from "@/components/ui/MoneyInput";
+import { riseIn } from "@/lib/stagger";
 import type {
   CashFlowReport,
   DreReport,
@@ -89,7 +90,7 @@ export function FinanceView({
           return (
             <li
               key={e.id}
-              style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
+              style={riseIn(i)}
               className="animate-rise-in flex items-center justify-between gap-3 py-2.5"
             >
               <div>

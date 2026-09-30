@@ -8,6 +8,7 @@ import { authedFetch } from "@/lib/api-server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { OpenTicketButton } from "./OpenTicketButton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { riseIn } from "@/lib/stagger";
 
 const brl = (cents: number) =>
   (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -37,7 +38,7 @@ export default async function ComandasPage() {
           {tickets.map((ticket, i) => (
             <li
               key={ticket.id}
-              style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
+              style={riseIn(i)}
               className="animate-rise-in"
             >
               <Link

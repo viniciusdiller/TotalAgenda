@@ -6,6 +6,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Input } from "@/components/ui/Input";
 import { MaskedInput } from "@/components/ui/MaskedInput";
 import { formatCentsBRL, moneyToCents, parseIntStrict } from "@/lib/masks";
+import { riseIn } from "@/lib/stagger";
 import { Button } from "@/components/ui/Button";
 import { toggleServiceActiveAction, updateServiceAction } from "./actions";
 
@@ -141,7 +142,7 @@ export function ServiceRow({
 
   return (
     <li
-      style={{ "--i": Math.min(index, 8) } as React.CSSProperties}
+      style={riseIn(index)}
       className="animate-rise-in flex flex-col gap-1 py-4"
     >
       <div className="flex items-center justify-between gap-4">
