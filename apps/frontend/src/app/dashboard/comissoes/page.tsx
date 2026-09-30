@@ -1,7 +1,7 @@
-import { redirect } from "next/navigation";
 import type { AdminProduct, CommissionRule } from "@totalagenda/shared-types";
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
+import { requireRole } from "@/lib/guards";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ComissoesView } from "./ComissoesView";
 
@@ -16,9 +16,7 @@ interface TeamMember {
 
 export default async function ComissoesPage() {
   const session = await auth();
-  if (session?.user.role !== "OWNER") {
-    redirect("/dashboard");
-  }
+  requireRole(session, ["OWNER"]);
 
   const [rules, team, services, products] = await Promise.all([
     authedFetch<CommissionRule[]>("/commissions/rules").catch(() => []),

@@ -1,15 +1,13 @@
 import Link from "next/link";
 import { CaretLeft } from "@phosphor-icons/react/dist/ssr";
-import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { requireRole } from "@/lib/guards";
 import { ClientForm } from "../ClientForm";
 import { createClientAction } from "../actions";
 
 export default async function NewClientPage() {
   const session = await auth();
-  if (session?.user.role === "PROFESSIONAL") {
-    redirect("/dashboard/clientes");
-  }
+  requireRole(session, ["OWNER", "RECEPTIONIST"], "/dashboard/clientes");
 
   return (
     <div className="max-w-2xl">

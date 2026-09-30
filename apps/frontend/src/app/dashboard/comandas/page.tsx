@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { DateTime } from "luxon";
 import { Receipt } from "@phosphor-icons/react/dist/ssr";
-import { redirect } from "next/navigation";
 import type { Ticket } from "@totalagenda/shared-types";
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
+import { requireRole } from "@/lib/guards";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { OpenTicketButton } from "./OpenTicketButton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -13,9 +13,7 @@ import { brl } from "@/lib/money";
 
 export default async function ComandasPage() {
   const session = await auth();
-  if (session?.user.role === "PROFESSIONAL") {
-    redirect("/dashboard");
-  }
+  requireRole(session, ["OWNER", "RECEPTIONIST"]);
 
   const tickets = await authedFetch<Ticket[]>("/tickets").catch(() => []);
 
