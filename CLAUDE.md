@@ -379,6 +379,11 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
   `legal.test.ts` falha se ainda houver lacuna) e atualizar `LEGAL_DOCS_VERSION` junto com o texto.
 - Backend não faz requisição HTTP de saída hoje (sem superfície de SSRF): se surgir fetch de
   URL controlada por usuário, validar host contra allowlist e bloquear IP privado/metadata.
+- **Sem smoke e2e contra Stripe real** (checkout, portal, troca de plano) — depende de uma
+  conta Stripe de teste configurada, que não existe neste ambiente. Mitigação parcial:
+  `StripeService` e as regras de troca de plano têm cobertura unit (Prisma mockado); falta o
+  caminho ponta-a-ponta contra o Stripe de verdade. Rodar manualmente antes de mexer em
+  `src/billing`/`src/webhooks/stripe-webhook.*`.
 
 ## Convenções
 
@@ -424,6 +429,13 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
   (`DATABASE_URL` com `?schema=e2e` + `prisma migrate deploy`; nunca no banco de dev em uso), com o backend
   buildado subindo com `TRUST_PROXY_HOPS=1`: `API_URL=http://localhost:3101 node scripts/smoke/functional.mjs`.
   Rode antes de mexer em validação de DTO, auth ou dinheiro.
+- **Frontend E2E** (`apps/frontend/e2e/`, Playwright, `pnpm --filter frontend test:e2e`) e
+  **componente** (`apps/frontend/src/**/*.test.tsx`, Vitest + React Testing Library,
+  `pnpm --filter frontend test:unit`): cobrem hoje os fluxos de maior tráfego/risco do
+  dashboard do dono (confirmação de ação destrutiva em Agenda/Comandas/Caixa/Serviços/
+  Profissionais, menu mobile), não as 14 categorias inteiras. Ausência de spec numa
+  categoria não é lacuna esquecida — é escopo ainda não alcançado; ao mexer numa categoria
+  sem cobertura, considerar adicionar o spec junto, não só confiar no `tsc`/build.
 
 ### Git
 - Branch dedicada por feature/fix (`feat/...`, `fix/...`), nunca commit direto em `main`.

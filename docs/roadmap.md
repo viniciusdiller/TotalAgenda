@@ -25,7 +25,12 @@ unitários + seed atualizado, build (`turbo run build`) e `turbo run test` verde
   `CashRegister`/`CashMovement`. Fechar comanda gera baixa de estoque + comissão na mesma
   transação. Telas `/dashboard/comandas`, `/produtos`, `/caixa`, `/comissoes`.
   _Deferido:_ devolução/estorno de pagamento, transferência de item entre comandas,
-  relatório de margem por produto, exportação CSV.
+  relatório de margem por produto, exportação CSV. A auditoria de UX de 2026-09
+  (dashboard do dono) revisou a lógica de prioridade de `CommissionRule` (regra mais
+  específica vence, sem empilhar) e decidiu só explicar melhor na tela, não
+  reestruturar — mesma decisão pro DRE/CMV do Financeiro (M4) e pro form-builder
+  genérico de Fichas (M2): são features reais, só mal explicadas, não candidatas a
+  remoção nesta leva.
 - **M4 — concluída.** `FinancialCategory` (árvore, padrões auto) + `FinancialEntry` (regime
   de caixa, previsto×realizado). Fechar comanda → receita `PAID` automática. "Fechar
   comissões do período" → contas a pagar por profissional. Relatórios: fluxo de caixa por
