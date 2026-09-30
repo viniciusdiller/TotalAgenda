@@ -46,10 +46,16 @@ export class ProfessionalsService {
     });
   }
 
-  findAllByTenant(tenantId: string) {
+  // includeEmail=false pra PROFESSIONAL: GET /professionals/:id já bloqueia um profissional
+  // de ver o registro de outro colega, mas essa listagem não tinha a mesma restrição e
+  // vazava o e-mail de todo mundo pra qualquer profissional autenticado.
+  findAllByTenant(tenantId: string, { includeEmail = true }: { includeEmail?: boolean } = {}) {
     return this.prisma.professional.findMany({
       where: { tenantId },
-      include: { user: { select: { id: true, name: true, email: true } }, workingHours: true },
+      include: {
+        user: { select: { id: true, name: true, email: includeEmail } },
+        workingHours: true,
+      },
     });
   }
 

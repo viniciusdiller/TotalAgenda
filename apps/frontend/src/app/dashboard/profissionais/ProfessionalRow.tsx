@@ -17,7 +17,7 @@ export function ProfessionalRow({
 }: {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   isActive: boolean;
   canManage: boolean;
   index?: number;
@@ -47,7 +47,7 @@ export function ProfessionalRow({
           >
             {name}
           </Link>
-          <p className="text-sm text-zinc-500 dark:text-stone-400">{email}</p>
+          {email ? <p className="text-sm text-zinc-500 dark:text-stone-400">{email}</p> : null}
         </div>
 
         <div className="flex items-center gap-3">

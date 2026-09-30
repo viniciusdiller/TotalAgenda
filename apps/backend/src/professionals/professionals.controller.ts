@@ -34,7 +34,9 @@ export class ProfessionalsController {
 
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
-    return this.professionalsService.findAllByTenant(user.tenantId);
+    return this.professionalsService.findAllByTenant(user.tenantId, {
+      includeEmail: user.role !== Role.PROFESSIONAL,
+    });
   }
 
   @Get(":id")
