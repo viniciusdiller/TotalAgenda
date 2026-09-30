@@ -31,6 +31,11 @@ describe("PlanLimitService", () => {
       (prisma.professional.count as jest.Mock).mockResolvedValue(1);
 
       await expect(service.assertCanAddProfessional("tenant-1")).resolves.toBeUndefined();
+      // Regressão: se essa contagem algum dia perder o filtro por tenantId, o limite de
+      // plano passa a valer contra a contagem de TODOS os tenants juntos.
+      expect(prisma.professional.count).toHaveBeenCalledWith({
+        where: { tenantId: "tenant-1", isActive: true },
+      });
     });
 
     it("bloqueia quando o limite do plano em trial (Essencial) foi atingido", async () => {
@@ -61,6 +66,21 @@ describe("PlanLimitService", () => {
       (prisma.professional.count as jest.Mock).mockResolvedValue(5);
 
       await expect(service.assertCanAddProfessional("tenant-1")).rejects.toThrow(ConflictException);
+    });
+
+    it("tenant no limite não bloqueia outro tenant com vaga sobrando", async () => {
+      (prisma.subscription.findUnique as jest.Mock).mockResolvedValue(null);
+      (prisma.plan.findUnique as jest.Mock).mockResolvedValue({
+        tier: PlanTier.ESSENCIAL,
+        name: "Essencial",
+        maxProfessionals: 2,
+      });
+      (prisma.professional.count as jest.Mock).mockImplementation(({ where }) =>
+        where.tenantId === "tenant-cheio" ? 2 : 0,
+      );
+
+      await expect(service.assertCanAddProfessional("tenant-cheio")).rejects.toThrow(ConflictException);
+      await expect(service.assertCanAddProfessional("tenant-vazio")).resolves.toBeUndefined();
     });
   });
 

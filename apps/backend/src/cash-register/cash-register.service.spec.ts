@@ -28,12 +28,41 @@ function build(over: Record<string, unknown> = {}) {
 }
 
 describe("CashRegisterService", () => {
+  // Regressão de isolamento: currentOpen é o único ponto que filtra por tenantId (os
+  // outros métodos operam sobre o cashRegisterId já resolvido por ele) — sem essa
+  // asserção, um mock genérico faria os testes acima passarem mesmo se o tenantId
+  // sumisse do WHERE e o caixa aberto de QUALQUER tenant contasse como "aberto".
+  it("currentOpen filtra por tenantId E status OPEN", async () => {
+    const { service, prisma } = build();
+    await service.currentOpen("tenant-a");
+    expect(prisma.cashRegister.findFirst).toHaveBeenCalledWith({
+      where: { tenantId: "tenant-a", status: "OPEN" },
+    });
+  });
+
+  it("caixa aberto do tenant A não é enxergado pelo tenant B", async () => {
+    const { service, prisma } = build();
+    (prisma.cashRegister.findFirst as jest.Mock).mockImplementation(({ where }) =>
+      Promise.resolve(where.tenantId === "tenant-a" ? { id: "cr-a" } : null),
+    );
+
+    await expect(service.currentOpen("tenant-a")).resolves.toEqual({ id: "cr-a" });
+    await expect(service.currentOpen("tenant-b")).resolves.toBeNull();
+    // addMovement do tenant B não deve enxergar o caixa aberto do tenant A.
+    await expect(
+      service.addMovement("tenant-b", { kind: "DEPOSIT", amountCents: 100 }),
+    ).rejects.toThrow(NotFoundException);
+  });
+
   it("open recusa quando já há caixa aberto", async () => {
     const { service, prisma } = build();
     (prisma.cashRegister.findFirst as jest.Mock).mockResolvedValue({ id: "cr-open" });
     await expect(service.open("t-1", "u-1", { openingFloatCents: 10000 })).rejects.toThrow(
       ConflictException,
     );
+    expect(prisma.cashRegister.findFirst).toHaveBeenCalledWith({
+      where: { tenantId: "t-1", status: "OPEN" },
+    });
   });
 
   it("addMovement sem caixa aberto lança NotFound", async () => {

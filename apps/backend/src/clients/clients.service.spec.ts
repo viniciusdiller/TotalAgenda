@@ -57,6 +57,12 @@ describe("ClientsService (M2)", () => {
     const service = new ClientsService(prisma);
 
     await expect(service.update("t-1", "c-9", { name: "Novo" })).rejects.toThrow(NotFoundException);
+    // Não basta lançar NotFound — precisa ter sido POR TER FILTRADO por tenantId (senão um
+    // findFirst({ where: { id } }) sem tenantId também retornaria null pra um id inexistente
+    // e o teste passaria sem provar isolamento nenhum).
+    expect(prisma.client.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ id: "c-9", tenantId: "t-1" }) }),
+    );
   });
 
   // Regressão: upsertForBooking sobrescrevia o nome do cliente em TODO novo agendamento
