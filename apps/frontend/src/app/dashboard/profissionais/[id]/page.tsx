@@ -6,6 +6,7 @@ import { WorkingHoursEditor } from "./WorkingHoursEditor";
 import { ServiceLinks } from "./ServiceLinks";
 import { TimeBlocksManager } from "./TimeBlocksManager";
 import { ProfessionalProfileHeader } from "./ProfessionalProfileHeader";
+import { HowItWorks, FieldHint } from "@/components/ui/HowItWorks";
 import type { WorkingHoursInterval } from "./actions";
 
 interface ProfessionalDetail {
@@ -89,10 +90,24 @@ export default async function ProfessionalDetailPage({
         canManage={canManage}
       />
 
+      <HowItWorks>
+        <p>Aqui você define <strong>quando este profissional atende</strong> e o que ele faz.</p>
+        <ul className="list-disc space-y-1 pl-5">
+          <li><strong>Horário de trabalho:</strong> a jornada fixa de cada dia da semana. É ela que define os horários livres que o cliente vê ao agendar.</li>
+          <li><strong>Serviços que realiza:</strong> o cliente só consegue marcar com ele os serviços marcados aqui.</li>
+          <li><strong>Bloqueios:</strong> exceções pontuais (folga, consulta, férias) que tiram um horário específico da agenda, sem mexer na jornada fixa.</li>
+        </ul>
+      </HowItWorks>
+
       <section className="mt-8">
         <h2 className="font-display text-lg font-semibold text-zinc-900 dark:text-white">
           Horário de trabalho
         </h2>
+        <FieldHint>
+          Para cada dia, informe de que horas até que horas ele atende. “Não atende” significa folga fixa.
+          Para um intervalo de almoço, cadastre dois horários no mesmo dia (ex.: 09:00–12:00 e 13:30–18:00).
+          Só vale depois de clicar em “Salvar horários”.
+        </FieldHint>
         <div className="mt-3">
           <WorkingHoursEditor professionalId={id} initialIntervals={workingHoursForEditor} />
         </div>
@@ -103,6 +118,7 @@ export default async function ProfessionalDetailPage({
           <h2 className="font-display text-lg font-semibold text-zinc-900 dark:text-white">
             Serviços que realiza
           </h2>
+          <FieldHint>Marque os serviços que ele faz; só serviços ativos aparecem. A marcação vale na hora.</FieldHint>
           <div className="mt-3">
             <ServiceLinks
               professionalId={id}
@@ -117,6 +133,10 @@ export default async function ProfessionalDetailPage({
         <h2 className="font-display text-lg font-semibold text-zinc-900 dark:text-white">
           Bloqueios (folga, almoço, férias)
         </h2>
+        <FieldHint>
+          Tira um período pontual da agenda deste profissional. Não dá para bloquear um horário que já tem
+          atendimento marcado: cancele ou remarque o atendimento antes.
+        </FieldHint>
         <div className="mt-3">
           <TimeBlocksManager professionalId={id} blocks={blocks} />
         </div>

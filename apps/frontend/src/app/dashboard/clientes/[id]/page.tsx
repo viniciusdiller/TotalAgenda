@@ -6,6 +6,7 @@ import type { AdminClientDetail } from "@totalagenda/shared-types";
 import { authedFetch } from "@/lib/api-server";
 import { ApiError } from "@/lib/api";
 import { ClientForm } from "../ClientForm";
+import { HowItWorks, FieldHint } from "@/components/ui/HowItWorks";
 import { IntakeSection } from "./IntakeSection";
 import { updateClientAction, listIntakeFormsAction } from "../actions";
 
@@ -49,6 +50,16 @@ export default async function ClientDetailPage({
         {client.name}
       </h1>
 
+      <HowItWorks>
+        <p>Esta é a ficha deste cliente no seu negócio. Ela tem três partes:</p>
+        <ul className="list-disc space-y-1 pl-5">
+          <li><strong>Cadastro:</strong> contato e dados pessoais. Altere e clique em “Salvar alterações”.</li>
+          <li><strong>Anamnese:</strong> as fichas que você criou em Fichas. Cada uma pode ser preenchida e atualizada aqui.</li>
+          <li><strong>Histórico:</strong> todos os atendimentos dele aqui (só leitura), com profissional e status.</li>
+        </ul>
+        <p>Esta ficha é só do seu negócio: outros negócios não veem o que você escreve aqui.</p>
+      </HowItWorks>
+
       <section className="mt-6">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">Cadastro</h2>
         <div className="mt-3">
@@ -58,6 +69,7 @@ export default async function ClientDetailPage({
 
       <section className="mt-10">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">Anamnese</h2>
+        <FieldHint>Perguntas de saúde e preferências feitas pela equipe. Clique em “Preencher” ou “Editar” em cada ficha.</FieldHint>
         <div className="mt-3">
           <IntakeSection clientId={client.id} forms={forms} responses={client.intakeResponses} />
         </div>
@@ -67,6 +79,7 @@ export default async function ClientDetailPage({
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">
           Histórico ({client.appointments.length})
         </h2>
+        <FieldHint>Atendimentos já feitos ou marcados. Para mudar um, use a Agenda.</FieldHint>
         {client.appointments.length === 0 ? (
           <p className="mt-3 text-sm text-zinc-500 dark:text-stone-400">Nenhum atendimento.</p>
         ) : (

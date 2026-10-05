@@ -5,6 +5,7 @@ import { DateTime } from "luxon";
 import { Trash } from "@phosphor-icons/react/dist/ssr";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { MoneyInput } from "@/components/ui/MoneyInput";
+import { HowItWorks, FieldHint } from "@/components/ui/HowItWorks";
 import { formatCentsBRL, moneyToCents } from "@/lib/masks";
 import { brl } from "@/lib/money";
 import type { AdminProduct, PaymentMethod, Ticket } from "@totalagenda/shared-types";
@@ -112,6 +113,31 @@ export function TicketPdv({
               : "cancelada"}
         </span>
       </div>
+
+      <HowItWorks defaultOpen={!readOnly && ticket.items.length === 0}>
+        {readOnly ? (
+          <p>
+            Esta comanda está <strong>{ticket.status === "CLOSED" ? "fechada" : "cancelada"}</strong> e
+            não pode mais ser alterada. Os valores abaixo são o registro final do atendimento.
+          </p>
+        ) : (
+          <>
+            <ol className="list-decimal space-y-1 pl-5">
+              <li><strong>Adicione os itens:</strong> serviços, produtos ou um item avulso. O preço de serviço e produto vem do catálogo e não pode ser mudado aqui; só o item avulso tem preço livre.</li>
+              <li><strong>Escolha o profissional</strong> de cada item. É ele quem recebe a comissão; item “Sem profissional” não gera comissão.</li>
+              <li><strong>Desconto</strong> (opcional): em reais, sobre o total, e não pode passar do subtotal.</li>
+              <li><strong>Registre o pagamento.</strong> Pode ser em mais de uma forma. Se deixar o valor em branco, vale o que ainda falta.</li>
+              <li><strong>Feche a comanda</strong> quando não faltar nada.</li>
+            </ol>
+            <p>
+              Ao fechar, a receita vai para o Financeiro, a comissão é calculada (sobre o preço dos itens, antes do desconto) e o estoque dos produtos baixa. Fechar não tem volta.
+            </p>
+            <p>
+              <strong>Cancelar</strong> só é possível enquanto não houver pagamento registrado, e descarta a comanda.
+            </p>
+          </>
+        )}
+      </HowItWorks>
 
       {/* Itens */}
       <div className="mt-5 rounded-2xl border border-zinc-200 dark:border-white/10">
@@ -243,6 +269,13 @@ export function TicketPdv({
         </div>
       ) : null}
 
+      {!readOnly ? (
+        <FieldHint>
+          Avulso é para algo fora do catálogo (ex.: taxa extra): informe a descrição e o valor.
+          Produto mostra o estoque atual entre parênteses.
+        </FieldHint>
+      ) : null}
+
       {/* Totais + desconto */}
       <div className="mt-5 space-y-1 text-sm">
         <div className="flex justify-between text-zinc-500 dark:text-stone-400">
@@ -341,6 +374,13 @@ export function TicketPdv({
         </div>
       ) : null}
 
+      {!readOnly ? (
+        <FieldHint>
+          O valor em branco paga tudo o que falta. Para dividir, registre uma parte, depois a outra.
+          O desconto é salvo ao sair do campo.
+        </FieldHint>
+      ) : null}
+
       {error ? <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p> : null}
 
       {!readOnly ? (
@@ -362,6 +402,12 @@ export function TicketPdv({
             Cancelar
           </button>
         </div>
+      ) : null}
+      {!readOnly ? (
+        <FieldHint>
+          “Fechar comanda” só habilita com pelo menos um item e nenhum valor faltando. “Cancelar” só
+          habilita se ainda não houver pagamento.
+        </FieldHint>
       ) : null}
 
       <ConfirmDialog

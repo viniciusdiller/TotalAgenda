@@ -33,10 +33,10 @@ export function TimeBlocksManager({
   return (
     <div>
       <form action={action} className="grid gap-4 sm:grid-cols-4">
-        <Input label="Data" name="date" type="date" required />
-        <Input label="Início" name="startTime" type="time" required />
-        <Input label="Fim" name="endTime" type="time" required />
-        <Input label="Motivo (opcional)" name="reason" placeholder="Almoço" />
+        <Input label="Data" name="date" type="date" required hint="Dia do bloqueio." />
+        <Input label="Início" name="startTime" type="time" required hint="Primeira hora indisponível." />
+        <Input label="Fim" name="endTime" type="time" required hint="Deve ser depois do início." />
+        <Input label="Motivo (opcional)" name="reason" placeholder="Almoço" hint="Só você vê; ajuda a lembrar." />
 
         {state?.error ? (
           <p className="sm:col-span-4 text-sm text-red-600 dark:text-red-400">{state.error}</p>

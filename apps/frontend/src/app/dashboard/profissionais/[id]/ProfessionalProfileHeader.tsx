@@ -58,6 +58,7 @@ export function ProfessionalProfileHeader({
           <Input label="Nome" value={nameInput} onChange={(e) => setNameInput(e.target.value)} required />
           <Input
             label="E-mail"
+            hint="É o login dele. Mudar aqui muda o e-mail de acesso."
             type="email"
             value={emailInput}
             onChange={(e) => setEmailInput(e.target.value)}
@@ -66,6 +67,7 @@ export function ProfessionalProfileHeader({
         </div>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-zinc-700 dark:text-stone-200">Bio (opcional)</span>
+          <span className="-mt-1 text-xs text-zinc-400 dark:text-stone-500">Texto livre sobre o profissional (formação, especialidade).</span>
           <textarea
             value={bioInput}
             onChange={(e) => setBioInput(e.target.value)}
