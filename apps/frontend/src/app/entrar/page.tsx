@@ -4,6 +4,7 @@ import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import { LoginForm } from "./LoginForm";
 import { Logo } from "@/components/brand/Logo";
 import { Footer } from "@/components/marketing/Footer";
+import { BrandPattern } from "@/components/brand/BrandPattern";
 
 export const metadata: Metadata = { title: "Entrar - TotalAgenda" };
 
@@ -16,7 +17,8 @@ export default async function LoginPage({
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <main className="flex flex-1 items-center justify-center bg-stone-50 px-6 py-16 dark:bg-zinc-950">
+      <main className="relative isolate flex flex-1 items-center justify-center bg-stone-50 px-6 py-16 dark:bg-zinc-950">
+        <BrandPattern mask="radial-gradient(ellipse 55% 60% at 50% 50%, transparent 30%, black 100%)" />
         <div className="w-full max-w-sm">
           <Link
             href="/"

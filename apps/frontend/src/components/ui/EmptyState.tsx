@@ -1,5 +1,6 @@
 import type { Icon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
+import { BrandPattern } from "../brand/BrandPattern";
 
 export function EmptyState({
   icon: IconComponent,
@@ -13,7 +14,8 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-zinc-300 px-6 py-12 text-center dark:border-white/15">
+    <div className="relative isolate flex flex-col items-center gap-3 overflow-hidden rounded-2xl border border-dashed border-zinc-300 px-6 py-12 text-center dark:border-white/15">
+      <BrandPattern mask="radial-gradient(ellipse at center, transparent 30%, black 90%)" />
       <IconComponent size={32} weight="light" className="text-zinc-300 dark:text-stone-600" />
       <div>
         <p className="text-sm font-medium text-zinc-700 dark:text-stone-200">{title}</p>

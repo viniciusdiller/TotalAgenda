@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { MagnifyingGlass, MapPin } from "@phosphor-icons/react/dist/ssr";
 import { Container } from "../ui/Container";
+import { BrandPattern } from "../brand/BrandPattern";
 
 // Hero de busca (estilo Trinks): a home vira o ponto de entrada de quem procura um
 // salão/barbearia, não só a página de venda pro dono. A busca por texto usa "contains" no
@@ -26,11 +27,13 @@ export function Hero({ cities }: { cities: string[] }) {
   }
 
   return (
-    <section id="top" className="relative overflow-hidden pt-32 pb-24 lg:pt-40 lg:pb-28">
+    <section id="top" className="relative isolate overflow-hidden pt-32 pb-24 lg:pt-40 lg:pb-28">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-accent-100/70 via-transparent to-transparent dark:from-accent-500/10"
       />
+
+      <BrandPattern mask="radial-gradient(ellipse 70% 60% at 50% 0%, black 0%, transparent 75%)" />
 
       <Container>
         <div className="mx-auto max-w-2xl text-center">

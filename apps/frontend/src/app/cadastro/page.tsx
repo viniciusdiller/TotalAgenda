@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { SignupFlow } from "./SignupFlow";
 import { Logo } from "@/components/brand/Logo";
 import { Footer } from "@/components/marketing/Footer";
+import { BrandPattern } from "@/components/brand/BrandPattern";
 import { BackLink } from "@/components/ui/BackLink";
 import { type PlanInfo, isPlanInfo } from "@/lib/billing";
 import { parsePlanParam } from "@/lib/signup-plan";
@@ -31,7 +32,8 @@ export default async function CadastroPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <main className="flex-1 bg-stone-50 px-5 py-8 sm:px-6 sm:py-10 dark:bg-zinc-950">
+      <main className="relative isolate flex-1 bg-stone-50 px-5 py-8 sm:px-6 sm:py-10 dark:bg-zinc-950">
+        <BrandPattern mask="radial-gradient(ellipse 55% 60% at 50% 50%, transparent 30%, black 100%)" />
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between">
           <BackLink href="/" label="Voltar" />
           <Link href="/" aria-label="TotalAgenda, página inicial">

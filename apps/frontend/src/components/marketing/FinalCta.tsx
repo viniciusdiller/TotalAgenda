@@ -1,13 +1,15 @@
 import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
 import { Button } from "../ui/Button";
+import { BrandPattern } from "../brand/BrandPattern";
 
 export function FinalCta() {
   return (
     <section className="py-20 lg:py-28">
       <Container>
         <Reveal>
-          <div className="relative overflow-hidden rounded-2xl bg-zinc-900 px-8 py-16 text-center sm:px-16">
+          <div className="relative isolate overflow-hidden rounded-2xl bg-zinc-900 px-8 py-16 text-center sm:px-16">
+            <BrandPattern tone="dark" mask="radial-gradient(ellipse at center, transparent 25%, black 85%)" />
             <div
               aria-hidden
               className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-accent-500/20 via-transparent to-transparent"

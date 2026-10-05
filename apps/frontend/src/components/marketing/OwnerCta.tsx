@@ -2,12 +2,14 @@ import { CalendarCheck, LinkSimple, TrendUp } from "@phosphor-icons/react/dist/s
 import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
 import { Button } from "../ui/Button";
+import { BrandPattern } from "../brand/BrandPattern";
 
 // Faixa full-bleed (quebra o Container de propósito) — mesmo papel do bloco laranja do
 // Trinks: o ponto da home onde o dono de salão, não o cliente final, é o público.
 export function OwnerCta() {
   return (
-    <section className="relative overflow-hidden bg-accent-500 py-20 lg:py-24">
+    <section className="relative isolate overflow-hidden bg-accent-500 py-20 lg:py-24">
+      <BrandPattern tone="purple" mask="linear-gradient(to left, black, transparent 70%)" />
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent"

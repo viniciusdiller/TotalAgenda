@@ -1,6 +1,7 @@
 import { CalendarPlus, PaperPlaneTilt, UsersThree } from "@phosphor-icons/react/dist/ssr";
 import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
+import { BrandPattern } from "../brand/BrandPattern";
 
 const steps = [
   {
@@ -22,7 +23,8 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section id="como-funciona" className="bg-white py-20 lg:py-28 dark:bg-zinc-900/40">
+    <section id="como-funciona" className="relative isolate bg-white py-20 lg:py-28 dark:bg-zinc-900/40">
+      <BrandPattern mask="radial-gradient(ellipse at bottom left, black 10%, transparent 70%)" className="right-auto hidden w-1/3 lg:block" />
       <Container>
         <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
           <Reveal>
