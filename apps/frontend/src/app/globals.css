@@ -97,6 +97,34 @@
   animation-delay: calc(var(--i, 0) * 60ms);
 }
 
+/* Hover com função: avisa que o elemento é clicável/editável. `hover-lift` é pra cartões
+   com borda (sobe e ganha sombra), `hover-nudge` pra linhas de lista (desliza um pouco,
+   sem sombra pra não poluir listas longas). Só em dispositivo com ponteiro real: no toque,
+   :hover "gruda" depois do tap. O reduced-motion abaixo zera as transições. */
+@utility hover-lift {
+  transition:
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms ease-out,
+    border-color 220ms ease-out;
+  @media (hover: hover) {
+    &:hover {
+      transform: translateY(-2px);
+      border-color: var(--color-accent-300);
+      box-shadow: 0 8px 22px -10px color-mix(in srgb, var(--color-accent-500) 40%, transparent);
+    }
+  }
+}
+@utility hover-nudge {
+  transition:
+    transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 150ms ease-out;
+  @media (hover: hover) {
+    &:hover {
+      transform: translateX(3px);
+    }
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
