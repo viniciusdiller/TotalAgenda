@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { HowItWorks } from "@/components/ui/HowItWorks";
 import { TenantProfileSettingsForm } from "./TenantProfileSettingsForm";
 import { GalleryManager } from "./GalleryManager";
 
@@ -50,6 +51,19 @@ export default async function ConfiguracoesPage() {
           </>
         }
       />
+
+      <HowItWorks>
+        <p>
+          Esta tela controla <strong>o que o cliente vê na sua página pública</strong>, a que
+          ele abre para agendar.
+        </p>
+        <ul className="list-disc space-y-1 pl-5">
+          <li>Descrição, endereço, horário e contatos aparecem na página. WhatsApp e Instagram viram botões.</li>
+          <li><strong>Seções visíveis</strong> liga e desliga blocos (serviços, equipe, galeria, contato). Uma seção só aparece se tiver conteúdo cadastrado.</li>
+          <li>A <strong>galeria</strong> aceita até 12 fotos. Passe o mouse numa foto para removê-la.</li>
+          <li>Esta tela não altera plano nem cobrança; isso fica em Plano e cobrança.</li>
+        </ul>
+      </HowItWorks>
 
       <div className="mt-6 flex flex-col gap-8">
         <TenantProfileSettingsForm tenant={tenant} />

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { HowItWorks } from "@/components/ui/HowItWorks";
 import { CreateProfessionalForm } from "./CreateProfessionalForm";
 import { ProfessionalRow } from "./ProfessionalRow";
 
@@ -26,6 +27,19 @@ export default async function ProfessionalsPage() {
         title="Profissionais"
         description="Cada profissional tem a própria agenda e horário de trabalho."
       />
+
+      <HowItWorks>
+        <p>
+          Cada profissional tem <strong>login próprio</strong>, uma agenda separada e os seus
+          horários de trabalho.
+        </p>
+        <ul className="list-disc space-y-1 pl-5">
+          <li>Em <strong>Gerenciar</strong> você define os horários de trabalho, as folgas e quais serviços ele atende.</li>
+          <li>O profissional entra com o e-mail e a senha inicial que você cadastrar e vê só a própria agenda.</li>
+          <li><strong>Desativar</strong> tira a pessoa dos novos agendamentos. Não dá para desativar quem tem atendimento futuro marcado: remarque ou cancele antes.</li>
+          <li>O número de profissionais ativos é limitado pelo seu plano.</li>
+        </ul>
+      </HowItWorks>
 
       {isOwner ? (
         <div className="mt-6">

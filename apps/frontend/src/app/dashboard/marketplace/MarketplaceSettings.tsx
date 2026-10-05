@@ -24,8 +24,8 @@ export function MarketplaceSettings({ settings }: { settings: Settings }) {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <Input label="Cidade" name="city" maxLength={120} autoComplete="address-level2" defaultValue={settings.city ?? ""} />
-        <Input label="Bairro" name="neighborhood" maxLength={120} defaultValue={settings.neighborhood ?? ""} />
+        <Input label="Cidade" name="city" maxLength={120} autoComplete="address-level2" defaultValue={settings.city ?? ""} hint="É o que o cliente filtra na busca." />
+        <Input label="Bairro" name="neighborhood" maxLength={120} defaultValue={settings.neighborhood ?? ""} hint="Opcional, ajuda a achar quem está perto." />
         <Input
           label="Latitude"
           name="latitude"
@@ -54,6 +54,7 @@ export function MarketplaceSettings({ settings }: { settings: Settings }) {
           <option value="3">$$$</option>
           <option value="4">$$$$</option>
         </select>
+        <span className="text-xs font-normal text-zinc-400 dark:text-stone-500">$ é mais em conta, $$$$ é premium. Aparece no cartão do resultado.</span>
       </label>
 
       <fieldset>

@@ -7,6 +7,7 @@ import { authedFetch } from "@/lib/api-server";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { HowItWorks } from "@/components/ui/HowItWorks";
 import { riseIn } from "@/lib/stagger";
 
 export default async function ClientsPage({
@@ -42,6 +43,19 @@ export default async function ClientsPage({
           </Button>
         }
       />
+
+      <HowItWorks>
+        <p>
+          Este é o <strong>cadastro de clientes do seu negócio</strong>: contato, histórico de
+          atendimentos, observações, tags e fichas de anamnese.
+        </p>
+        <ul className="list-disc space-y-1 pl-5">
+          <li>Clientes entram aqui quando você cadastra ou quando fazem o primeiro agendamento pela sua página.</li>
+          <li>Clique num cliente para ver e editar a ficha dele, e preencher as fichas de anamnese.</li>
+          <li>Use as <strong>tags</strong> para agrupar (ex.: “VIP”, “alérgica a amônia”) e a busca por nome ou telefone para achar rápido.</li>
+          <li>O mesmo telefone pode ter conta em vários negócios, mas cada negócio tem a própria ficha e não vê a dos outros.</li>
+        </ul>
+      </HowItWorks>
 
       <form className="mt-6 flex max-w-sm items-center gap-2 rounded-lg border border-zinc-300 px-3 py-2 dark:border-white/15">
         <MagnifyingGlass size={16} className="text-zinc-400" />
@@ -79,7 +93,7 @@ export default async function ClientsPage({
             <li key={client.id} style={riseIn(i)} className="animate-rise-in">
               <Link
                 href={`/dashboard/clientes/${client.id}`}
-                className="-mx-3 flex items-center justify-between gap-4 rounded-lg px-3 py-3.5 transition-colors hover:bg-zinc-900/5 dark:hover:bg-white/5"
+                className="hover-nudge -mx-3 flex items-center justify-between gap-4 rounded-lg px-3 py-3.5 hover:bg-zinc-900/5 dark:hover:bg-white/5"
               >
                 <div>
                   <p className="font-medium text-zinc-900 dark:text-white">{client.name}</p>

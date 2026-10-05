@@ -12,6 +12,7 @@ import {
   formatDate,
 } from "@/lib/billing";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { HowItWorks } from "@/components/ui/HowItWorks";
 import { PlanCards } from "./PlanCards";
 import { PortalButton } from "./PortalButton";
 import { RefreshButton } from "./RefreshButton";
@@ -101,6 +102,19 @@ export default async function PlanoPage({ searchParams }: { searchParams: Promis
               </p>
             ) : null}
           </section>
+
+          <HowItWorks>
+            <p>
+              O plano define <strong>quantos profissionais ativos</strong> você pode ter. Todas as
+              contas começam com um período de teste, sem cartão.
+            </p>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>Ao fim do teste, o painel é bloqueado até você assinar um plano.</li>
+              <li><strong>Gerenciar pagamento</strong> abre o portal seguro da Stripe, onde você troca o cartão, vê faturas e cancela.</li>
+              <li><strong>Trocar de plano</strong> vale na hora, com crédito ou cobrança proporcional. Se o novo plano tiver menos vagas, você escolhe quais profissionais desativar (só quem não tem atendimentos futuros).</li>
+              <li>Cancelando, você mantém o acesso até o fim do período já pago.</li>
+            </ul>
+          </HowItWorks>
 
           <section className="mt-8">
             <h2 className="font-display text-lg font-semibold text-zinc-900 dark:text-white">Planos</h2>

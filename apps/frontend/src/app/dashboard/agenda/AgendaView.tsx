@@ -6,6 +6,7 @@ import { CaretLeft, CaretRight, Plus, Users, WarningCircle } from "@phosphor-ico
 import clsx from "clsx";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { HowItWorks } from "@/components/ui/HowItWorks";
 import type {
   CalendarResponse,
   PublicBooking,
@@ -192,6 +193,19 @@ export function AgendaView({
         </div>
       </div>
 
+      <HowItWorks>
+        <p>
+          A agenda mostra o dia, com <strong>uma coluna por profissional</strong>. A faixa mais
+          clara de cada coluna é o horário de trabalho dele.
+        </p>
+        <ul className="list-disc space-y-1 pl-5">
+          <li><strong>Clique num horário livre</strong> para marcar um atendimento (o horário é arredondado de 15 em 15 minutos).</li>
+          <li><strong>Clique num atendimento</strong> para ver os detalhes, confirmar, marcar falta, remarcar, cancelar ou abrir a comanda.</li>
+          <li>A cor do bloco é o status; a legenda está logo abaixo.</li>
+          <li>O sistema impede dois atendimentos no mesmo profissional e horário.</li>
+        </ul>
+      </HowItWorks>
+
       {loadError ? (
         <div className="mt-6 flex flex-col items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
           <p className="flex items-center gap-2">
@@ -274,6 +288,7 @@ export function AgendaView({
                     className="relative bg-zinc-50/50 dark:bg-white/[0.015]"
                     style={{ height: GRID_HEIGHT }}
                     onClick={(e) => handleColumnClick(professional.id, e)}
+                    title={canManage ? "Clique num horário livre para agendar" : undefined}
                   >
                     {/* Faixas de horário de trabalho */}
                     {dayHours.map((w, i) => (
@@ -335,7 +350,7 @@ export function AgendaView({
                           }}
                           className={clsx(
                             "absolute inset-x-1 overflow-hidden rounded-md border px-2 py-1 text-left text-[11px] leading-tight",
-                            "transition-[filter] duration-150 hover:brightness-95 dark:hover:brightness-125",
+                            "transition-[filter,box-shadow,transform] duration-150 hover:-translate-y-px hover:shadow-md hover:brightness-95 dark:hover:brightness-125",
                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-current",
                             getStatusBlockClasses(a.status),
                           )}

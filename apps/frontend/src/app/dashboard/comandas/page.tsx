@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
 import { requireRole } from "@/lib/guards";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { HowItWorks } from "@/components/ui/HowItWorks";
 import { OpenTicketButton } from "./OpenTicketButton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { riseIn } from "@/lib/stagger";
@@ -25,6 +26,25 @@ export default async function ComandasPage() {
         action={<OpenTicketButton />}
       />
 
+      <HowItWorks>
+        <p>
+          A <strong>comanda</strong> é a conta de um atendimento, como a ficha de consumo do
+          salão. Abra uma quando o cliente chegar, ou a partir de um agendamento.
+        </p>
+        <ol className="list-decimal space-y-1 pl-5">
+          <li>Adicione os <strong>serviços</strong> feitos e os <strong>produtos</strong> vendidos. O preço vem do catálogo e não pode ser alterado aqui.</li>
+          <li>Se quiser, aplique um <strong>desconto</strong> (nunca maior que o subtotal).</li>
+          <li>Registre o <strong>pagamento</strong>. Pode dividir em mais de uma forma (Pix + dinheiro, por exemplo).</li>
+          <li><strong>Feche</strong> a comanda quando o valor estiver pago.</li>
+        </ol>
+        <p>
+          Ao fechar, o sistema lança a receita no Financeiro, calcula a comissão do
+          profissional e baixa o estoque dos produtos. Depois de fechada, a comanda não
+          muda mais. Na lista, <span className="text-amber-600 dark:text-amber-400">&quot;falta R$&quot;</span>{" "}
+          é o quanto ainda não foi pago.
+        </p>
+      </HowItWorks>
+
       {tickets.length === 0 ? (
         <div className="mt-8">
           <EmptyState icon={Receipt} title="Nenhuma comanda aberta" />
@@ -39,7 +59,7 @@ export default async function ComandasPage() {
             >
               <Link
                 href={`/dashboard/comandas/${ticket.id}`}
-                className="-mx-3 flex items-center justify-between gap-4 rounded-lg px-3 py-3.5 transition-colors hover:bg-zinc-900/5 dark:hover:bg-white/5"
+                className="hover-nudge -mx-3 flex items-center justify-between gap-4 rounded-lg px-3 py-3.5 hover:bg-zinc-900/5 dark:hover:bg-white/5"
               >
                 <div>
                   <p className="font-medium text-zinc-900 dark:text-white">

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Plus, Trash } from "@phosphor-icons/react/dist/ssr";
 import type { IntakeFieldDef, IntakeFormSummary } from "@totalagenda/shared-types";
 import { riseIn } from "@/lib/stagger";
+import { FieldHint } from "@/components/ui/HowItWorks";
 import { saveIntakeFormAction } from "./actions";
 
 const FIELD_TYPES: IntakeFieldDef["type"][] = ["text", "textarea", "boolean", "select"];
@@ -81,11 +82,20 @@ function Editor({
         className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium dark:border-white/15 dark:bg-zinc-900 dark:text-white"
       />
 
+      <FieldHint>
+        O nome identifica o modelo na ficha do cliente. Use algo que diga para que serve.
+      </FieldHint>
+
       <p className="mt-3 text-xs text-zinc-400 dark:text-stone-500">
         Cada campo vira uma pergunta que aparece pro profissional preencher na ficha do
-        cliente (ex.: "Alergias conhecidas" como texto, "Fez química recente?" como
-        Sim/Não).
+        cliente. Escolha o tipo conforme a resposta esperada:
       </p>
+      <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-zinc-400 dark:text-stone-500">
+        <li><strong>Texto curto:</strong> resposta de uma linha (ex.: “Produto que usa em casa”).</li>
+        <li><strong>Texto longo:</strong> resposta aberta (ex.: “Alergias conhecidas”).</li>
+        <li><strong>Sim/Não:</strong> uma caixa de marcar (ex.: “Fez química recente?”).</li>
+        <li><strong>Lista de opções:</strong> o profissional escolhe uma; separe as opções por vírgula (ex.: liso, ondulado, cacheado).</li>
+      </ul>
 
       <div className="mt-3 space-y-2">
         {fields.map((field, i) => (
@@ -147,6 +157,7 @@ function Editor({
         <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
         Ficha ativa
       </label>
+      <FieldHint>Desmarque para parar de oferecer este modelo, sem apagar as respostas já salvas.</FieldHint>
 
       {error ? <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p> : null}
 
@@ -183,7 +194,7 @@ export function FormsManager({ initialForms }: { initialForms: IntakeFormSummary
           <div
             key={form.id}
             style={riseIn(i)}
-            className="animate-rise-in flex items-center justify-between rounded-xl border border-zinc-200 p-4 dark:border-white/10"
+            className="animate-rise-in hover-lift flex items-center justify-between rounded-xl border border-zinc-200 p-4 dark:border-white/10"
           >
             <div>
               <p className="font-medium text-zinc-900 dark:text-white">{form.name}</p>

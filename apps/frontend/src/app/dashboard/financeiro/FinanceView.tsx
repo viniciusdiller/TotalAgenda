@@ -33,7 +33,7 @@ const initial: FinanceActionState = {};
 
 function Card({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 p-4 dark:border-white/10">
+    <div className="hover-lift rounded-2xl border border-zinc-200 p-4 dark:border-white/10">
       <p className="text-xs text-zinc-400">{label}</p>
       <p className="mt-1 text-xl font-bold text-zinc-900 dark:text-white">{value}</p>
       {hint ? <p className="text-xs text-amber-600 dark:text-amber-400">{hint}</p> : null}
@@ -182,7 +182,7 @@ export function FinanceView({
             className={
               tab === t
                 ? "border-b-2 border-accent-500 px-3 py-2 text-sm font-medium text-accent-700 dark:text-accent-300"
-                : "px-3 py-2 text-sm font-medium text-zinc-500 dark:text-stone-400"
+                : "px-3 py-2 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-stone-400 dark:hover:text-white"
             }
           >
             {t}
@@ -219,6 +219,10 @@ export function FinanceView({
             <label className="flex items-center gap-2 text-sm text-zinc-600 sm:col-span-2 dark:text-stone-300">
               <input type="checkbox" name="paidNow" /> Já quitado
             </label>
+            <p className="-mt-1 text-xs text-zinc-400 sm:col-span-2 dark:text-stone-500">
+              Despesa é dinheiro que sai; Receita é dinheiro que entra fora das comandas. A data é o
+              vencimento. Marque “Já quitado” se já foi paga ou recebida; senão fica pendente em A pagar / A receber.
+            </p>
             {state.error ? (
               <p className="text-sm text-red-600 sm:col-span-2 dark:text-red-400">{state.error}</p>
             ) : null}

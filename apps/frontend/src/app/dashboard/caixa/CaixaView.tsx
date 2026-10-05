@@ -42,7 +42,7 @@ export function CaixaView({ summary }: { summary: CashRegisterSummary }) {
   if (!summary.open) {
     return (
       <form action={openAction} className="mt-6 max-w-sm space-y-3">
-        <MaskedInput mask="money" label="Fundo de troco (R$)" name="float" defaultValue="0,00" required />
+        <MaskedInput mask="money" label="Fundo de troco (R$)" name="float" defaultValue="0,00" required hint="Dinheiro que já está na gaveta agora, para dar troco. Pode ser 0,00." />
         {openState.error ? (
           <p className="text-sm text-red-600 dark:text-red-400">{openState.error}</p>
         ) : null}
@@ -145,7 +145,7 @@ export function CaixaView({ summary }: { summary: CashRegisterSummary }) {
       <div>
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">Fechar caixa</h2>
         <form ref={closeFormRef} action={closeFormAction} className="mt-3 flex flex-wrap items-end gap-2">
-          <MaskedInput mask="money" label="Dinheiro contado (R$)" name="counted" required />
+          <MaskedInput mask="money" label="Dinheiro contado (R$)" name="counted" required hint="Conte as notas e moedas da gaveta. O sistema mostra a diferença para o esperado." />
           <button
             type="submit"
             disabled={closePending}

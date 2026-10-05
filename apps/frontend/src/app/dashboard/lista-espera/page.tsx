@@ -4,6 +4,7 @@ import { authedFetch } from "@/lib/api-server";
 import { WaitlistRow } from "./WaitlistRow";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { HowItWorks } from "@/components/ui/HowItWorks";
 
 interface AdminWaitlistEntry {
   id: string;
@@ -39,6 +40,18 @@ export default async function WaitlistPage() {
         title="Lista de espera"
         description="Clientes aguardando um horário livre. Entre em contato quando abrir uma vaga."
       />
+
+      <HowItWorks>
+        <p>
+          Quando o horário que o cliente quer está cheio, ele pode entrar na lista de espera
+          pela sua página pública. Aqui você vê quem está esperando e para qual serviço.
+        </p>
+        <ul className="list-disc space-y-1 pl-5">
+          <li>O sistema <strong>não avisa o cliente sozinho</strong>: quando abrir uma vaga, ligue ou chame no WhatsApp.</li>
+          <li><strong>Marcar como contatado</strong> só registra que você já falou com ele; ele continua na lista.</li>
+          <li><strong>Resolver</strong> tira da lista (ele agendou ou desistiu).</li>
+        </ul>
+      </HowItWorks>
 
       {entries.length === 0 ? (
         <div className="mt-8">

@@ -62,7 +62,7 @@ export function PlanCards({
               key={plan.tier}
               style={riseIn(i)}
               className={clsx(
-                "animate-rise-in flex flex-col rounded-2xl border p-5",
+                "animate-rise-in hover-lift flex flex-col rounded-2xl border p-5",
                 action === "CURRENT"
                   ? "border-accent-500 bg-accent-50/50 dark:border-accent-400 dark:bg-accent-500/10"
                   : isSuggested

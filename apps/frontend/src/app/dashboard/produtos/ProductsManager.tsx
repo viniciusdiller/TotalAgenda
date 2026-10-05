@@ -87,10 +87,10 @@ export function ProductsManager({ products }: { products: AdminProduct[] }) {
           className="mb-6 grid gap-3 rounded-2xl border border-zinc-200 p-4 sm:grid-cols-2 dark:border-white/10"
         >
           <Input label="Nome" name="name" required minLength={2} maxLength={120} />
-          <Input label="SKU (opcional)" name="sku" maxLength={60} />
-          <MaskedInput mask="money" label="Preço de venda (R$)" name="price" required />
-          <MaskedInput mask="money" label="Custo (R$, opcional)" name="cost" />
-          <Input label="Estoque inicial" name="initialStock" type="number" min={0} max={1000000} step={1} />
+          <Input label="SKU (opcional)" name="sku" maxLength={60} hint="Seu código interno ou o código de barras, para achar o produto depois." />
+          <MaskedInput mask="money" label="Preço de venda (R$)" name="price" required hint="O que o cliente paga. É copiado para a comanda na hora da venda." />
+          <MaskedInput mask="money" label="Custo (R$, opcional)" name="cost" hint="O que você paga por unidade. Entra no cálculo do lucro (CMV)." />
+          <Input label="Estoque inicial" name="initialStock" type="number" min={0} max={1000000} step={1} hint="Quantas unidades você tem agora. Depois use entrada e saída." />
           {state.error ? (
             <p className="text-sm text-red-600 sm:col-span-2 dark:text-red-400">{state.error}</p>
           ) : null}

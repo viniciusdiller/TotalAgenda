@@ -36,7 +36,7 @@ export function ServiceLinks({
           const isLinked = linked.has(service.id);
           return (
             <li key={service.id}>
-              <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-200 p-3 text-sm dark:border-white/10">
+              <label className="hover-lift flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-200 p-3 text-sm dark:border-white/10">
                 <input
                   type="checkbox"
                   checked={isLinked}

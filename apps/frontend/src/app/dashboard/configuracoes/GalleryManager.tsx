@@ -52,7 +52,7 @@ function GalleryImage({
   return (
     <div
       style={riseIn(index)}
-      className="animate-rise-in group relative aspect-square overflow-hidden rounded-xl"
+      className="animate-rise-in hover-lift group relative aspect-square overflow-hidden rounded-xl"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={`${API_URL}${image.url}`} alt="" className="h-full w-full object-cover" />

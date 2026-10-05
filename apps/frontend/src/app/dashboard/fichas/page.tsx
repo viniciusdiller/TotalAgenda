@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
 import { requireRole } from "@/lib/guards";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { HowItWorks } from "@/components/ui/HowItWorks";
 import { FormsManager } from "./FormsManager";
 
 export default async function FichasPage() {
@@ -17,6 +18,20 @@ export default async function FichasPage() {
         title="Fichas de anamnese"
         description="Modelos de ficha preenchidos por cliente na tela de cada cliente."
       />
+
+      <HowItWorks defaultOpen={forms.length === 0}>
+        <p>
+          Ficha de anamnese é um <strong>questionário que você monta uma vez</strong> e a
+          equipe preenche na ficha de cada cliente (substitui a prancheta de papel).
+        </p>
+        <ul className="list-disc space-y-1 pl-5">
+          <li>Crie um modelo (ex.: “Anamnese capilar”) e adicione as perguntas. Cada pergunta é um campo: texto, sim/não ou lista de opções.</li>
+          <li>O profissional preenche em <strong>Clientes → (cliente) → Fichas</strong>. Cada cliente tem uma resposta por modelo; ao editar, ela é atualizada.</li>
+          <li>Modelo inativo não aparece mais para preencher, mas as respostas já salvas ficam guardadas.</li>
+          <li>O preenchimento é feito pela equipe: o cliente não responde sozinho.</li>
+          <li>Respostas de saúde são dado sensível: pergunte só o que for necessário para o atendimento.</li>
+        </ul>
+      </HowItWorks>
 
       <FormsManager initialForms={forms} />
     </div>
