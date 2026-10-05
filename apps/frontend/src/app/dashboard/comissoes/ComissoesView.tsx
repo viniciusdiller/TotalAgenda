@@ -130,8 +130,8 @@ export function ComissoesView({
             <option value="PRODUCT">Produto</option>
           </select>
           {base !== "ALL" ? (
-            <select name="targetId" className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white">
-              <option value="">— alvo específico (opcional) —</option>
+            <select name="targetId" required className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white">
+              <option value="">— escolha o {base === "SERVICE" ? "serviço" : "produto"} —</option>
               {(base === "SERVICE" ? services : products).map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.name}
