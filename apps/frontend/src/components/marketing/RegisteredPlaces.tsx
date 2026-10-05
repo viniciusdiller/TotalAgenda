@@ -4,6 +4,7 @@ import type { MarketplaceResult } from "@totalagenda/shared-types";
 import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
 import { PressCard } from "../ui/PressCard";
+import { BrandPattern } from "../brand/BrandPattern";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 const MAX_PLACES = 8;
@@ -27,7 +28,8 @@ export async function RegisteredPlaces() {
   if (places.length === 0) return null;
 
   return (
-    <section className="bg-white py-20 lg:py-28 dark:bg-zinc-900/40">
+    <section className="relative isolate overflow-hidden bg-white py-20 lg:py-28 dark:bg-zinc-900/40">
+      <BrandPattern mask="radial-gradient(ellipse 45% 55% at 0% 0%, black 0%, transparent 70%)" />
       <Container>
         <Reveal>
           <div className="flex items-baseline justify-between gap-3">

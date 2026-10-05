@@ -4,6 +4,7 @@ import { SetPasswordForm } from "./SetPasswordForm";
 import { Logo } from "@/components/brand/Logo";
 import { Footer } from "@/components/marketing/Footer";
 import { BackLink } from "@/components/ui/BackLink";
+import { BrandPattern } from "@/components/brand/BrandPattern";
 import { backendFetch } from "@/lib/backend-fetch";
 
 export const metadata: Metadata = { title: "Definir senha - TotalAgenda" };
@@ -28,7 +29,8 @@ export default async function DefinirSenhaPage({
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <main className="flex flex-1 items-center justify-center bg-stone-50 px-6 py-16 dark:bg-zinc-950">
+      <main className="relative isolate flex flex-1 items-center justify-center bg-stone-50 px-6 py-16 dark:bg-zinc-950">
+        <BrandPattern mask="radial-gradient(ellipse 55% 60% at 50% 50%, transparent 30%, black 100%)" />
         <div className="w-full max-w-sm">
           <BackLink href="/entrar" label="Voltar ao login" />
           <Link href="/" className="mt-4 block">

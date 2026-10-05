@@ -1,6 +1,7 @@
 import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
 import { AccordionItem } from "../ui/Accordion";
+import { BrandPattern } from "../brand/BrandPattern";
 
 const faqs = [
   {
@@ -37,7 +38,8 @@ const faqs = [
 
 export function Faq() {
   return (
-    <section id="faq" className="py-20 lg:py-28">
+    <section id="faq" className="relative isolate overflow-hidden py-20 lg:py-28">
+      <BrandPattern mask="radial-gradient(ellipse 45% 55% at 100% 100%, black 0%, transparent 70%)" />
       <Container>
         <div className="grid gap-10 lg:grid-cols-[0.7fr_1.3fr] lg:gap-16">
           <Reveal>

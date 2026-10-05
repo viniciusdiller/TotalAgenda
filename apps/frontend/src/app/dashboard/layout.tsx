@@ -10,6 +10,7 @@ import { Logo } from "@/components/brand/Logo";
 import { type BillingStatusResponse, hasBillingAccess } from "@/lib/billing";
 import { BillingBanner } from "./BillingBanner";
 import { BillingGate } from "./BillingGate";
+import { BrandPattern } from "@/components/brand/BrandPattern";
 
 const ROLE_LABEL: Record<string, string> = {
   OWNER: "Dono do negócio",
@@ -69,7 +70,8 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="relative isolate flex min-w-0 flex-1 flex-col">
+        <BrandPattern mask="radial-gradient(ellipse 60% 320px at 100% 0%, black 0%, transparent 100%)" />
         <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-zinc-200 bg-stone-50/85 px-4 py-3 backdrop-blur-md md:px-6 md:py-4 dark:border-white/10 dark:bg-zinc-950/85">
           <div className="flex min-w-0 items-center gap-1 md:gap-3">
             <MobileSidebar tenant={tenant} />

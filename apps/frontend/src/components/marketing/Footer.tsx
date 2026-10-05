@@ -1,5 +1,6 @@
 import { Container } from "../ui/Container";
 import { Logo } from "../brand/Logo";
+import { BrandPattern } from "../brand/BrandPattern";
 
 // #como-funciona/#recursos/#faq são âncoras que só existem na home — em
 // qualquer outra página (descobrir, [slug], etc.) viram link morto. isHome
@@ -11,7 +12,8 @@ const accountLinks = [
 
 export function Footer({ isHome = false }: { isHome?: boolean }) {
   return (
-    <footer className="border-t border-zinc-200 py-14 dark:border-white/10">
+    <footer className="relative isolate overflow-hidden border-t border-zinc-200 py-14 dark:border-white/10">
+      <BrandPattern mask="linear-gradient(to top, black, transparent 80%)" />
       <Container>
         <div className="flex flex-col gap-12 md:flex-row md:justify-between">
           <div className="max-w-xs">

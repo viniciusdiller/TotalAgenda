@@ -1,6 +1,7 @@
 import { ChatsCircle, ClockCounterClockwise, XCircle } from "@phosphor-icons/react/dist/ssr";
 import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
+import { BrandPattern } from "../brand/BrandPattern";
 
 const pains = [
   {
@@ -22,7 +23,8 @@ const pains = [
 
 export function ProblemSolution() {
   return (
-    <section className="py-20 lg:py-28">
+    <section className="relative isolate overflow-hidden py-20 lg:py-28">
+      <BrandPattern mask="radial-gradient(ellipse 45% 55% at 0% 100%, black 0%, transparent 70%)" />
       <Container>
         <Reveal>
           <h2 className="max-w-xl font-display text-3xl font-bold tracking-tight text-zinc-900 md:text-4xl dark:text-white">

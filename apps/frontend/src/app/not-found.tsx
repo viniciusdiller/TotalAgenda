@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { BackLink } from "@/components/ui/BackLink";
 import { Logo } from "@/components/brand/Logo";
+import { BrandPattern } from "@/components/brand/BrandPattern";
 
 export const metadata: Metadata = { title: "Página não encontrada - TotalAgenda" };
 
 export default function NotFound() {
   return (
-    <main className="flex min-h-dvh items-center justify-center px-6">
+    <main className="relative isolate flex min-h-dvh items-center justify-center px-6">
+      <BrandPattern mask="radial-gradient(ellipse 55% 60% at 50% 50%, transparent 30%, black 100%)" />
       <div className="animate-rise-in w-full max-w-sm">
         <Logo />
         <p className="mt-8 font-display text-5xl font-bold text-zinc-900 dark:text-white">404</p>

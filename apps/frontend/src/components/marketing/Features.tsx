@@ -7,10 +7,12 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { Container } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
+import { BrandPattern } from "../brand/BrandPattern";
 
 export function Features() {
   return (
-    <section id="recursos" className="py-20 lg:py-28">
+    <section id="recursos" className="relative isolate overflow-hidden py-20 lg:py-28">
+      <BrandPattern mask="radial-gradient(ellipse 45% 55% at 100% 0%, black 0%, transparent 70%)" />
       <Container>
         <Reveal>
           <h2 className="max-w-lg font-display text-3xl font-bold tracking-tight text-zinc-900 md:text-4xl dark:text-white">

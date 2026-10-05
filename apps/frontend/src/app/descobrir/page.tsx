@@ -5,6 +5,7 @@ import type { MarketplaceCategory } from "@totalagenda/shared-types";
 import { DiscoverSearch } from "./DiscoverSearch";
 import { Footer } from "@/components/marketing/Footer";
 import { SiteHeader } from "@/components/account/SiteHeader";
+import { BrandPattern } from "@/components/brand/BrandPattern";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -35,7 +36,8 @@ export default async function DescobrirPage({
   ]);
 
   return (
-    <>
+    <div className="relative isolate">
+      <BrandPattern mask="linear-gradient(to bottom, black, transparent 420px)" />
       <SiteHeader loginNext="/descobrir" />
       <main className="mx-auto max-w-3xl px-4 py-10">
         <Link
@@ -69,6 +71,6 @@ export default async function DescobrirPage({
         </div>
       </main>
       <Footer />
-    </>
+    </div>
   );
 }
