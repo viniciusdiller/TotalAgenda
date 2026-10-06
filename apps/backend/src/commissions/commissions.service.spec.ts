@@ -157,7 +157,11 @@ describe("CommissionsService.createRule: alvo da regra", () => {
       professional: { findFirst: jest.fn().mockResolvedValue({ id: "prof-1" }) },
       service: { findFirst: jest.fn().mockResolvedValue(found.service ?? null) },
       product: { findFirst: jest.fn().mockResolvedValue(found.product ?? null) },
-      commissionRule: { create: jest.fn().mockResolvedValue({ id: "r1" }) },
+      commissionRule: {
+        create: jest.fn().mockResolvedValue({ id: "r1" }),
+        findFirst: jest.fn().mockResolvedValue(null),
+        count: jest.fn().mockResolvedValue(0),
+      },
     };
     return { prisma, svc: new CommissionsService(prisma as unknown as PrismaService) };
   };

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import {
   CommissionBase,
   CommissionKind,
@@ -13,6 +13,9 @@ import { UpsertCommissionRuleDto } from "./dto/upsert-commission-rule.dto";
 import { allocateDiscount } from "./discount-allocation.util";
 
 const MAX_REPORT_RANGE_MS = 366 * 24 * 60 * 60 * 1000;
+// Teto de regras por profissional: sem ele, um loop de POST enchia a tabela e o fechamento de comanda
+// (que carrega as regras do profissional) ficava cada vez mais lento.
+const MAX_RULES_PER_PROFESSIONAL = 100;
 
 type RuleForMatch = {
   id: string;
@@ -85,6 +88,15 @@ export class CommissionsService {
 
   async createRule(tenantId: string, dto: UpsertCommissionRuleDto) {
     await this.assertValid(tenantId, dto);
+    await this.assertNoDuplicate(tenantId, dto, dto.isActive ?? true);
+    const count = await this.prisma.commissionRule.count({
+      where: { tenantId, professionalId: dto.professionalId },
+    });
+    if (count >= MAX_RULES_PER_PROFESSIONAL) {
+      throw new BadRequestException(
+        `Limite de ${MAX_RULES_PER_PROFESSIONAL} regras por profissional. Exclua regras que não usa mais.`,
+      );
+    }
     return this.prisma.commissionRule.create({
       data: {
         tenantId,
@@ -104,17 +116,34 @@ export class CommissionsService {
       throw new NotFoundException("Regra de comissão não encontrada.");
     }
     await this.assertValid(tenantId, dto);
-    return this.prisma.commissionRule.update({
-      where: { id },
+    // PATCH sem isActive NÃO pode reativar em silêncio uma regra que o dono desligou: o padrão é
+    // manter o estado atual (antes era `?? true`).
+    const isActive = dto.isActive ?? existing.isActive;
+    await this.assertNoDuplicate(tenantId, dto, isActive, id);
+
+    // tenantId também no WHERE da escrita (não só na leitura acima): o isolamento não depende de
+    // ninguém ter lembrado de checar antes.
+    const { count } = await this.prisma.commissionRule.updateMany({
+      where: { id, tenantId },
       data: {
         professionalId: dto.professionalId,
         base: dto.base as CommissionBase,
         targetId: dto.base === "ALL" ? null : dto.targetId!,
         kind: dto.kind as CommissionKind,
         value: dto.value,
-        isActive: dto.isActive ?? true,
+        isActive,
       },
     });
+    if (count === 0) throw new NotFoundException("Regra de comissão não encontrada.");
+    return this.prisma.commissionRule.findFirstOrThrow({ where: { id, tenantId } });
+  }
+
+  // Excluir uma regra só vale para comandas FUTURAS: a CommissionEntry de comandas já fechadas guarda
+  // o valor calculado e não referencia a regra, então o histórico e o saldo não mudam.
+  async deleteRule(tenantId: string, id: string) {
+    const { count } = await this.prisma.commissionRule.deleteMany({ where: { id, tenantId } });
+    if (count === 0) throw new NotFoundException("Regra de comissão não encontrada.");
+    return { deleted: true };
   }
 
   // O escopo por profissional é forçado AQUI (não só no controller): um PROFESSIONAL nunca
@@ -338,6 +367,9 @@ export class CommissionsService {
 
     const rules = (await tx.commissionRule.findMany({
       where: { tenantId, isActive: true, professionalId: { in: professionalIds } },
+      // Ordem fixa: se duas regras empatassem na prioridade, a escolha dependeria da ordem que o
+      // banco devolve e a mesma venda poderia render comissões diferentes.
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     })) as RuleForMatch[];
 
     const entries: Prisma.CommissionEntryCreateManyInput[] = [];
@@ -347,10 +379,13 @@ export class CommissionsService {
       if (!rule) continue;
 
       const baseCents = item.unitPriceCents * item.quantity;
-      const amountCents =
+      const rawAmount =
         rule.kind === CommissionKind.PERCENT
           ? Math.round((baseCents * rule.value) / 100)
           : rule.value * item.quantity;
+      // Comissão nunca passa do valor vendido: um "R$ fixo" digitado errado (ex.: 5000,00 em vez de
+      // 50,00) geraria repasse maior que a venda e estouraria o caixa.
+      const amountCents = Math.min(rawAmount, baseCents);
       if (amountCents <= 0) continue;
 
       entries.push({
@@ -384,6 +419,33 @@ export class CommissionsService {
     const score = (rule: RuleForMatch) =>
       (rule.targetId && rule.targetId === targetId ? 4 : 0) + (rule.base !== CommissionBase.ALL ? 2 : 0);
     return matches.sort((a, b) => score(b) - score(a))[0];
+  }
+
+  // Duas regras ativas para o MESMO profissional e alvo empatam na prioridade (pickRule), e o repasse
+  // dependeria de qual o banco devolve primeiro. Uma só regra ativa por (profissional, base, alvo).
+  private async assertNoDuplicate(
+    tenantId: string,
+    dto: UpsertCommissionRuleDto,
+    willBeActive: boolean,
+    excludeId?: string,
+  ) {
+    if (!willBeActive) return;
+    const clash = await this.prisma.commissionRule.findFirst({
+      where: {
+        tenantId,
+        professionalId: dto.professionalId,
+        base: dto.base as CommissionBase,
+        targetId: dto.base === "ALL" ? null : (dto.targetId ?? null),
+        isActive: true,
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+      },
+      select: { id: true },
+    });
+    if (clash) {
+      throw new ConflictException(
+        "Já existe uma regra ativa para este profissional e este alvo. Edite a existente em vez de criar outra.",
+      );
+    }
   }
 
   private async assertValid(tenantId: string, dto: UpsertCommissionRuleDto) {

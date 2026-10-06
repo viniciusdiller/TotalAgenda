@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from "@nestjs/common";
 import { Role } from "@totalagenda/database";
 import { CommissionsService } from "./commissions.service";
 import { UpsertCommissionRuleDto } from "./dto/upsert-commission-rule.dto";
@@ -27,10 +27,19 @@ export class CommissionsController {
   @Patch("rules/:id")
   updateRule(
     @CurrentUser() user: AuthenticatedUser,
-    @Param("id") id: string,
+    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
     @Body() dto: UpsertCommissionRuleDto,
   ) {
     return this.commissions.updateRule(user.tenantId, id, dto);
+  }
+
+  @Roles(Role.OWNER)
+  @Delete("rules/:id")
+  deleteRule(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
+  ) {
+    return this.commissions.deleteRule(user.tenantId, id);
   }
 
   // PROFESSIONAL vê só o próprio; OWNER/RECEPTIONIST veem todos. O filtro é forçado dentro

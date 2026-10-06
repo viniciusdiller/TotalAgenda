@@ -7,7 +7,7 @@ const proto = CommissionsController.prototype;
 const meta = (handler: keyof CommissionsController) => Reflect.getMetadata(ROLES_KEY, proto[handler]);
 
 describe("CommissionsController: quem pode chamar o quê", () => {
-  it.each(["listRules", "createRule", "updateRule"] as const)("%s exige OWNER (regra de comissão é decisão do dono)", (handler) => {
+  it.each(["listRules", "createRule", "updateRule", "deleteRule"] as const)("%s exige OWNER (regra de comissão é decisão do dono)", (handler) => {
     expect(meta(handler)).toEqual([Role.OWNER]);
   });
 
