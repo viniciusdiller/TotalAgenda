@@ -24,4 +24,10 @@ describe("FinanceController: quem pode chamar o quê", () => {
       expect(methodRoles(handler)).toBeUndefined();
     },
   );
+
+  // Dinheiro saindo: além do limite global (100/min), o repasse tem teto próprio por minuto.
+  it("registerPayout tem limite de requisições próprio (20/min)", () => {
+    expect(Reflect.getMetadata("THROTTLER:LIMITdefault", proto.registerPayout)).toBe(20);
+    expect(Reflect.getMetadata("THROTTLER:TTLdefault", proto.registerPayout)).toBe(60_000);
+  });
 });

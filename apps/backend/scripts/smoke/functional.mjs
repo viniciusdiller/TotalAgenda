@@ -179,6 +179,78 @@ check("intervalo acima de 366 dias → 400", r.status === 400, r);
 r = await call("GET", "/commissions/earnings", undefined, T);
 check("earnings sem from/to → 400", r.status === 400, r);
 
+console.log("== regras de comissão: editar, excluir, duplicata e isolamento");
+r = await call("GET", "/commissions/rules", undefined, T);
+const allRule = r.json?.find((x) => x.base === "ALL");
+const svcRule = r.json?.find((x) => x.base === "SERVICE");
+check("lista as regras do tenant", r.status === 200 && !!allRule && !!svcRule, r.json);
+r = await call("POST", "/commissions/rules", { professionalId, base: "ALL", kind: "PERCENT", value: 10 }, T);
+check("regra ALL ativa duplicada → 409", r.status === 409, r);
+r = await call("PATCH", `/commissions/rules/${allRule.id}`, { professionalId, base: "ALL", kind: "FIXED", value: 1500 }, T);
+check("edita a regra (valor fixo R$ 15,00) mantendo-a ativa", r.status === 200 && r.json?.value === 1500 && r.json?.isActive === true, r);
+r = await call("PATCH", `/commissions/rules/${allRule.id}`, { professionalId, base: "ALL", kind: "FIXED", value: 1500, isActive: false }, T);
+check("desativa a regra", r.status === 200 && r.json?.isActive === false, r);
+r = await call("PATCH", `/commissions/rules/${allRule.id}`, { professionalId, base: "ALL", kind: "FIXED", value: 1600 }, T);
+check("editar SEM isActive mantém a regra desativada (não reativa em silêncio)", r.status === 200 && r.json?.isActive === false, r);
+r = await call("PATCH", `/commissions/rules/${svcRule.id}`, { professionalId, base: "SERVICE", targetId: serviceId, kind: "PERCENT", value: 101 }, T);
+check("edição com percentual > 100 → 400", r.status === 400, r);
+r = await call("PATCH", `/commissions/rules/nao-e-uuid`, { professionalId, base: "ALL", kind: "PERCENT", value: 10 }, T);
+check("id que não é UUID → 400", r.status === 400, r);
+r = await call("PATCH", `/commissions/rules/${randomUUID()}`, { professionalId, base: "ALL", kind: "PERCENT", value: 10 }, T);
+check("regra inexistente → 404", r.status === 404, r);
+r = await call("PATCH", `/commissions/rules/${svcRule.id}`, { professionalId, base: "SERVICE", targetId: serviceId, kind: "PERCENT", value: 30, campoExtra: 1 }, T);
+check("campo fora do DTO → 400 (forbidNonWhitelisted)", r.status === 400, r);
+r = await call("PATCH", `/commissions/rules/${svcRule.id}`, { professionalId: randomUUID(), base: "SERVICE", targetId: serviceId, kind: "PERCENT", value: 30 }, T);
+check("mover a regra p/ profissional inexistente/de outro tenant → 404", r.status === 404, r);
+r = await call("PATCH", `/commissions/rules/${svcRule.id}`, { professionalId, base: "ALL", kind: "PERCENT", value: 10 }, PT);
+check("profissional editando regra → 403", r.status === 403, r);
+r = await call("DELETE", `/commissions/rules/${svcRule.id}`, undefined, PT);
+check("profissional excluindo regra → 403", r.status === 403, r);
+
+// Outro negócio (tenant B) tenta mexer na regra do tenant A: tem que parecer que ela não existe.
+const emailB = `donob${stamp}@e2e.com`;
+r = await call("POST", "/public/signup", { businessName: "Salão B", ownerName: "Dono B", email: emailB, password, acceptedTermsVersion: LEGAL_VERSION });
+check("cria o tenant B", r.status === 201, r);
+r = await call("POST", "/auth/login", { email: emailB, password });
+const TB = r.json?.accessToken;
+r = await call("PATCH", `/commissions/rules/${svcRule.id}`, { professionalId, base: "ALL", kind: "PERCENT", value: 99 }, TB);
+check("tenant B editando regra do A → 404 (mesmo de inexistente)", r.status === 404, r);
+r = await call("DELETE", `/commissions/rules/${svcRule.id}`, undefined, TB);
+check("tenant B excluindo regra do A → 404", r.status === 404, r);
+r = await call("POST", "/finance/commissions/payouts", { professionalId, amountCents: 100 }, TB);
+check("tenant B pagando repasse de profissional do A → 404", r.status === 404, r);
+r = await call("GET", "/commissions/rules", undefined, TB);
+check("tenant B não vê regras do A", r.status === 200 && r.json.length === 0, r.json);
+
+r = await call("DELETE", `/commissions/rules/${svcRule.id}`, undefined, T);
+check("dono exclui a regra", r.status === 200 && r.json?.deleted === true, r);
+r = await call("DELETE", `/commissions/rules/${svcRule.id}`, undefined, T);
+check("excluir de novo → 404", r.status === 404, r);
+
+console.log("== repasse: data automática, faixa de data e idempotência");
+const today = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10); // dia civil em São Paulo (UTC-3)
+const dayOf = (offsetDays) => new Date(Date.now() - 3 * 3600e3 + offsetDays * 86400e3).toISOString().slice(0, 10);
+r = await call("POST", "/finance/commissions/payouts", { professionalId, amountCents: 100 }, T);
+check("sem data, assume HOJE (São Paulo)", r.status === 201 && r.json?.paidOn === today, r.json);
+r = await call("POST", "/finance/commissions/payouts", { professionalId, amountCents: 100, paidOn: dayOf(-1) }, T);
+check("aceita corrigir para ontem", r.status === 201 && r.json?.paidOn === dayOf(-1), r.json);
+r = await call("POST", "/finance/commissions/payouts", { professionalId, amountCents: 100, paidOn: dayOf(1) }, T);
+check("data futura → 400", r.status === 400 && /futura/.test(JSON.stringify(r.json)), r);
+r = await call("POST", "/finance/commissions/payouts", { professionalId, amountCents: 100, paidOn: dayOf(-400) }, T);
+check("data com mais de 366 dias → 400", r.status === 400, r);
+r = await call("POST", "/finance/commissions/payouts", { professionalId, amountCents: 100, paidOn: "06/10/2026" }, T);
+check("data em formato inválido → 400", r.status === 400, r);
+const reqKey = randomUUID();
+r = await call("POST", "/finance/commissions/payouts", { professionalId, amountCents: 200, requestKey: reqKey }, T);
+check("repasse com requestKey → 201", r.status === 201 && r.json?.replayed === false, r.json);
+const firstId = r.json?.id;
+r = await call("POST", "/finance/commissions/payouts", { professionalId, amountCents: 200, requestKey: reqKey }, T);
+check("MESMA requestKey reenviada devolve o mesmo repasse (replayed), sem pagar de novo", r.status === 201 && r.json?.id === firstId && r.json?.replayed === true, r.json);
+r = await call("POST", "/finance/commissions/payouts", { professionalId, amountCents: 300, requestKey: reqKey }, T);
+check("mesma requestKey com OUTRO valor → 409", r.status === 409, r);
+r = await call("GET", `/finance/commissions/payouts?professionalId=${professionalId}`, undefined, T);
+check("só UM repasse de R$ 2,00 foi gravado (idempotência)", r.json?.items?.filter((p) => p.amountCents === 200).length === 1, r.json?.items);
+
 console.log("== lista de espera");
 const waitPhone = "(31) 98888-" + String(stamp).slice(-4);
 r = await call("POST", "/public/consumer/register", { name: "Carla Espera", phone: waitPhone, email: `carla${stamp}@e2e.com`, password: "senha-carla-123", consent: true });
