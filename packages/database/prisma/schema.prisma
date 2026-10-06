@@ -179,6 +179,7 @@ model Tenant {
   payments        Payment[]
   commissionRules CommissionRule[]
   commissionEntries CommissionEntry[]
+  commissionPayouts CommissionPayout[]
   cashRegisters   CashRegister[]
   financialCategories FinancialCategory[]
   financialEntries    FinancialEntry[]
@@ -248,6 +249,7 @@ model User {
   openedTickets Ticket[]
   cashRegisters CashRegister[]
   financialEntries FinancialEntry[]
+  commissionPayouts CommissionPayout[]
   refreshTokens RefreshToken[]
 
   @@index([tenantId])
@@ -277,6 +279,7 @@ model Professional {
   ticketItems          TicketItem[]
   commissionRules      CommissionRule[]
   commissionEntries    CommissionEntry[]
+  commissionPayouts    CommissionPayout[]
 
   @@index([tenantId, isActive])
 }
@@ -664,6 +667,27 @@ model CommissionEntry {
   @@index([tenantId, professionalId, createdAt])
 }
 
+// Repasse efetivamente pago a um profissional. O saldo a repassar é SEMPRE derivado:
+// (Σ CommissionEntry do histórico) − (Σ CommissionPayout). Não existe "fechar período":
+// cada pagamento é um lançamento próprio, ligado à despesa PAGA que gerou no Financeiro.
+model CommissionPayout {
+  id               String   @id @default(uuid())
+  tenantId         String
+  professionalId   String
+  amountCents      Int
+  note             String?
+  financialEntryId String   @unique
+  createdByUserId  String
+  createdAt        DateTime @default(now()) @db.Timestamptz(6)
+
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  professional   Professional   @relation(fields: [professionalId], references: [id], onDelete: Restrict)
+  financialEntry FinancialEntry @relation(fields: [financialEntryId], references: [id], onDelete: Restrict)
+  createdBy      User           @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, professionalId, createdAt])
+}
+
 // Sessão de caixa. Só um OPEN por tenant de cada vez (garantido no service).
 model CashRegister {
   id                 String             @id @default(uuid())
@@ -762,6 +786,7 @@ model FinancialEntry {
   category  FinancialCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   ticket    Ticket?            @relation(fields: [ticketId], references: [id], onDelete: SetNull)
   createdBy User               @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  commissionPayout CommissionPayout?
 
   @@index([tenantId, dueDate])
   @@index([tenantId, status, direction])
