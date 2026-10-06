@@ -194,6 +194,10 @@ r = await call("PATCH", `/commissions/rules/${allRule.id}`, { professionalId, ba
 check("editar SEM isActive mantém a regra desativada (não reativa em silêncio)", r.status === 200 && r.json?.isActive === false, r);
 r = await call("PATCH", `/commissions/rules/${svcRule.id}`, { professionalId, base: "SERVICE", targetId: serviceId, kind: "PERCENT", value: 101 }, T);
 check("edição com percentual > 100 → 400", r.status === 400, r);
+r = await call("PATCH", `/commissions/rules/${svcRule.id}`, { professionalId, base: "SERVICE", kind: "PERCENT", value: 25 }, T);
+check("regra 'qualquer serviço' (sem alvo) pode ser salva", r.status === 200 && r.json?.base === "SERVICE" && r.json?.targetId === null && r.json?.value === 25, r);
+r = await call("PATCH", `/commissions/rules/${svcRule.id}`, { professionalId, base: "SERVICE", targetId: serviceId, kind: "PERCENT", value: 30 }, T);
+check("e volta a ter alvo específico", r.status === 200 && r.json?.targetId === serviceId, r);
 r = await call("PATCH", `/commissions/rules/nao-e-uuid`, { professionalId, base: "ALL", kind: "PERCENT", value: 10 }, T);
 check("id que não é UUID → 400", r.status === 400, r);
 r = await call("PATCH", `/commissions/rules/${randomUUID()}`, { professionalId, base: "ALL", kind: "PERCENT", value: 10 }, T);
