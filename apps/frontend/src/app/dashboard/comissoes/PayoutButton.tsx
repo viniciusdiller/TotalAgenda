@@ -1,10 +1,26 @@
 "use client";
 
 import { useId, useRef, useState, useTransition } from "react";
+import { DateTime } from "luxon";
 import { MoneyInput } from "@/components/ui/MoneyInput";
 import { formatCentsBRL } from "@/lib/masks";
 import { brl } from "@/lib/money";
 import { registerPayoutAction } from "./actions";
+
+const TZ = "America/Sao_Paulo";
+// Mesmo teto do servidor (366 dias). O servidor revalida: isto só evita mandar o que ele recusaria.
+const MAX_BACKDATE_DAYS = 366;
+
+// UUID por abertura do diálogo: se a mesma requisição for reenviada (duplo clique, retry de rede), o
+// servidor devolve o repasse já criado em vez de pagar de novo. Sem crypto.randomUUID (página em HTTP
+// fora de localhost) segue sem chave — o botão desabilitado durante o envio continua protegendo.
+function newRequestKey(): string | undefined {
+  try {
+    return globalThis.crypto?.randomUUID?.();
+  } catch {
+    return undefined;
+  }
+}
 
 // Registra um repasse (pagamento da comissão) a um profissional. O valor sugerido é o saldo
 // inteiro, mas o dono pode pagar menos; o servidor recusa mais que o saldo (aqui é só conforto).
@@ -22,6 +38,8 @@ export function PayoutButton({
   const titleId = useId();
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [paidOn, setPaidOn] = useState("");
+  const requestKey = useRef<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -33,13 +51,16 @@ export function PayoutButton({
     setAmount(formatCentsBRL(balanceCents));
     setNote("");
     setError(null);
+    // Data do pagamento já vem preenchida com HOJE (fuso de São Paulo, não o do navegador).
+    setPaidOn(DateTime.now().setZone(TZ).toISODate()!);
+    requestKey.current = newRequestKey();
     dialogRef.current?.showModal();
   }
 
   function confirm() {
     setError(null);
     startTransition(async () => {
-      const result = await registerPayoutAction(professionalId, amount, note);
+      const result = await registerPayoutAction(professionalId, amount, note, paidOn, requestKey.current);
       if (result.error) setError(result.error);
       else dialogRef.current?.close();
     });
@@ -78,6 +99,22 @@ export function PayoutButton({
           />
           <span className="text-xs font-normal text-zinc-400 dark:text-stone-500">
             Pode ser menos que o saldo; o resto continua a repassar.
+          </span>
+        </label>
+
+        <label className="mt-3 flex flex-col gap-1.5 text-sm font-medium text-zinc-700 dark:text-stone-200">
+          Data do pagamento
+          <input
+            type="date"
+            value={paidOn}
+            onChange={(e) => setPaidOn(e.target.value)}
+            max={DateTime.now().setZone(TZ).toISODate()!}
+            min={DateTime.now().setZone(TZ).minus({ days: MAX_BACKDATE_DAYS }).toISODate()!}
+            required
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-normal dark:border-white/15 dark:bg-zinc-900 dark:text-white"
+          />
+          <span className="text-xs font-normal text-zinc-400 dark:text-stone-500">
+            Já vem com a data de hoje. Mude só se o pagamento foi em outro dia (nunca no futuro).
           </span>
         </label>
 
