@@ -340,6 +340,8 @@ export interface TicketItem {
   quantity: number;
   unitPriceCents: number;
   totalCents: number;
+  /** Quando o item entrou na comanda (registro de data). */
+  createdAt: string;
   professional: { id: string | null; name: string } | null;
 }
 
@@ -358,6 +360,7 @@ export interface Ticket {
   note: string | null;
   openedAt: string;
   closedAt: string | null;
+  canceledAt: string | null;
   discountCents: number;
   subtotalCents: number;
   totalCents: number;
@@ -494,6 +497,15 @@ export interface AdminClientDetail {
     items: Array<{ id: string; service: { name: string }; priceCentsSnapshot: number }>;
   }>;
   intakeResponses: ClientIntakeResponse[];
+  /** Comandas do cliente (mais recentes primeiro; sem as canceladas). */
+  tickets: Array<{
+    id: string;
+    status: TicketStatus;
+    openedAt: string;
+    closedAt: string | null;
+    totalCents: number;
+    items: Array<{ id: string; description: string; quantity: number; totalCents: number }>;
+  }>;
 }
 
 export interface IntakeFormSummary {

@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post } from "@nestjs/common";
 import { Role } from "@totalagenda/database";
 import { TicketsService } from "./tickets.service";
 import {
   AddPaymentDto,
   AddTicketItemDto,
   OpenTicketDto,
+  SetTicketClientDto,
   SetTicketDiscountDto,
 } from "./dto/ticket-dtos";
 import { Roles } from "../common/decorators/roles.decorator";
@@ -47,6 +48,15 @@ export class TicketsController {
     @Param("itemId") itemId: string,
   ) {
     return this.tickets.removeItem(user.tenantId, id, itemId);
+  }
+
+  @Patch(":id/client")
+  setClient(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
+    @Body() dto: SetTicketClientDto,
+  ) {
+    return this.tickets.setClient(user.tenantId, id, dto);
   }
 
   @Patch(":id/discount")

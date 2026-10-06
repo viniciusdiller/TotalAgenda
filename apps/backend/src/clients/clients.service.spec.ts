@@ -82,6 +82,7 @@ describe("ClientsService (M2)", () => {
 
   it("getDetail deduplica respostas de anamnese pela mais recente por form", async () => {
     const prisma = buildPrisma();
+    (prisma as unknown as { ticket: unknown }).ticket = { findMany: jest.fn().mockResolvedValue([]) };
     (prisma.client.findFirst as jest.Mock).mockResolvedValue({
       id: "c-1",
       appointments: [],

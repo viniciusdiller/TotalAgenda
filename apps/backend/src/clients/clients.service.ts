@@ -68,7 +68,39 @@ export class ClientsService {
       if (!latestByForm.has(response.formId)) latestByForm.set(response.formId, response);
     }
 
-    return { ...client, intakeResponses: [...latestByForm.values()] };
+    // Comandas do cliente (as mais recentes; canceladas não entram no histórico). Total = itens − desconto,
+    // calculado aqui no servidor, igual ao da própria comanda.
+    const ticketRows = await this.prisma.ticket.findMany({
+      where: { tenantId, clientId: id, status: { not: "CANCELED" } },
+      orderBy: { openedAt: "desc" },
+      take: 50,
+      select: {
+        id: true,
+        status: true,
+        openedAt: true,
+        closedAt: true,
+        discountCents: true,
+        items: { select: { id: true, description: true, quantity: true, unitPriceCents: true } },
+      },
+    });
+    const tickets = ticketRows.map((t) => {
+      const subtotal = t.items.reduce((sum, i) => sum + i.unitPriceCents * i.quantity, 0);
+      return {
+        id: t.id,
+        status: t.status,
+        openedAt: t.openedAt,
+        closedAt: t.closedAt,
+        totalCents: Math.max(0, subtotal - t.discountCents),
+        items: t.items.map((i) => ({
+          id: i.id,
+          description: i.description,
+          quantity: i.quantity,
+          totalCents: i.unitPriceCents * i.quantity,
+        })),
+      };
+    });
+
+    return { ...client, intakeResponses: [...latestByForm.values()], tickets };
   }
 
   async create(tenantId: string, dto: CreateClientDto) {

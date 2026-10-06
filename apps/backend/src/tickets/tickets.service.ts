@@ -14,6 +14,7 @@ import {
   AddPaymentDto,
   AddTicketItemDto,
   OpenTicketDto,
+  SetTicketClientDto,
   SetTicketDiscountDto,
 } from "./dto/ticket-dtos";
 
@@ -176,6 +177,29 @@ export class TicketsService {
       const item = await tx.ticketItem.findFirst({ where: { id: itemId, ticketId: id } });
       if (!item) throw new NotFoundException("Item não encontrado.");
       await tx.ticketItem.delete({ where: { id: itemId } });
+    });
+    return this.serialize(await this.getOpenOrAny(tenantId, id));
+  }
+
+  // Vincula, troca ou remove o cliente de uma comanda ABERTA. O cliente tem que ser do mesmo tenant
+  // (checado aqui, nunca confiando no id do body) e comanda aberta a partir de um agendamento mantém o
+  // cliente do agendamento: ele é a fonte de verdade, trocar aqui deixaria os dois divergentes.
+  async setClient(tenantId: string, id: string, dto: SetTicketClientDto) {
+    await this.lockedOpenTicket(tenantId, id, async (tx, ticket) => {
+      if (ticket.appointmentId) {
+        throw new ConflictException(
+          "Esta comanda veio de um agendamento: o cliente é o do agendamento e não pode ser trocado aqui.",
+        );
+      }
+      if (dto.clientId !== null) {
+        const client = await tx.client.findFirst({
+          where: { id: dto.clientId, tenantId },
+          select: { id: true },
+        });
+        if (!client) throw new NotFoundException("Cliente não encontrado.");
+      }
+      // tenantId também no WHERE da escrita, não só na leitura acima.
+      await tx.ticket.updateMany({ where: { id, tenantId }, data: { clientId: dto.clientId } });
     });
     return this.serialize(await this.getOpenOrAny(tenantId, id));
   }
@@ -344,6 +368,7 @@ export class TicketsService {
       note: ticket.note,
       openedAt: ticket.openedAt,
       closedAt: ticket.closedAt,
+      canceledAt: ticket.canceledAt,
       discountCents: ticket.discountCents,
       subtotalCents,
       totalCents,
@@ -358,6 +383,7 @@ export class TicketsService {
         quantity: item.quantity,
         unitPriceCents: item.unitPriceCents,
         totalCents: item.unitPriceCents * item.quantity,
+        createdAt: item.createdAt,
         professional: item.professional
           ? { id: item.professionalId, name: item.professional.user.name }
           : null,

@@ -77,6 +77,14 @@ export class SetTicketDiscountDto {
   discountCents!: number;
 }
 
+// Vincula (UUID) ou desvincula (null) o cliente da comanda. `clientId` é OBRIGATÓRIO no corpo: ausente
+// não vira "desvincular" em silêncio (ValidateIf só pula a checagem de UUID quando é null de verdade).
+export class SetTicketClientDto {
+  @ValidateIf((o: SetTicketClientDto) => o.clientId !== null)
+  @IsUUID()
+  clientId!: string | null;
+}
+
 export class AddPaymentDto {
   @IsIn(["CASH", "DEBIT", "CREDIT", "PIX", "OTHER"])
   method!: "CASH" | "DEBIT" | "CREDIT" | "PIX" | "OTHER";
