@@ -46,4 +46,17 @@ export class CommissionsController {
       professionalId: user.professionalId,
     });
   }
+
+  // Faturamento bruto/líquido, repasse e saldo por profissional, sem passo de "fechar período".
+  // Mesmo escopo do report: o service força o filtro quando o chamador é PROFESSIONAL.
+  @Get("earnings")
+  earnings(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: RangeByProfessionalQueryDto,
+  ) {
+    return this.commissions.earnings(user.tenantId, query.from, query.to, query.professionalId, {
+      role: user.role,
+      professionalId: user.professionalId,
+    });
+  }
 }

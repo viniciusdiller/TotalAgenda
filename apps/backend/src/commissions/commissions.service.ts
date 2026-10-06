@@ -5,9 +5,12 @@ import {
   Prisma,
   Role,
   TicketItemKind,
+  TicketStatus,
 } from "@totalagenda/database";
+import type { EarningsReport, ProfessionalEarnings } from "@totalagenda/shared-types";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpsertCommissionRuleDto } from "./dto/upsert-commission-rule.dto";
+import { allocateDiscount } from "./discount-allocation.util";
 
 const MAX_REPORT_RANGE_MS = 366 * 24 * 60 * 60 * 1000;
 
@@ -28,6 +31,45 @@ type TicketItemForCommission = {
   professionalId: string | null;
   quantity: number;
   unitPriceCents: number;
+};
+
+type Caller = { role: Role; professionalId?: string };
+
+// PROFESSIONAL só enxerga o próprio. Se vier PROFESSIONAL sem vínculo (professionalId ausente),
+// o filtro NÃO pode sumir (viraria "todos"): nega o acesso.
+function resolveScope(
+  caller: Caller,
+  requestedProfessionalId: string | undefined,
+): { professionalId?: string; denied: boolean } {
+  if (caller.role !== Role.PROFESSIONAL) {
+    return { professionalId: requestedProfessionalId, denied: false };
+  }
+  return caller.professionalId
+    ? { professionalId: caller.professionalId, denied: false }
+    : { denied: true };
+}
+
+function parseRange(from: string, to: string) {
+  const fromDate = new Date(from);
+  const toDate = new Date(to);
+  if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+    throw new BadRequestException("Intervalo inválido.");
+  }
+  // Sem teto, "1970 → 2100" materializava todas as comissões do tenant numa resposta só.
+  if (toDate.getTime() - fromDate.getTime() > MAX_REPORT_RANGE_MS) {
+    throw new BadRequestException("Intervalo máximo do relatório é de 366 dias.");
+  }
+  return { fromDate, toDate };
+}
+
+const EMPTY_TOTALS = {
+  ticketCount: 0,
+  grossCents: 0,
+  discountCents: 0,
+  netCents: 0,
+  commissionCents: 0,
+  houseCents: 0,
+  payableBalanceCents: 0,
 };
 
 @Injectable()
@@ -85,19 +127,12 @@ export class CommissionsService {
     from: string,
     to: string,
     requestedProfessionalId: string | undefined,
-    caller: { role: Role; professionalId?: string },
+    caller: Caller,
   ) {
-    const professionalId =
-      caller.role === Role.PROFESSIONAL ? caller.professionalId : requestedProfessionalId;
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
-    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
-      throw new BadRequestException("Intervalo inválido.");
-    }
-    // Sem teto, "1970 → 2100" materializava todas as comissões do tenant numa resposta só.
-    if (toDate.getTime() - fromDate.getTime() > MAX_REPORT_RANGE_MS) {
-      throw new BadRequestException("Intervalo máximo do relatório é de 366 dias.");
-    }
+    const scope = resolveScope(caller, requestedProfessionalId);
+    const { fromDate, toDate } = parseRange(from, to);
+    if (scope.denied) return { totalCents: 0, byProfessional: [], entries: [] };
+    const professionalId = scope.professionalId;
 
     const entries = await this.prisma.commissionEntry.findMany({
       where: {
@@ -141,6 +176,151 @@ export class CommissionsService {
         createdAt: e.createdAt,
       })),
     };
+  }
+
+  // Faturamento por profissional, calculado na hora (nada de "fechar período"). A base temporal
+  // é UMA só: Ticket.closedAt das comandas FECHADAS — bruto, desconto e comissão do período usam
+  // o mesmo corte. O saldo a repassar é acumulado (histórico inteiro), não do período.
+  // Lista todo profissional ATIVO (mesmo com zero) pra equipe inteira aparecer sempre.
+  async earnings(
+    tenantId: string,
+    from: string,
+    to: string,
+    requestedProfessionalId: string | undefined,
+    caller: Caller,
+  ): Promise<EarningsReport> {
+    const { fromDate, toDate } = parseRange(from, to);
+    const scope = resolveScope(caller, requestedProfessionalId);
+    const empty: EarningsReport = {
+      from: fromDate.toISOString(),
+      to: toDate.toISOString(),
+      professionals: [],
+      totals: { ...EMPTY_TOTALS },
+    };
+    if (scope.denied) return empty;
+    const only = scope.professionalId;
+
+    const closedInRange = {
+      status: TicketStatus.CLOSED,
+      closedAt: { gte: fromDate, lte: toDate },
+    };
+
+    const [grossRows, discountedTickets, commissionRows, accruedRows, paidRows] =
+      await Promise.all([
+        // Bruto e nº de comandas por profissional. Raw só pra Σ(preço × qtd), que o groupBy do
+        // Prisma não expressa; tudo parametrizado pelo template tag.
+        this.prisma.$queryRaw<Array<{ professionalId: string; gross: bigint; tickets: bigint }>>`
+          SELECT ti."professionalId" AS "professionalId",
+                 SUM(ti."unitPriceCents" * ti."quantity")::bigint AS gross,
+                 COUNT(DISTINCT ti."ticketId")::bigint AS tickets
+          FROM "TicketItem" ti
+          JOIN "Ticket" t ON t."id" = ti."ticketId"
+          WHERE t."tenantId" = ${tenantId}
+            AND t."status" = 'CLOSED'
+            AND t."closedAt" >= ${fromDate}
+            AND t."closedAt" <= ${toDate}
+            AND ti."professionalId" IS NOT NULL
+            ${only ? Prisma.sql`AND ti."professionalId" = ${only}` : Prisma.empty}
+          GROUP BY ti."professionalId"`,
+        // Só as comandas COM desconto precisam de rateio item a item (o desconto é um valor
+        // único da comanda e é dividido entre TODOS os itens, inclusive os sem profissional).
+        this.prisma.ticket.findMany({
+          where: { tenantId, ...closedInRange, discountCents: { gt: 0 } },
+          select: {
+            discountCents: true,
+            items: { select: { professionalId: true, unitPriceCents: true, quantity: true } },
+          },
+        }),
+        this.prisma.commissionEntry.groupBy({
+          by: ["professionalId"],
+          where: { tenantId, ticket: closedInRange, ...(only ? { professionalId: only } : {}) },
+          _sum: { amountCents: true },
+        }),
+        this.prisma.commissionEntry.groupBy({
+          by: ["professionalId"],
+          where: { tenantId, ...(only ? { professionalId: only } : {}) },
+          _sum: { amountCents: true },
+        }),
+        this.prisma.commissionPayout.groupBy({
+          by: ["professionalId"],
+          where: { tenantId, ...(only ? { professionalId: only } : {}) },
+          _sum: { amountCents: true },
+        }),
+      ]);
+
+    const discountByPro = new Map<string, number>();
+    for (const ticket of discountedTickets) {
+      const shares = allocateDiscount(
+        ticket.items.map((i) => i.unitPriceCents * i.quantity),
+        ticket.discountCents,
+      );
+      ticket.items.forEach((item, index) => {
+        if (!item.professionalId) return;
+        discountByPro.set(
+          item.professionalId,
+          (discountByPro.get(item.professionalId) ?? 0) + shares[index],
+        );
+      });
+    }
+
+    const sumByPro = (
+      rows: Array<{ professionalId: string; _sum: { amountCents: number | null } }>,
+    ) => new Map(rows.map((r) => [r.professionalId, r._sum.amountCents ?? 0]));
+    const commissionByPro = sumByPro(commissionRows);
+    const accruedByPro = sumByPro(accruedRows);
+    const paidByPro = sumByPro(paidRows);
+    const grossByPro = new Map(grossRows.map((r) => [r.professionalId, Number(r.gross)]));
+    const ticketsByPro = new Map(grossRows.map((r) => [r.professionalId, Number(r.tickets)]));
+
+    const withActivity = new Set([
+      ...grossByPro.keys(),
+      ...accruedByPro.keys(),
+      ...paidByPro.keys(),
+    ]);
+    const professionals = await this.prisma.professional.findMany({
+      where: {
+        tenantId,
+        ...(only ? { id: only } : {}),
+        OR: [{ isActive: true }, { id: { in: [...withActivity] } }],
+      },
+      select: { id: true, isActive: true, user: { select: { name: true } } },
+    });
+
+    const rows: ProfessionalEarnings[] = professionals
+      .map((p) => {
+        const grossCents = grossByPro.get(p.id) ?? 0;
+        const discountCents = discountByPro.get(p.id) ?? 0;
+        const netCents = grossCents - discountCents;
+        const commissionCents = commissionByPro.get(p.id) ?? 0;
+        return {
+          professionalId: p.id,
+          name: p.user.name,
+          isActive: p.isActive,
+          ticketCount: ticketsByPro.get(p.id) ?? 0,
+          grossCents,
+          discountCents,
+          netCents,
+          commissionCents,
+          houseCents: netCents - commissionCents,
+          payableBalanceCents: (accruedByPro.get(p.id) ?? 0) - (paidByPro.get(p.id) ?? 0),
+        };
+      })
+      .sort((a, b) => b.grossCents - a.grossCents || a.name.localeCompare(b.name, "pt-BR"));
+
+    const totals = rows.reduce(
+      (acc, r) => ({
+        ticketCount: acc.ticketCount + r.ticketCount,
+        grossCents: acc.grossCents + r.grossCents,
+        discountCents: acc.discountCents + r.discountCents,
+        netCents: acc.netCents + r.netCents,
+        commissionCents: acc.commissionCents + r.commissionCents,
+        houseCents: acc.houseCents + r.houseCents,
+        payableBalanceCents: acc.payableBalanceCents + r.payableBalanceCents,
+      }),
+      { ...EMPTY_TOTALS },
+    );
+
+    return { ...empty, professionals: rows, totals };
   }
 
   // Chamado dentro da transação de fechamento da comanda. Uma entry por item que casa com

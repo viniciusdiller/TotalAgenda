@@ -395,6 +395,42 @@ export interface CommissionReport {
   }>;
 }
 
+// Faturamento por profissional num período (comandas FECHADAS no intervalo). Tudo em centavos.
+//  - grossCents: Σ preço × quantidade dos itens atribuídos a ele (antes do desconto)
+//  - discountCents: parte do desconto da comanda rateada proporcionalmente aos itens
+//  - netCents: grossCents − discountCents
+//  - commissionCents: repasse (comissão) gerado no período — calculada sobre o bruto
+//  - houseCents: o que sobra pro estabelecimento (netCents − commissionCents)
+//  - payableBalanceCents: ACUMULADO de todo o histórico (comissões − repasses já pagos), não do período
+export interface ProfessionalEarnings {
+  professionalId: string;
+  name: string;
+  isActive: boolean;
+  ticketCount: number;
+  grossCents: number;
+  discountCents: number;
+  netCents: number;
+  commissionCents: number;
+  houseCents: number;
+  payableBalanceCents: number;
+}
+
+export interface EarningsReport {
+  from: string;
+  to: string;
+  professionals: ProfessionalEarnings[];
+  totals: Omit<ProfessionalEarnings, "professionalId" | "name" | "isActive">;
+}
+
+export interface CommissionPayout {
+  id: string;
+  professionalId: string;
+  professionalName: string;
+  amountCents: number;
+  note: string | null;
+  createdAt: string;
+}
+
 export interface CashRegisterSummary {
   open: boolean;
   register?: {
