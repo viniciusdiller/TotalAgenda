@@ -192,6 +192,18 @@ sozinho (Stripe direto), e o Admin-TotalSoftware vira só back-office.
   devolver o repasse existente em vez de pagar duas vezes; mesma chave com outro valor/profissional = 409. A busca
   da chave acontece DEPOIS do lock por profissional. `POST /finance/commissions/payouts` tem `@Throttle` de 20/min.
 
+### Comanda: cliente e registro de datas
+- **Cliente da comanda:** `PATCH /tickets/:id/client` (OWNER/RECEPTIONIST) vincula, troca ou remove (`clientId: null`) o
+  cliente de uma comanda ABERTA. O cliente é validado no mesmo tenant (`findFirst({ id, tenantId })`), a escrita leva
+  `tenantId` no WHERE e roda sob o lock da comanda. `clientId` é obrigatório no corpo: ausente é 400, nunca
+  "desvincular" em silêncio. Comanda vinda de agendamento mantém o cliente do agendamento (409); fechada ou cancelada
+  não aceita troca (o registro do atendimento não muda depois). Na abertura (`POST /tickets`) o cliente é opcional.
+- **Registro de datas:** a comanda expõe `openedAt`, `closedAt`, `canceledAt`, `createdAt` de cada item e de cada
+  pagamento. O frontend formata sempre em America/Sao_Paulo (`lib/datetime.ts`), nunca no fuso do navegador, para
+  não divergir entre servidor e cliente.
+- A ficha do cliente (`GET /clients/:id`) traz `tickets`: as 50 comandas mais recentes (sem as canceladas), com
+  itens, total (itens − desconto, calculado no servidor) e datas.
+
 ### Uploads
 Arquivos de tenant (logo, galeria) em `apps/backend/uploads/` (gitignored), servidos por
 `ServeStaticModule`. Nome de arquivo fixo por tenant + cache-bust por `updatedAt` na URL.
