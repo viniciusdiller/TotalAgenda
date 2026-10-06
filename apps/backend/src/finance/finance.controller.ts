@@ -2,13 +2,14 @@ import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common
 import { Role } from "@totalagenda/database";
 import { FinanceService } from "./finance.service";
 import {
-  CloseCommissionsDto,
   CreateCategoryDto,
   CreateEntryDto,
+  RegisterPayoutDto,
   SettleEntryDto,
   UpdateCategoryDto,
   UpdateEntryDto,
 } from "./dto/finance-dtos";
+import { PayoutsQueryDto } from "./dto/payouts-query.dto";
 import { Roles } from "../common/decorators/roles.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { CashFlowQueryDto, ListEntriesQueryDto, RequiredDateRangeQueryDto } from "../common/dto/query-dtos";
@@ -80,9 +81,15 @@ export class FinanceController {
   }
 
   @Roles(Role.OWNER)
-  @Post("commissions/close")
-  closeCommissions(@CurrentUser() user: AuthenticatedUser, @Body() dto: CloseCommissionsDto) {
-    return this.finance.closeCommissions(user.tenantId, user.userId, dto);
+  @Post("commissions/payouts")
+  registerPayout(@CurrentUser() user: AuthenticatedUser, @Body() dto: RegisterPayoutDto) {
+    return this.finance.registerCommissionPayout(user.tenantId, user.userId, dto);
+  }
+
+  @Roles(Role.OWNER)
+  @Get("commissions/payouts")
+  listPayouts(@CurrentUser() user: AuthenticatedUser, @Query() query: PayoutsQueryDto) {
+    return this.finance.listCommissionPayouts(user.tenantId, query);
   }
 
   @Get("cash-flow")

@@ -11,7 +11,7 @@ describe("FinanceController: quem pode chamar o quê", () => {
     expect(Reflect.getMetadata(ROLES_KEY, FinanceController)).toEqual([Role.OWNER, Role.RECEPTIONIST]);
   });
 
-  it.each(["createCategory", "updateCategory", "closeCommissions", "dre"] as const)(
+  it.each(["createCategory", "updateCategory", "registerPayout", "listPayouts", "dre"] as const)(
     "%s restringe além da classe: só OWNER",
     (handler) => {
       expect(methodRoles(handler)).toEqual([Role.OWNER]);

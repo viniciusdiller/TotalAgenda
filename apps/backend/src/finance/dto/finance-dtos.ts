@@ -132,14 +132,20 @@ export class SettleEntryDto {
   paymentMethod?: "CASH" | "DEBIT" | "CREDIT" | "PIX" | "OTHER";
 }
 
-export class CloseCommissionsDto {
-  @IsISO8601()
-  from!: string;
+// Repasse pago a um profissional. Só o NOVO pagamento vem do cliente: o servidor recalcula o saldo
+// a repassar dentro da transação e recusa valor acima dele (o DTO só valida tipo/faixa).
+export class RegisterPayoutDto {
+  @IsUUID()
+  professionalId!: string;
 
-  @IsISO8601()
-  to!: string;
+  @IsInt()
+  @Min(1)
+  @Max(100_000_000)
+  amountCents!: number;
 
-  // Vencimento do(s) lançamento(s) de comissão gerado(s).
-  @IsISO8601()
-  dueDate!: string;
+  @IsOptional()
+  @Trim()
+  @IsString()
+  @MaxLength(200)
+  note?: string;
 }

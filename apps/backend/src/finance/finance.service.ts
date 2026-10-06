@@ -6,15 +6,21 @@ import {
   PaymentMethod,
   Prisma,
 } from "@totalagenda/database";
+import type { CommissionPayout } from "@totalagenda/shared-types";
 import { PrismaService } from "../prisma/prisma.service";
+import { resolvePagination, toPage } from "../common/pagination/paginate";
 import {
-  CloseCommissionsDto,
   CreateCategoryDto,
   CreateEntryDto,
+  RegisterPayoutDto,
   SettleEntryDto,
   UpdateCategoryDto,
   UpdateEntryDto,
 } from "./dto/finance-dtos";
+import { PayoutsQueryDto } from "./dto/payouts-query.dto";
+
+const formatBrl = (cents: number) =>
+  (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 // Criadas na primeira vez que o tenant abre o financeiro.
 const DEFAULT_CATEGORIES: Array<{ name: string; direction: FinancialDirection }> = [
@@ -233,54 +239,104 @@ export class FinanceService {
     });
   }
 
-  async closeCommissions(tenantId: string, userId: string, dto: CloseCommissionsDto) {
-    const from = new Date(dto.from);
-    const to = new Date(dto.to);
-    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) {
-      throw new BadRequestException("Período inválido.");
-    }
+  // Registra um repasse pago a um profissional. Substitui o antigo "fechar comissões do período"
+  // (não idempotente: clicar duas vezes duplicava a despesa e nada marcava a comissão como
+  // fechada). Aqui o saldo é DERIVADO — comissões do histórico menos repasses já pagos — e o
+  // servidor o recalcula DENTRO da transação, com lock por profissional, então dois cliques
+  // simultâneos nunca pagam mais do que o saldo.
+  async registerCommissionPayout(tenantId: string, userId: string, dto: RegisterPayoutDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const professional = await tx.professional.findFirst({
+        where: { id: dto.professionalId, tenantId },
+        select: { id: true, user: { select: { name: true } } },
+      });
+      if (!professional) throw new NotFoundException("Profissional não encontrado.");
 
-    const grouped = await this.prisma.commissionEntry.groupBy({
-      by: ["professionalId"],
-      where: { tenantId, createdAt: { gte: from, lte: to } },
-      _sum: { amountCents: true },
-    });
-    if (grouped.length === 0) {
-      throw new BadRequestException("Nenhuma comissão no período.");
-    }
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`commission-payout:${professional.id}`})::bigint)`;
 
-    const [category, professionals] = await Promise.all([
-      this.prisma.financialCategory.findFirst({
+      const [accrued, paid] = await Promise.all([
+        tx.commissionEntry.aggregate({
+          where: { tenantId, professionalId: professional.id },
+          _sum: { amountCents: true },
+        }),
+        tx.commissionPayout.aggregate({
+          where: { tenantId, professionalId: professional.id },
+          _sum: { amountCents: true },
+        }),
+      ]);
+      const balanceCents = (accrued._sum.amountCents ?? 0) - (paid._sum.amountCents ?? 0);
+      if (dto.amountCents > balanceCents) {
+        throw new BadRequestException(
+          balanceCents > 0
+            ? `O repasse não pode ser maior que o saldo a repassar (${formatBrl(balanceCents)}).`
+            : "Este profissional não tem saldo a repassar.",
+        );
+      }
+
+      const category = await tx.financialCategory.findFirst({
         where: { tenantId, name: COMMISSION_CATEGORY, direction: FinancialDirection.EXPENSE },
         select: { id: true },
-      }),
-      this.prisma.professional.findMany({
-        where: { tenantId, id: { in: grouped.map((g) => g.professionalId) } },
-        select: { id: true, user: { select: { name: true } } },
-      }),
-    ]);
-    const nameById = new Map(professionals.map((p) => [p.id, p.user.name]));
+      });
+      const now = new Date();
+      const entry = await tx.financialEntry.create({
+        data: {
+          tenantId,
+          direction: FinancialDirection.EXPENSE,
+          status: FinancialEntryStatus.PAID,
+          source: FinancialEntrySource.COMMISSION,
+          description: `Repasse ${professional.user.name}`,
+          amountCents: dto.amountCents,
+          categoryId: category?.id ?? null,
+          counterparty: professional.user.name,
+          dueDate: now,
+          paidAt: now,
+          notes: dto.note ?? null,
+          createdByUserId: userId,
+        },
+      });
+      const payout = await tx.commissionPayout.create({
+        data: {
+          tenantId,
+          professionalId: professional.id,
+          amountCents: dto.amountCents,
+          note: dto.note ?? null,
+          financialEntryId: entry.id,
+          createdByUserId: userId,
+        },
+      });
+      return {
+        id: payout.id,
+        amountCents: payout.amountCents,
+        balanceAfterCents: balanceCents - dto.amountCents,
+      };
+    });
+  }
 
-    const created = await this.prisma.$transaction(
-      grouped
-        .filter((g) => (g._sum.amountCents ?? 0) > 0)
-        .map((g) =>
-          this.prisma.financialEntry.create({
-            data: {
-              tenantId,
-              direction: FinancialDirection.EXPENSE,
-              source: FinancialEntrySource.COMMISSION,
-              description: `Comissão ${nameById.get(g.professionalId) ?? ""} (${dto.from.slice(0, 10)} a ${dto.to.slice(0, 10)})`,
-              amountCents: g._sum.amountCents ?? 0,
-              categoryId: category?.id ?? null,
-              counterparty: nameById.get(g.professionalId) ?? null,
-              dueDate: new Date(dto.dueDate),
-              createdByUserId: userId,
-            },
-          }),
-        ),
-    );
-    return { created: created.length, totalCents: created.reduce((s, e) => s + e.amountCents, 0) };
+  async listCommissionPayouts(tenantId: string, query: PayoutsQueryDto) {
+    const pagination = resolvePagination(query);
+    const where = {
+      tenantId,
+      ...(query.professionalId ? { professionalId: query.professionalId } : {}),
+    };
+    const [rows, total] = await Promise.all([
+      this.prisma.commissionPayout.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: pagination.skip,
+        take: pagination.take,
+        include: { professional: { select: { user: { select: { name: true } } } } },
+      }),
+      this.prisma.commissionPayout.count({ where }),
+    ]);
+    const items: CommissionPayout[] = rows.map((r) => ({
+      id: r.id,
+      professionalId: r.professionalId,
+      professionalName: r.professional.user.name,
+      amountCents: r.amountCents,
+      note: r.note,
+      createdAt: r.createdAt.toISOString(),
+    }));
+    return toPage(items, total, pagination);
   }
 
   // ─────────────────────────────────────────────

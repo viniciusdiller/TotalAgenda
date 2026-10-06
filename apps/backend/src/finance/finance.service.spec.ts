@@ -179,32 +179,4 @@ describe("FinanceService", () => {
     expect(result.totalCents).toBe(150);
     expect(result.overdueCents).toBe(100);
   });
-
-  it("closeCommissions gera um lançamento por profissional", async () => {
-    const { service, prisma } = build();
-    (prisma.commissionEntry.groupBy as jest.Mock).mockResolvedValue([
-      { professionalId: "p1", _sum: { amountCents: 30000 } },
-      { professionalId: "p2", _sum: { amountCents: 12000 } },
-    ]);
-    (prisma.professional.findMany as jest.Mock).mockResolvedValue([
-      { id: "p1", user: { name: "Alex" } },
-      { id: "p2", user: { name: "Bruna" } },
-    ]);
-
-    const result = await service.closeCommissions("t-1", "u-1", {
-      from: range.from,
-      to: range.to,
-      dueDate: "2026-09-05",
-    });
-
-    expect(result.created).toBe(2);
-    expect(result.totalCents).toBe(42000);
-  });
-
-  it("closeCommissions sem comissão no período lança erro", async () => {
-    const { service } = build();
-    await expect(
-      service.closeCommissions("t-1", "u-1", { from: range.from, to: range.to, dueDate: "2026-09-05" }),
-    ).rejects.toThrow(BadRequestException);
-  });
 });
