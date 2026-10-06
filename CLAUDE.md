@@ -178,6 +178,19 @@ sozinho (Stripe direto), e o Admin-TotalSoftware vira só back-office.
 - **Escopo:** `earnings` e `report` não têm `@Roles`; o service força o próprio `professionalId` para PROFESSIONAL e
   devolve vazio se o token vier sem vínculo (antes, sem vínculo, o filtro sumia e a equipe inteira ficava visível).
 - Itens da comanda sem profissional não entram no faturamento por profissional.
+- **Regras de comissão (editar/excluir):** `PATCH`/`DELETE /commissions/rules/:id` (OWNER, `ParseUUIDPipe`). A escrita
+  leva `tenantId` no WHERE (`updateMany`/`deleteMany`), não só a leitura; regra de outro tenant = mesmo 404 de
+  inexistente. PATCH sem `isActive` MANTÉM o estado (antes reativava em silêncio). Uma só regra ATIVA por
+  (profissional, base, alvo): duplicata = 409, porque duas empatam em `pickRule` e o repasse dependeria da ordem do
+  banco (as regras também são lidas em ordem fixa `createdAt, id`). A comissão calculada **nunca passa do valor
+  vendido** (`min(valor, base)`): um "R$ fixo" digitado errado gerava repasse maior que a venda. Teto de 100 regras
+  por profissional. Mudar/excluir regra vale só para comandas FUTURAS: `CommissionEntry` guarda o valor e não
+  referencia a regra. **Sem trilha de auditoria** das alterações de regra (só o dono mexe); aceito por ora.
+- **Repasse — data e idempotência:** o dia do pagamento assume HOJE em America/Sao_Paulo (`paidAt` = instante real);
+  pode ser corrigido para dia passado, nunca futuro nem com mais de 366 dias (validado no service, não só no
+  DTO). `requestKey` (UUID gerado a cada abertura do diálogo, único por tenant) faz o reenvio da MESMA requisição
+  devolver o repasse existente em vez de pagar duas vezes; mesma chave com outro valor/profissional = 409. A busca
+  da chave acontece DEPOIS do lock por profissional. `POST /finance/commissions/payouts` tem `@Throttle` de 20/min.
 
 ### Uploads
 Arquivos de tenant (logo, galeria) em `apps/backend/uploads/` (gitignored), servidos por
