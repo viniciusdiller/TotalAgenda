@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { DateTime } from "luxon";
 import { Trash } from "@phosphor-icons/react/dist/ssr";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { MoneyInput } from "@/components/ui/MoneyInput";
 import { HowItWorks, FieldHint } from "@/components/ui/HowItWorks";
-import { formatCentsBRL, moneyToCents } from "@/lib/masks";
+import { formatCentsBRL, formatPhoneBR, moneyToCents } from "@/lib/masks";
+import { formatDateTime, formatShortDateTime } from "@/lib/datetime";
 import { brl } from "@/lib/money";
 import type { AdminProduct, PaymentMethod, Ticket } from "@totalagenda/shared-types";
 import {
@@ -16,7 +18,9 @@ import {
   closeTicketAction,
   removeItemAction,
   setDiscountAction,
+  setTicketClientAction,
 } from "../actions";
+import { ClientPicker } from "../ClientPicker";
 
 // Texto BRL → centavos; valor mal formado dá null (nunca um 0 silencioso que zeraria desconto/pagamento).
 const centsFromReais = (v: string) => moneyToCents(v);
@@ -65,6 +69,7 @@ export function TicketPdv({
     null,
   );
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [pickingClient, setPickingClient] = useState(false);
 
   const readOnly = ticket.status !== "OPEN";
 
@@ -114,6 +119,85 @@ export function TicketPdv({
         </span>
       </div>
 
+      {/* Registro de datas: o dia e a hora de cada etapa, no fuso de São Paulo */}
+      <dl className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-zinc-500 dark:text-stone-400">
+        <div className="flex gap-1.5">
+          <dt>Aberta em</dt>
+          <dd className="font-medium text-zinc-700 dark:text-stone-200">{formatDateTime(ticket.openedAt)}</dd>
+        </div>
+        {ticket.closedAt ? (
+          <div className="flex gap-1.5">
+            <dt>Fechada em</dt>
+            <dd className="font-medium text-zinc-700 dark:text-stone-200">{formatDateTime(ticket.closedAt)}</dd>
+          </div>
+        ) : null}
+        {ticket.canceledAt ? (
+          <div className="flex gap-1.5">
+            <dt>Cancelada em</dt>
+            <dd className="font-medium text-zinc-700 dark:text-stone-200">{formatDateTime(ticket.canceledAt)}</dd>
+          </div>
+        ) : null}
+      </dl>
+
+      {/* Cliente da comanda */}
+      <div className="mt-4 rounded-2xl border border-zinc-200 p-3 text-sm dark:border-white/10">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-zinc-500 dark:text-stone-400">
+            Cliente:{" "}
+            {ticket.client ? (
+              <Link
+                href={`/dashboard/clientes/${ticket.client.id}`}
+                className="font-medium text-zinc-900 hover:text-accent-600 dark:text-white dark:hover:text-accent-300"
+              >
+                {ticket.client.name}
+              </Link>
+            ) : (
+              <span className="font-medium text-zinc-700 dark:text-stone-200">sem cliente vinculado</span>
+            )}
+            {ticket.client ? (
+              <span className="ml-2 text-xs text-zinc-400">{formatPhoneBR(ticket.client.phone)}</span>
+            ) : null}
+          </p>
+          {!readOnly && !ticket.appointmentId ? (
+            <span className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setPickingClient((v) => !v)}
+                className="text-sm font-medium text-accent-600 hover:underline dark:text-accent-300"
+              >
+                {pickingClient ? "Fechar busca" : ticket.client ? "Trocar cliente" : "Vincular cliente"}
+              </button>
+              {ticket.client ? (
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => run(() => setTicketClientAction(ticket.id, null))}
+                  className="text-sm font-medium text-zinc-500 hover:text-red-600 disabled:opacity-50 dark:text-stone-400"
+                >
+                  Remover
+                </button>
+              ) : null}
+            </span>
+          ) : null}
+        </div>
+        {!readOnly && ticket.appointmentId ? (
+          <p className="mt-1 text-xs text-zinc-400 dark:text-stone-500">
+            Comanda aberta a partir de um agendamento: o cliente é o do agendamento.
+          </p>
+        ) : null}
+        {pickingClient && !readOnly ? (
+          <div className="mt-3">
+            <ClientPicker
+              autoFocus
+              onSelect={(client) => {
+                setPickingClient(false);
+                run(() => setTicketClientAction(ticket.id, client.id));
+              }}
+            />
+          </div>
+        ) : null}
+      </div>
+
       <HowItWorks defaultOpen={!readOnly && ticket.items.length === 0}>
         {readOnly ? (
           <p>
@@ -153,7 +237,8 @@ export function TicketPdv({
                     {item.description}
                   </p>
                   <p className="text-xs text-zinc-400">
-                    {item.professional?.name ?? "sem profissional"} · {brl(item.unitPriceCents)}
+                    {item.professional?.name ?? "sem profissional"} · {brl(item.unitPriceCents)} · adicionado{" "}
+                    {formatShortDateTime(item.createdAt)}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -328,7 +413,10 @@ export function TicketPdv({
         <ul className="mt-3 space-y-1 text-sm text-zinc-500 dark:text-stone-400">
           {ticket.payments.map((p) => (
             <li key={p.id} className="flex justify-between">
-              <span>{METHODS.find((m) => m.value === p.method)?.label ?? p.method}</span>
+              <span>
+                {METHODS.find((m) => m.value === p.method)?.label ?? p.method}
+                <span className="ml-2 text-xs text-zinc-400">{formatDateTime(p.createdAt)}</span>
+              </span>
               <span>{brl(p.amountCents)}</span>
             </li>
           ))}

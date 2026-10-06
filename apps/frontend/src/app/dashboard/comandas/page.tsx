@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { DateTime } from "luxon";
 import { Receipt } from "@phosphor-icons/react/dist/ssr";
 import type { Ticket } from "@totalagenda/shared-types";
 import { auth } from "@/lib/auth";
@@ -11,6 +10,7 @@ import { OpenTicketButton } from "./OpenTicketButton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { riseIn } from "@/lib/stagger";
 import { brl } from "@/lib/money";
+import { formatDateTime } from "@/lib/datetime";
 
 export default async function ComandasPage() {
   const session = await auth();
@@ -29,7 +29,7 @@ export default async function ComandasPage() {
       <HowItWorks>
         <p>
           A <strong>comanda</strong> é a conta de um atendimento, como a ficha de consumo do
-          salão. Abra uma quando o cliente chegar, ou a partir de um agendamento.
+          salão. Abra uma quando o cliente chegar (escolhendo o cliente, se já for cadastrado) ou a partir de um agendamento.
         </p>
         <ol className="list-decimal space-y-1 pl-5">
           <li>Adicione os <strong>serviços</strong> feitos e os <strong>produtos</strong> vendidos. O preço vem do catálogo e não pode ser alterado aqui.</li>
@@ -66,8 +66,8 @@ export default async function ComandasPage() {
                     {ticket.client?.name ?? "Sem cliente"}
                   </p>
                   <p className="text-sm text-zinc-500 dark:text-stone-400">
-                    {ticket.items.length} {ticket.items.length === 1 ? "item" : "itens"} · aberta{" "}
-                    {DateTime.fromISO(ticket.openedAt).setLocale("pt-BR").toRelative()}
+                    {ticket.items.length} {ticket.items.length === 1 ? "item" : "itens"} · aberta em{" "}
+                    {formatDateTime(ticket.openedAt)}
                   </p>
                 </div>
                 <div className="text-right">
