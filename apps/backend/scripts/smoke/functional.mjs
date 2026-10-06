@@ -255,6 +255,51 @@ check("mesma requestKey com OUTRO valor → 409", r.status === 409, r);
 r = await call("GET", `/finance/commissions/payouts?professionalId=${professionalId}`, undefined, T);
 check("só UM repasse de R$ 2,00 foi gravado (idempotência)", r.json?.items?.filter((p) => p.amountCents === 200).length === 1, r.json?.items);
 
+console.log("== comanda: vincular cliente e registro de datas");
+r = await call("POST", "/tickets", {}, T);
+check("abre comanda avulsa (sem cliente)", r.status === 201 && r.json?.client === null, r);
+const linkTicketId = r.json?.id;
+check("a resposta traz a data de abertura e canceledAt nulo", !!r.json?.openedAt && r.json?.canceledAt === null, r.json);
+r = await call("PATCH", `/tickets/${linkTicketId}/client`, { clientId }, T);
+check("vincula o cliente à comanda aberta", r.status === 200 && r.json?.client?.id === clientId, r);
+r = await call("POST", `/tickets/${linkTicketId}/items`, { kind: "SERVICE", serviceId, professionalId }, T);
+check("item guarda a data em que entrou (createdAt)", r.status === 201 && !!r.json?.items?.[0]?.createdAt, r.json?.items);
+r = await call("PATCH", `/tickets/${linkTicketId}/client`, {}, T);
+check("clientId ausente → 400 (não vira 'desvincular' em silêncio)", r.status === 400, r);
+r = await call("PATCH", `/tickets/${linkTicketId}/client`, { clientId: "1 OR 1=1" }, T);
+check("clientId que não é UUID → 400", r.status === 400, r);
+r = await call("PATCH", `/tickets/${linkTicketId}/client`, { clientId: randomUUID() }, T);
+check("cliente inexistente → 404", r.status === 404, r);
+r = await call("PATCH", "/tickets/nao-e-uuid/client", { clientId }, T);
+check("id da comanda que não é UUID → 400", r.status === 400, r);
+
+// Cliente do tenant B não pode ser vinculado a comanda do tenant A, e B não mexe na comanda do A.
+r = await call("POST", "/clients", { name: "Cliente do B", phone: "(31) 97777-" + String(stamp).slice(-4) }, TB);
+check("cria cliente no tenant B", r.status === 201, r);
+const clientOfB = r.json?.id;
+r = await call("PATCH", `/tickets/${linkTicketId}/client`, { clientId: clientOfB }, T);
+check("vincular cliente de OUTRO tenant → 404 (mesmo de inexistente)", r.status === 404, r);
+r = await call("PATCH", `/tickets/${linkTicketId}/client`, { clientId }, TB);
+check("tenant B mexendo na comanda do A → 404", r.status === 404, r);
+r = await call("PATCH", `/tickets/${linkTicketId}/client`, { clientId }, PT);
+check("profissional vinculando cliente → 403", r.status === 403, r);
+
+r = await call("GET", `/clients/${clientId}`, undefined, T);
+check(
+  "ficha do cliente lista as comandas dele (a aberta e a fechada), com total e datas",
+  r.status === 200 && r.json?.tickets?.some((t) => t.id === linkTicketId && t.closedAt === null) &&
+    r.json.tickets.some((t) => t.id === ticketId && t.status === "CLOSED" && t.totalCents === 4090 && !!t.closedAt),
+  r.json?.tickets,
+);
+r = await call("PATCH", `/tickets/${linkTicketId}/client`, { clientId: null }, T);
+check("desvincula o cliente (null)", r.status === 200 && r.json?.client === null, r);
+r = await call("POST", `/tickets/${linkTicketId}/cancel`, {}, T);
+check("cancela a comanda de teste e registra canceledAt", r.status === 201 && r.json?.status === "CANCELED" && !!r.json?.canceledAt, r.json);
+r = await call("PATCH", `/tickets/${linkTicketId}/client`, { clientId }, T);
+check("comanda cancelada não aceita trocar o cliente → 409", r.status === 409, r);
+r = await call("PATCH", `/tickets/${ticketId}/client`, { clientId: null }, T);
+check("comanda FECHADA não aceita trocar o cliente → 409", r.status === 409, r);
+
 console.log("== lista de espera");
 const waitPhone = "(31) 98888-" + String(stamp).slice(-4);
 r = await call("POST", "/public/consumer/register", { name: "Carla Espera", phone: waitPhone, email: `carla${stamp}@e2e.com`, password: "senha-carla-123", consent: true });
