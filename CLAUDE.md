@@ -159,6 +159,26 @@ sozinho (Stripe direto), e o Admin-TotalSoftware vira só back-office.
   `remove_appointment_manage_token`): capability não autenticada num link circulável era
   superfície de IDOR/vazamento (nome e telefone) sem ganho, já que agendar também exige login.
 
+### Comissões e repasses
+- **Sem "fechar período".** `GET /commissions/earnings` (`CommissionsService.earnings`) calcula na hora, por
+  profissional: **bruto** (Σ preço × qtd dos itens dele), **descontos**, **líquido** (bruto − descontos), **repasse**
+  do período (Σ `CommissionEntry`), **sobra da casa** (líquido − repasse) e **saldo a repassar**. Todo profissional
+  ativo aparece, mesmo com zero. Base temporal única: `Ticket.closedAt` (comandas fechadas). Tela:
+  `/dashboard/comissoes` (período na URL: `?periodo=` ou `?de=&ate=`, padrão mês corrente em America/Sao_Paulo).
+- **Decisão (negócio): a comissão é calculada sobre o BRUTO**, antes do desconto da comanda (`computeForTicket`).
+  O desconto sai do lado do estabelecimento; a receita no Financeiro entra líquida. O desconto é um valor único
+  por comanda (`Ticket.discountCents`), então a coluna "Descontos" é um RATEIO de exibição proporcional aos itens
+  (`discount-allocation.util.ts`, maior resto, soma exata): não altera comissão nem receita.
+- **Repasse = pagamento do saldo, não fechamento.** `CommissionPayout` + despesa `PAID` (`source=COMMISSION`) criados
+  juntos em `POST /finance/commissions/payouts` (OWNER). **Saldo é sempre derivado**: Σ `CommissionEntry` do
+  histórico − Σ `CommissionPayout`. O servidor recalcula o saldo DENTRO da transação, com
+  `pg_advisory_xact_lock` por profissional, e recusa valor acima dele (o DTO só valida tipo/faixa). O antigo
+  `POST /finance/commissions/close` foi removido: não era idempotente (duas chamadas duplicavam a despesa) e nada
+  marcava a comissão como fechada.
+- **Escopo:** `earnings` e `report` não têm `@Roles`; o service força o próprio `professionalId` para PROFESSIONAL e
+  devolve vazio se o token vier sem vínculo (antes, sem vínculo, o filtro sumia e a equipe inteira ficava visível).
+- Itens da comanda sem profissional não entram no faturamento por profissional.
+
 ### Uploads
 Arquivos de tenant (logo, galeria) em `apps/backend/uploads/` (gitignored), servidos por
 `ServeStaticModule`. Nome de arquivo fixo por tenant + cache-bust por `updatedAt` na URL.
@@ -351,6 +371,9 @@ que o valor é *confiável para aquele contexto* — um `class-validator` que s�
     `@Sse()`. Rever ao migrar pro Nest 11 ou se algum endpoint SSE for criado.
 
 ### Riscos conhecidos (aceitos por ora)
+- **Repasses antigos:** lançamentos `COMMISSION` gerados pelo extinto "fechar comissões do período" não têm
+  `CommissionPayout`. O saldo novo não os conhece e mostra todo o histórico como "a repassar". Aceito enquanto não
+  há tenant real (cadastro público ainda fechado); com dado real, fazer backfill antes de usar o saldo.
 - Access token de staff (12 h) não é revogável antes de vencer (só `isActive=false` o derruba na hora); o
   refresh token é rotativo e revogável (ver Auth / sessão). Reduzir `JWT_EXPIRES_IN` encurta a janela.
 - Lockout por conta permite travar a conta alheia (DoS) — mitigado por throttle por IP.

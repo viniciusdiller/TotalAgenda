@@ -32,9 +32,9 @@ não domínio.
 | `billing` | Cobrança pelo Stripe: checkout, portal, troca de plano (`CheckoutService`, `PlanChangeService`, `StripeService`), status e planos; `PlanLimitService`/`TenantBillingGuard` leem daqui. |
 | `cash-register` | Abertura/fechamento de caixa, conferência de valor físico contra `Payment`/`CashMovement`. |
 | `clients` | CRUD de `Client` (ficha 360, intake) pelo staff. |
-| `commissions` | Regras de comissão por profissional/serviço e cálculo no fechamento de comanda. |
+| `commissions` | Regras de comissão por profissional/serviço, cálculo no fechamento de comanda e `earnings` (bruto/líquido/repasse/saldo por profissional, calculado na hora). |
 | `consumer-auth` | Identidade global do cliente final (`Consumer`): login telefone+senha, migração de contas antigas, perfil, troca de senha, `ensureLink` com o `Client` de cada tenant. |
-| `finance` | Lançamentos manuais + automáticos (receita de comanda, comissão), DRE, fluxo de caixa. |
+| `finance` | Lançamentos manuais + automáticos (receita de comanda), registro de repasse de comissão (`CommissionPayout` + despesa PAGA), DRE, fluxo de caixa. |
 | `intake` | Formulários de ficha de anamnese/cadastro configuráveis pelo tenant e respostas de cliente. |
 | `marketplace` | Busca/descoberta pública de estabelecimentos (`public/marketplace`), config de visibilidade do tenant. |
 | `products` | Catálogo de produto + estoque (ajuste manual, baixa automática por venda). |

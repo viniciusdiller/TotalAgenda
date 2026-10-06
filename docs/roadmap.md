@@ -32,8 +32,10 @@ unitários + seed atualizado, build (`turbo run build`) e `turbo run test` verde
   genérico de Fichas (M2): são features reais, só mal explicadas, não candidatas a
   remoção nesta leva.
 - **M4 — concluída.** `FinancialCategory` (árvore, padrões auto) + `FinancialEntry` (regime
-  de caixa, previsto×realizado). Fechar comanda → receita `PAID` automática. "Fechar
-  comissões do período" → contas a pagar por profissional. Relatórios: fluxo de caixa por
+  de caixa, previsto×realizado). Fechar comanda → receita `PAID` automática. Comissão: faturamento
+  bruto/líquido, repasse e saldo por profissional são calculados na hora
+  (`GET /commissions/earnings`); "Registrar repasse" gera a despesa `PAID` (`CommissionPayout`).
+  O antigo "fechar comissões do período" saiu (2026-10): não era idempotente. Relatórios: fluxo de caixa por
   categoria, DRE simples (receita − CMV via `Product.costCents` − despesas), a pagar/receber
   com aging, overview do mês. Sem PSP/conta bancária/conciliação — tudo pela gestão. Tela
   `/dashboard/financeiro`.
@@ -106,6 +108,8 @@ Refactor que todo o resto depende. Fazer e **revisar antes** de construir M1–M
   com conferência; relatório de fechamento.
 - `CommissionRule` por profissional (× serviço/produto/categoria, % ou fixo) +
   `CommissionEntry` gerada ao fechar comanda; relatório por profissional/período.
+  Desde 2026-10: tela "Comissões e repasses" com bruto, descontos, líquido, repasse, sobra da casa
+  e saldo a repassar por profissional, sempre visível (sem fechar período).
 
 ## M4 — Financeiro
 
