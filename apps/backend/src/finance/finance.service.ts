@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { DateTime } from "luxon";
 import {
   FinancialDirection,
   FinancialEntrySource,
@@ -18,6 +19,30 @@ import {
   UpdateEntryDto,
 } from "./dto/finance-dtos";
 import { PayoutsQueryDto } from "./dto/payouts-query.dto";
+
+const PAYOUT_TIMEZONE = "America/Sao_Paulo";
+const MAX_PAYOUT_BACKDATE_DAYS = 366;
+
+// Dia do repasse: padrão HOJE em São Paulo. Pode ser corrigido pra um dia passado (pagou ontem e só
+// registrou hoje), mas nunca futuro nem muito antigo: data livre sem teto serviria pra empurrar um
+// pagamento pra dentro (ou pra fora) de um período já fechado no fluxo de caixa/DRE.
+function resolvePayoutDay(paidOn: string | undefined) {
+  const today = DateTime.now().setZone(PAYOUT_TIMEZONE).startOf("day");
+  const day = paidOn ? DateTime.fromISO(paidOn, { zone: PAYOUT_TIMEZONE }) : today;
+  if (!day.isValid) throw new BadRequestException("Data do repasse inválida.");
+  if (day > today) throw new BadRequestException("A data do repasse não pode ser futura.");
+  if (today.diff(day, "days").days > MAX_PAYOUT_BACKDATE_DAYS) {
+    throw new BadRequestException("A data do repasse não pode ser de mais de 366 dias atrás.");
+  }
+  const isToday = day.hasSame(today, "day");
+  return {
+    // Hoje: o instante real do pagamento. Dia passado: meio-dia de SP (não vira o dia por fuso).
+    paidAt: isToday ? new Date() : day.set({ hour: 12 }).toJSDate(),
+    // Coluna @db.Date: meia-noite UTC do dia civil de SP (evita cair no dia seguinte às 22h em SP).
+    dueDate: new Date(`${day.toISODate()}T00:00:00.000Z`),
+    paidOn: day.toISODate()!,
+  };
+}
 
 const formatBrl = (cents: number) =>
   (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -245,6 +270,7 @@ export class FinanceService {
   // servidor o recalcula DENTRO da transação, com lock por profissional, então dois cliques
   // simultâneos nunca pagam mais do que o saldo.
   async registerCommissionPayout(tenantId: string, userId: string, dto: RegisterPayoutDto) {
+    const day = resolvePayoutDay(dto.paidOn);
     return this.prisma.$transaction(async (tx) => {
       const professional = await tx.professional.findFirst({
         where: { id: dto.professionalId, tenantId },
@@ -253,6 +279,30 @@ export class FinanceService {
       if (!professional) throw new NotFoundException("Profissional não encontrado.");
 
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`commission-payout:${professional.id}`})::bigint)`;
+
+      // Reenvio da MESMA requisição (duplo clique, retry de rede): devolve o repasse já feito. A busca
+      // vem depois do lock, então duas requisições simultâneas com a mesma chave se serializam.
+      if (dto.requestKey) {
+        const replay = await tx.commissionPayout.findFirst({
+          where: { tenantId, requestKey: dto.requestKey },
+        });
+        if (replay) {
+          if (replay.professionalId !== professional.id || replay.amountCents !== dto.amountCents) {
+            throw new ConflictException("Esta requisição já foi usada com outros dados. Abra o repasse de novo.");
+          }
+          const [accruedNow, paidNow] = await Promise.all([
+            tx.commissionEntry.aggregate({ where: { tenantId, professionalId: professional.id }, _sum: { amountCents: true } }),
+            tx.commissionPayout.aggregate({ where: { tenantId, professionalId: professional.id }, _sum: { amountCents: true } }),
+          ]);
+          return {
+            id: replay.id,
+            amountCents: replay.amountCents,
+            balanceAfterCents: (accruedNow._sum.amountCents ?? 0) - (paidNow._sum.amountCents ?? 0),
+            paidOn: day.paidOn,
+            replayed: true,
+          };
+        }
+      }
 
       const [accrued, paid] = await Promise.all([
         tx.commissionEntry.aggregate({
@@ -277,7 +327,6 @@ export class FinanceService {
         where: { tenantId, name: COMMISSION_CATEGORY, direction: FinancialDirection.EXPENSE },
         select: { id: true },
       });
-      const now = new Date();
       const entry = await tx.financialEntry.create({
         data: {
           tenantId,
@@ -288,8 +337,8 @@ export class FinanceService {
           amountCents: dto.amountCents,
           categoryId: category?.id ?? null,
           counterparty: professional.user.name,
-          dueDate: now,
-          paidAt: now,
+          dueDate: day.dueDate,
+          paidAt: day.paidAt,
           notes: dto.note ?? null,
           createdByUserId: userId,
         },
@@ -301,6 +350,7 @@ export class FinanceService {
           amountCents: dto.amountCents,
           note: dto.note ?? null,
           financialEntryId: entry.id,
+          requestKey: dto.requestKey ?? null,
           createdByUserId: userId,
         },
       });
@@ -308,6 +358,8 @@ export class FinanceService {
         id: payout.id,
         amountCents: payout.amountCents,
         balanceAfterCents: balanceCents - dto.amountCents,
+        paidOn: day.paidOn,
+        replayed: false,
       };
     });
   }

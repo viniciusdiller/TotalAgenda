@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { Role } from "@totalagenda/database";
 import { FinanceService } from "./finance.service";
 import {
@@ -80,6 +81,8 @@ export class FinanceController {
     return this.finance.cancelEntry(user.tenantId, id);
   }
 
+  // Dinheiro saindo: teto de requisições por minuto, além do limite global de 100/min.
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Roles(Role.OWNER)
   @Post("commissions/payouts")
   registerPayout(@CurrentUser() user: AuthenticatedUser, @Body() dto: RegisterPayoutDto) {

@@ -49,7 +49,7 @@ describe("FinanceService.registerCommissionPayout", () => {
       amountCents: 3000,
       financialEntryId: "fe-1",
     });
-    expect(result).toEqual({ id: "pay-1", amountCents: 3000, balanceAfterCents: 5000 });
+    expect(result).toMatchObject({ id: "pay-1", amountCents: 3000, balanceAfterCents: 5000, replayed: false });
   });
 
   // Regressão do fluxo antigo: "fechar período" duplicava a despesa. O limite agora é o saldo

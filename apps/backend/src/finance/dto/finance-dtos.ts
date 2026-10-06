@@ -7,6 +7,7 @@ import {
   IsOptional,
   IsString,
   Max,
+  Matches,
   MaxLength,
   Min,
   MinLength,
@@ -148,4 +149,15 @@ export class RegisterPayoutDto {
   @IsString()
   @MaxLength(200)
   note?: string;
+
+  // Dia do pagamento (yyyy-MM-dd). Opcional: o servidor assume HOJE (fuso de São Paulo). Não pode ser
+  // futuro nem anterior a 366 dias; a faixa é checada no service, não só aqui.
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: "Data do repasse inválida." })
+  paidOn?: string;
+
+  // UUID gerado pelo cliente a cada abertura do diálogo. Mesma chave = mesmo repasse (idempotência).
+  @IsOptional()
+  @IsUUID("4")
+  requestKey?: string;
 }
