@@ -677,6 +677,9 @@ model CommissionPayout {
   amountCents      Int
   note             String?
   financialEntryId String   @unique
+  // Gerada pelo cliente a cada abertura do diálogo de repasse: reenviar a MESMA requisição (duplo
+  // clique, retry de rede) devolve o repasse já criado em vez de pagar de novo. NULL = sem chave.
+  requestKey       String?
   createdByUserId  String
   createdAt        DateTime @default(now()) @db.Timestamptz(6)
 
@@ -685,6 +688,7 @@ model CommissionPayout {
   financialEntry FinancialEntry @relation(fields: [financialEntryId], references: [id], onDelete: Restrict)
   createdBy      User           @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
 
+  @@unique([tenantId, requestKey])
   @@index([tenantId, professionalId, createdAt])
 }
 
