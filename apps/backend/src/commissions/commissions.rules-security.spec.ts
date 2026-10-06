@@ -137,6 +137,38 @@ describe("CommissionsService: regra duplicada", () => {
   });
 });
 
+// Regressão: o seed e o texto de ajuda da tela preveem "qualquer serviço/produto" (nível intermediário de
+// prioridade), mas o backend exigia um alvo e recusava até SALVAR uma regra assim já existente: ela ficava
+// impossível de editar.
+describe("CommissionsService: regra 'qualquer serviço/produto' (sem alvo)", () => {
+  it("cria regra SERVICE sem alvo, gravando targetId null (não consulta serviço nenhum)", async () => {
+    const { svc, rule, prisma } = build();
+    await expect(svc.createRule("t-1", dto({ base: "SERVICE" }))).resolves.toBeDefined();
+    expect(rule.create.mock.calls[0][0].data).toMatchObject({ base: "SERVICE", targetId: null });
+    expect(prisma.service.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("edita uma regra 'qualquer serviço' existente sem exigir alvo", async () => {
+    const { svc, rule } = build({
+      findFirst: jest.fn().mockResolvedValueOnce({ id: "r1", isActive: true }).mockResolvedValue(null),
+    });
+    await svc.updateRule("t-1", "r1", dto({ base: "PRODUCT", value: 20 }));
+    expect(rule.updateMany.mock.calls[0][0].data).toMatchObject({ base: "PRODUCT", targetId: null, value: 20 });
+  });
+
+  it("duas 'qualquer serviço' ativas do mesmo profissional continuam sendo duplicata (409)", async () => {
+    const { svc, rule } = build({ findFirst: jest.fn().mockResolvedValue({ id: "existente" }) });
+    await expect(svc.createRule("t-1", dto({ base: "SERVICE" }))).rejects.toThrow(ConflictException);
+    expect(rule.create).not.toHaveBeenCalled();
+  });
+
+  it("alvo informado continua sendo validado no tenant", async () => {
+    const { svc, prisma } = build();
+    prisma.service.findFirst.mockResolvedValue(null);
+    await expect(svc.createRule("tenant-A", dto({ base: "SERVICE", targetId: "svc-de-B" }))).rejects.toThrow("Serviço não encontrado.");
+  });
+});
+
 describe("CommissionsService.deleteRule", () => {
   it("exclui só dentro do tenant (id + tenantId no WHERE)", async () => {
     const { svc, rule } = build();

@@ -69,6 +69,28 @@ describe("ComissoesView: editar e excluir regras", () => {
     expect(within(form).getByLabelText("Serviço")).toHaveValue("s1");
   });
 
+  it("regra 'qualquer serviço' (sem alvo) abre com 'Qualquer serviço' e o alvo NÃO é obrigatório", async () => {
+    const user = userEvent.setup();
+    render(
+      <ComissoesView
+        rules={[{ id: "r9", professionalId: "p1", base: "SERVICE", targetId: null, kind: "PERCENT", value: 30, isActive: true }]}
+        professionals={professionals}
+        services={services}
+        products={[]}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Editar" }));
+
+    const form = screen.getByRole("button", { name: "Salvar" }).closest("form")!;
+    const target = within(form).getByLabelText("Serviço") as HTMLSelectElement;
+    expect(target).toHaveValue("");
+    expect(target).not.toBeRequired();
+    expect(within(form).getByRole("option", { name: "Qualquer serviço" })).toBeInTheDocument();
+
+    await user.click(within(form).getByRole("button", { name: "Salvar" }));
+    await waitFor(() => expect(actions.update).toHaveBeenCalled());
+  });
+
   it("salvar a edição chama a action com o id da regra e fecha o formulário", async () => {
     const user = userEvent.setup();
     setup();

@@ -102,7 +102,7 @@ export class CommissionsService {
         tenantId,
         professionalId: dto.professionalId,
         base: dto.base as CommissionBase,
-        targetId: dto.base === "ALL" ? null : dto.targetId!,
+        targetId: dto.base === "ALL" ? null : (dto.targetId ?? null),
         kind: dto.kind as CommissionKind,
         value: dto.value,
         isActive: dto.isActive ?? true,
@@ -128,7 +128,7 @@ export class CommissionsService {
       data: {
         professionalId: dto.professionalId,
         base: dto.base as CommissionBase,
-        targetId: dto.base === "ALL" ? null : dto.targetId!,
+        targetId: dto.base === "ALL" ? null : (dto.targetId ?? null),
         kind: dto.kind as CommissionKind,
         value: dto.value,
         isActive,
@@ -456,9 +456,8 @@ export class CommissionsService {
     if (!professional) {
       throw new NotFoundException("Profissional não encontrado.");
     }
-    if (dto.base !== "ALL" && !dto.targetId) {
-      throw new BadRequestException("Informe o serviço/produto alvo para regras específicas.");
-    }
+    // base SERVICE/PRODUCT sem alvo = "qualquer serviço/produto" (nível intermediário de prioridade, entre o
+    // alvo exato e "qualquer venda"). O alvo é opcional; quando vem, é validado no tenant logo abaixo.
     // targetId vem do body: sem checar o tenant, a regra podia apontar para um serviço/produto de
     // OUTRO negócio (referência cruzada entre tenants, mesmo que hoje nunca case com um item local).
     if (dto.base !== "ALL" && dto.targetId) {

@@ -78,14 +78,13 @@ function RuleForm({
       {base !== "ALL" ? (
         <select
           name="targetId"
-          required
           // A key força remontar ao trocar Serviço/Produto: o alvo antigo não existe na outra lista.
           key={base}
           defaultValue={rule && rule.base === base ? (rule.targetId ?? "") : ""}
           aria-label={base === "SERVICE" ? "Serviço" : "Produto"}
           className={field}
         >
-          <option value="">— escolha o {base === "SERVICE" ? "serviço" : "produto"} —</option>
+          <option value="">{base === "SERVICE" ? "Qualquer serviço" : "Qualquer produto"}</option>
           {(base === "SERVICE" ? services : products).map((o) => (
             <option key={o.id} value={o.id}>
               {o.name}
