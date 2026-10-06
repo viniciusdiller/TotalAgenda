@@ -68,6 +68,11 @@ export function AgendaView({
   const [calendar, setCalendar] = useState(initialCalendar);
   const [loadError, setLoadError] = useState(initialLoadError);
   const [professionalFilter, setProfessionalFilter] = useState<string>("");
+  // O backend devolve só o profissional filtrado; a lista do seletor vem da última carga sem filtro,
+  // senão o seletor sumia (ou perdia as opções) assim que alguém era escolhido.
+  const [filterOptions, setFilterOptions] = useState(() =>
+    initialCalendar.professionals.map((p) => ({ id: p.id, name: p.name })),
+  );
   const [selected, setSelected] = useState<PublicBooking | null>(null);
   const [createAt, setCreateAt] = useState<{ professionalId: string; startAt: string } | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -84,6 +89,9 @@ export function AgendaView({
         try {
           const data = await fetchCalendarAction(from, to, nextFilter || undefined);
           setCalendar(data);
+          if (!nextFilter) {
+            setFilterOptions(data.professionals.map((p) => ({ id: p.id, name: p.name })));
+          }
           setLoadError(false);
         } catch {
           setLoadError(true);
@@ -147,7 +155,7 @@ export function AgendaView({
         </div>
 
         <div className="flex items-center gap-2">
-          {calendar.professionals.length > 1 ? (
+          {filterOptions.length > 1 ? (
             <select
               value={professionalFilter}
               onChange={(e) => {
@@ -157,7 +165,7 @@ export function AgendaView({
               className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-white/15 dark:bg-zinc-900 dark:text-white"
             >
               <option value="">Todos os profissionais</option>
-              {calendar.professionals.map((p) => (
+              {filterOptions.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
