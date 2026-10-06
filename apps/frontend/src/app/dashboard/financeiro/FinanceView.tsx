@@ -4,6 +4,7 @@ import { useActionState, useState, useTransition } from "react";
 import { DateTime } from "luxon";
 import { Receipt } from "@phosphor-icons/react/dist/ssr";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MoneyInput } from "@/components/ui/MoneyInput";
 import { riseIn } from "@/lib/stagger";
@@ -18,7 +19,6 @@ import type {
 } from "@totalagenda/shared-types";
 import {
   cancelEntryAction,
-  closeCommissionsAction,
   createEntryAction,
   fetchCashFlowAction,
   fetchDreAction,
@@ -30,16 +30,6 @@ const TABS = ["Lançamentos", "A pagar", "A receber", "Fluxo de caixa", "DRE"] a
 type Tab = (typeof TABS)[number];
 
 const initial: FinanceActionState = {};
-
-function Card({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div className="hover-lift rounded-2xl border border-zinc-200 p-4 dark:border-white/10">
-      <p className="text-xs text-zinc-400">{label}</p>
-      <p className="mt-1 text-xl font-bold text-zinc-900 dark:text-white">{value}</p>
-      {hint ? <p className="text-xs text-amber-600 dark:text-amber-400">{hint}</p> : null}
-    </div>
-  );
-}
 
 export function FinanceView({
   overview,
@@ -240,7 +230,6 @@ export function FinanceView({
 
       {tab === "A pagar" ? (
         <div>
-          {isOwner ? <CloseCommissions from={from} to={to} /> : null}
           <EntryList items={payables} />
         </div>
       ) : null}
@@ -338,37 +327,6 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
     >
       <span>{label}</span>
       <span>{value}</span>
-    </div>
-  );
-}
-
-function CloseCommissions({ from, to }: { from: string; to: string }) {
-  const [isPending, start] = useTransition();
-  const [msg, setMsg] = useState<string | null>(null);
-  return (
-    <div className="mb-4 rounded-xl border border-zinc-200 p-3 text-sm dark:border-white/10">
-      <p className="text-zinc-600 dark:text-stone-300">
-        Gerar contas a pagar das comissões de {DateTime.fromISO(from).toFormat("dd/LL")} a{" "}
-        {DateTime.fromISO(to).toFormat("dd/LL")}.
-      </p>
-      <button
-        type="button"
-        disabled={isPending}
-        onClick={() =>
-          start(async () => {
-            const r = await closeCommissionsAction(
-              DateTime.fromISO(from).startOf("day").toISO()!,
-              DateTime.fromISO(to).endOf("day").toISO()!,
-              DateTime.now().plus({ days: 5 }).toISODate()!,
-            );
-            setMsg(r.error ?? "Lançamentos gerados.");
-          })
-        }
-        className="mt-2 rounded-full border border-zinc-300 px-4 py-1.5 text-xs font-medium dark:border-white/15 dark:text-stone-200"
-      >
-        Fechar comissões do período
-      </button>
-      {msg ? <p className="mt-2 text-xs text-zinc-500 dark:text-stone-400">{msg}</p> : null}
     </div>
   );
 }

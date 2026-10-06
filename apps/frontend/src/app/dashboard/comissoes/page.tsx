@@ -1,10 +1,12 @@
-import type { AdminProduct, CommissionRule } from "@totalagenda/shared-types";
+import type { AdminProduct, CommissionRule, EarningsReport } from "@totalagenda/shared-types";
 import { auth } from "@/lib/auth";
 import { authedFetch } from "@/lib/api-server";
 import { requireRole } from "@/lib/guards";
+import { resolvePeriod } from "@/lib/earnings-period";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { HowItWorks } from "@/components/ui/HowItWorks";
 import { ComissoesView } from "./ComissoesView";
+import { EarningsSection } from "./EarningsSection";
 
 interface CatalogService {
   id: string;
@@ -15,11 +17,23 @@ interface TeamMember {
   user: { name: string };
 }
 
-export default async function ComissoesPage() {
+// searchParams chega como string | string[] | undefined; só aceitamos string (o resto é lixo da URL).
+const first = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
+
+export default async function ComissoesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ periodo?: string | string[]; de?: string | string[]; ate?: string | string[] }>;
+}) {
   const session = await auth();
   requireRole(session, ["OWNER"]);
 
-  const [rules, team, services, products] = await Promise.all([
+  const query = await searchParams;
+  const period = resolvePeriod({ periodo: first(query.periodo), de: first(query.de), ate: first(query.ate) });
+  const earningsQuery = new URLSearchParams({ from: period.from, to: period.to });
+
+  const [report, rules, team, services, products] = await Promise.all([
+    authedFetch<EarningsReport>(`/commissions/earnings?${earningsQuery.toString()}`).catch(() => null),
     authedFetch<CommissionRule[]>("/commissions/rules").catch(() => []),
     authedFetch<TeamMember[]>("/professionals").catch(() => []),
     authedFetch<CatalogService[]>("/services").catch(() => []),
@@ -27,36 +41,40 @@ export default async function ComissoesPage() {
   ]);
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-5xl">
       <PageHeader
-        title="Comissões"
-        description={
-          <>
-            Defina quanto cada profissional ganha por venda. A comissão é calculada sozinha
-            quando uma comanda fecha, mas só vira conta a pagar de verdade quando você clicar
-            em "Fechar comissões do período" lá no Financeiro.
-          </>
-        }
+        title="Comissões e repasses"
+        description="Quanto cada profissional faturou e quanto você precisa repassar. Atualizado a cada comanda fechada."
       />
+
       <HowItWorks>
         <p>
-          Aqui você define <strong>quanto cada profissional ganha</strong> sobre o que vende.
-          Cada regra vale para um profissional.
+          A tabela é calculada na hora, sem fechar período. Uma comanda entra nos números
+          quando é <strong>fechada</strong>, no período escolhido.
         </p>
         <ul className="list-disc space-y-1 pl-5">
-          <li><strong>Base:</strong> “Tudo” vale para qualquer venda do profissional. “Serviço” ou “Produto” vale só para <strong>um item que você escolhe</strong> (ex.: 50% só em “Coloração”).</li>
-          <li><strong>Tipo:</strong> “%” é uma porcentagem do preço do item; “R$ fixo” é um valor por unidade vendida (2 unidades = 2 vezes o valor).</li>
-          <li>Se mais de uma regra serve ao mesmo item, <strong>vale a mais específica</strong> (item exato, depois serviço/produto, depois “Tudo”). Elas não se somam.</li>
-          <li>Ao fechar uma comanda a comissão é calculada. Só vira conta a pagar quando você usa “Fechar comissões do período” em Financeiro → A pagar.</li>
-          <li>O <strong>Relatório</strong> abaixo mostra quanto cada profissional tem a receber no período escolhido.</li>
+          <li><strong>Bruto:</strong> soma do preço dos serviços e produtos atendidos por ele, antes de qualquer desconto.</li>
+          <li><strong>Descontos:</strong> a parte do desconto de cada comanda que cabe a ele, dividida proporcionalmente ao valor dos itens.</li>
+          <li><strong>Líquido:</strong> bruto menos descontos, o que o cliente de fato pagou pelo trabalho dele.</li>
+          <li><strong>Repasse:</strong> a comissão dele no período, pelas regras abaixo. Ela é calculada sobre o <strong>bruto</strong>, então o desconto sai do lado da casa.</li>
+          <li><strong>Sobra da casa:</strong> líquido menos repasse.</li>
+          <li><strong>A repassar:</strong> saldo acumulado de todo o histórico que ainda não foi pago (não depende do período). <strong>Registrar repasse</strong> lança uma despesa já paga em Financeiro e baixa o saldo; pode ser parcial.</li>
+          <li>Itens sem profissional na comanda não aparecem aqui.</li>
         </ul>
       </HowItWorks>
-      <ComissoesView
-        rules={rules}
-        professionals={team.map((t) => ({ id: t.id, name: t.user.name }))}
-        services={services}
-        products={products.map((p) => ({ id: p.id, name: p.name }))}
-      />
+
+      <div className="mt-8">
+        <EarningsSection report={report} period={period} />
+      </div>
+
+      <div className="mt-12 max-w-2xl">
+        <ComissoesView
+          rules={rules}
+          professionals={team.map((t) => ({ id: t.id, name: t.user.name }))}
+          services={services}
+          products={products.map((p) => ({ id: p.id, name: p.name }))}
+        />
+      </div>
     </div>
   );
 }

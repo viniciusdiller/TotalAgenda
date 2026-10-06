@@ -1,18 +1,13 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
-import { DateTime } from "luxon";
+import { useActionState, useState } from "react";
 import { Percent } from "@phosphor-icons/react/dist/ssr";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MoneyInput } from "@/components/ui/MoneyInput";
 import { riseIn } from "@/lib/stagger";
 import { brl } from "@/lib/money";
-import type { CommissionReport, CommissionRule } from "@totalagenda/shared-types";
-import {
-  createCommissionRuleAction,
-  fetchCommissionReportAction,
-  type CommissionRuleState,
-} from "./actions";
+import type { CommissionRule } from "@totalagenda/shared-types";
+import { createCommissionRuleAction, type CommissionRuleState } from "./actions";
 
 interface Option {
   id: string;
@@ -35,11 +30,6 @@ export function ComissoesView({
   const [state, formAction, pending] = useActionState(createCommissionRuleAction, initial);
   const [base, setBase] = useState<"SERVICE" | "PRODUCT" | "ALL">("ALL");
   const [kind, setKind] = useState<"PERCENT" | "FIXED">("PERCENT");
-
-  const [report, setReport] = useState<CommissionReport | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const [from, setFrom] = useState(DateTime.now().startOf("month").toISODate()!);
-  const [to, setTo] = useState(DateTime.now().endOf("month").toISODate()!);
 
   const proName = (id: string) => professionals.find((p) => p.id === id)?.name ?? id;
   const targetName = (rule: CommissionRule) => {
@@ -65,21 +55,10 @@ export function ComissoesView({
     return `${amount} sobre cada venda de ${what} por ${pro}.`;
   };
 
-  function loadReport() {
-    startTransition(async () => {
-      setReport(
-        await fetchCommissionReportAction(
-          DateTime.fromISO(from).startOf("day").toISO()!,
-          DateTime.fromISO(to).endOf("day").toISO()!,
-        ),
-      );
-    });
-  }
-
   return (
-    <div className="mt-6 space-y-10">
+    <div className="space-y-10">
       <section>
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">Regras</h2>
+        <h2 className="font-display text-lg font-semibold text-zinc-900 dark:text-white">Regras de comissão</h2>
 
         {rules.length > 0 ? (
           <>
@@ -177,58 +156,6 @@ export function ComissoesView({
         </form>
         {state.error ? (
           <p className="mt-2 text-sm text-red-600 dark:text-red-400">{state.error}</p>
-        ) : null}
-      </section>
-
-      <section>
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">Relatório</h2>
-        <div className="mt-3 flex flex-wrap items-end gap-2">
-          <input
-            type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white"
-          />
-          <input
-            type="date"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white"
-          />
-          <button
-            type="button"
-            onClick={loadReport}
-            disabled={isPending}
-            className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-white/15 dark:text-stone-200"
-          >
-            {isPending ? "Carregando..." : "Ver"}
-          </button>
-        </div>
-
-        {report ? (
-          <div className="mt-4">
-            <p className="text-lg font-bold text-zinc-900 dark:text-white">
-              {brl(report.totalCents)}{" "}
-              <span className="text-sm font-normal text-zinc-400">no período</span>
-            </p>
-            <ul className="mt-2 divide-y divide-zinc-100 text-sm dark:divide-white/5">
-              {report.byProfessional.map((row, i) => (
-                <li
-                  key={row.professionalId}
-                  style={riseIn(i)}
-                  className="animate-rise-in flex justify-between py-2"
-                >
-                  <span className="text-zinc-700 dark:text-stone-200">
-                    {row.name}{" "}
-                    <span className="text-zinc-400">({row.count})</span>
-                  </span>
-                  <span className="font-medium text-zinc-900 dark:text-white">
-                    {brl(row.totalCents)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
         ) : null}
       </section>
     </div>

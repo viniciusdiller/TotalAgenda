@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { CommissionReport } from "@totalagenda/shared-types";
 import { authedFetch } from "@/lib/api-server";
 import { ApiError } from "@/lib/api";
 import { moneyToCents, parseIntStrict } from "@/lib/masks";
@@ -42,12 +41,30 @@ export async function createCommissionRuleAction(
   return {};
 }
 
-export async function fetchCommissionReportAction(
-  from: string,
-  to: string,
-  professionalId?: string,
-): Promise<CommissionReport> {
-  const params = new URLSearchParams({ from, to });
-  if (professionalId) params.set("professionalId", professionalId);
-  return authedFetch<CommissionReport>(`/commissions/report?${params.toString()}`);
+export interface PayoutState {
+  error?: string;
+}
+
+// Registra um repasse. O valor digitado vira centavos com moneyToCents (estrito: texto mal
+// formado é erro pro usuário, NUNCA 0 em silêncio). O servidor recalcula o saldo e recusa acima dele.
+export async function registerPayoutAction(
+  professionalId: string,
+  amount: string,
+  note: string,
+): Promise<PayoutState> {
+  const amountCents = moneyToCents(amount);
+  if (amountCents === null || amountCents < 1) {
+    return { error: "Informe um valor válido (ex: 150,00)." };
+  }
+  try {
+    await authedFetch("/finance/commissions/payouts", {
+      method: "POST",
+      body: JSON.stringify({ professionalId, amountCents, note: note.trim() || undefined }),
+    });
+  } catch (err) {
+    return { error: err instanceof ApiError ? err.message : "Erro ao registrar o repasse." };
+  }
+  revalidatePath("/dashboard/comissoes");
+  revalidatePath("/dashboard/financeiro");
+  return {};
 }

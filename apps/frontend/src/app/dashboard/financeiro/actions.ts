@@ -62,23 +62,6 @@ export async function cancelEntryAction(id: string): Promise<FinanceActionState>
   return {};
 }
 
-export async function closeCommissionsAction(
-  from: string,
-  to: string,
-  dueDate: string,
-): Promise<FinanceActionState> {
-  try {
-    await authedFetch("/finance/commissions/close", {
-      method: "POST",
-      body: JSON.stringify({ from, to, dueDate }),
-    });
-  } catch (err) {
-    return fail(err);
-  }
-  revalidatePath("/dashboard/financeiro");
-  return {};
-}
-
 export async function fetchCashFlowAction(from: string, to: string): Promise<CashFlowReport> {
   return authedFetch<CashFlowReport>(
     `/finance/cash-flow?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
