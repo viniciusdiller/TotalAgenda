@@ -131,6 +131,54 @@ check("pagamento", r.status === 201, r);
 r = await call("POST", `/tickets/${ticketId}/close`, {}, T);
 check("fecha comanda", r.status === 201 && r.json?.status === "CLOSED", r);
 
+console.log("== faturamento por profissional e repasse (sem fechar período)");
+// Comanda acima: serviço R$ 45,90 (30% = 1.377 de comissão: o alvo exato vence a regra fixa), desconto R$ 5,00.
+const periodFrom = new Date(Date.now() - 3600e3).toISOString();
+const periodTo = new Date(Date.now() + 3600e3).toISOString();
+const earningsUrl = `/commissions/earnings?from=${encodeURIComponent(periodFrom)}&to=${encodeURIComponent(periodTo)}`;
+r = await call("GET", earningsUrl, undefined, T);
+let row = r.json?.professionals?.find((p) => p.professionalId === professionalId);
+check(
+  "earnings: bruto 4590, desconto 500, líquido 4090, repasse 1377, sobra 2713, saldo 1377",
+  r.status === 200 && row?.grossCents === 4590 && row?.discountCents === 500 && row?.netCents === 4090 &&
+    row?.commissionCents === 1377 && row?.houseCents === 2713 && row?.payableBalanceCents === 1377 && row?.ticketCount === 1,
+  r.json,
+);
+check("earnings: totais fecham com a linha", r.json?.totals?.grossCents === 4590 && r.json?.totals?.netCents === 4090, r.json?.totals);
+r = await call("POST", "/finance/commissions/payouts", { professionalId, amountCents: 1378 }, T);
+check("repasse acima do saldo → 400", r.status === 400 && /saldo/.test(JSON.stringify(r.json)), r);
+r = await call("POST", "/finance/commissions/payouts", { professionalId, amountCents: 0 }, T);
+check("repasse zero → 400", r.status === 400, r);
+r = await call("POST", "/finance/commissions/payouts", { professionalId: randomUUID(), amountCents: 100 }, T);
+check("repasse p/ profissional inexistente → 404", r.status === 404, r);
+r = await call("POST", "/finance/commissions/payouts", { professionalId, amountCents: 377, note: "  Pix  " }, T);
+check("repasse parcial de R$ 3,77 → 201 e saldo restante 1000", r.status === 201 && r.json?.balanceAfterCents === 1000, r);
+r = await call("GET", earningsUrl, undefined, T);
+row = r.json?.professionals?.find((p) => p.professionalId === professionalId);
+check("saldo cai para 1000; repasse do período segue 1377 (pagar não muda o que foi gerado)", row?.payableBalanceCents === 1000 && row?.commissionCents === 1377, row);
+r = await call("GET", "/finance/entries?direction=EXPENSE&status=PAID", undefined, T);
+check(
+  "o repasse virou despesa PAGA de comissão no Financeiro",
+  r.status === 200 && r.json.some((e) => e.source === "COMMISSION" && e.amountCents === 377 && /Repasse Pro Um/.test(e.description)),
+  r.json,
+);
+r = await call("GET", `/finance/commissions/payouts?professionalId=${professionalId}`, undefined, T);
+check("histórico de repasses paginado", r.status === 200 && r.json?.total === 1 && r.json?.items?.[0]?.amountCents === 377, r.json);
+r = await call("POST", "/finance/commissions/payouts", { professionalId, amountCents: 100 }, PT);
+check("profissional registrando repasse → 403 (OWNER-only)", r.status === 403, r);
+r = await call("GET", `${earningsUrl}&professionalId=${randomUUID()}`, undefined, PT);
+check(
+  "profissional vê só o próprio faturamento (ignora o professionalId da query)",
+  r.status === 200 && r.json?.professionals?.length === 1 && r.json.professionals[0].professionalId === professionalId,
+  r.json,
+);
+r = await call("POST", "/finance/commissions/close", { from: periodFrom, to: periodTo, dueDate: "2030-01-10" }, T);
+check("o antigo 'fechar comissões do período' não existe mais → 404", r.status === 404, r);
+r = await call("GET", "/commissions/earnings?from=1970-01-01T00:00:00Z&to=2100-01-01T00:00:00Z", undefined, T);
+check("intervalo acima de 366 dias → 400", r.status === 400, r);
+r = await call("GET", "/commissions/earnings", undefined, T);
+check("earnings sem from/to → 400", r.status === 400, r);
+
 console.log("== lista de espera");
 const waitPhone = "(31) 98888-" + String(stamp).slice(-4);
 r = await call("POST", "/public/consumer/register", { name: "Carla Espera", phone: waitPhone, email: `carla${stamp}@e2e.com`, password: "senha-carla-123", consent: true });
