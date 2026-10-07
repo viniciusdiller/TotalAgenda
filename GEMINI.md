@@ -76,7 +76,11 @@ Este documento consolida as regras de negócio, funcionamento dos data-layers e 
    - Testes de componentes usam Vitest e React Testing Library (`apps/frontend/src/**/*.test.tsx`).
    - Rotas de alto risco do dashboard possuem cobertura para confirmações destrutivas. Sempre que adicionar uma função crítica ou criar novas ações destrutivas, expanda a suíte do frontend. Ausência de spec em uma funcionalidade legada não é permissão para não testar a nova feature equivalente.
 
-## 6. Fluxo Git e Versionamento (Separação Rígida por Camada)
+## 6. Fluxo Git e Versionamento (Separação Rígida por Camada e Pipeline Pré-Commit)
+- **Pipeline Mandatório Pré-Commit (Ordem Inflexível):**
+  1. **Execução Real dos Testes:** Todos os testes unitários (backend e frontend com matriz completa de roles e IDOR) devem ser **de fato executados via terminal e passar 100%**.
+  2. **Execução da Build:** Somente após os testes passarem, rodar a `build` dos pacotes afetados (ex.: `pnpm --filter ... build` ou `pnpm build`) e garantir zero erros de compilação/tipagem.
+  3. **Commit Atômico:** Somente com testes e build 100% verdes, prosseguir para os commits. Se houver qualquer falha, NADA é commitado até a correção.
 - **Sempre crie uma branch** para uma nova feature (ex: `feat/...`, `fix/...`) e só realize o merge na main quando solicitado.
 - **SEPARAÇÃO ESTRITA DE COMMITS POR CAMADA (Zero agrupamento multi-camada):**
   - **É TERMINANTEMENTE PROIBIDO commitar Database, Backend e Frontend juntos no mesmo commit**, mesmo que façam parte da mesma feature.
