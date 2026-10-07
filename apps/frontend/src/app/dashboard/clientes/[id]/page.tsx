@@ -71,6 +71,71 @@ export default async function ClientDetailPage({
       </section>
 
       <section className="mt-10">
+        <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">Balanço e Estatísticas</h2>
+        <FieldHint>Resumo gerado automaticamente com base nas comandas e histórico.</FieldHint>
+        
+        {(() => {
+          const now = DateTime.now();
+          let visitsThisMonth = 0;
+          let totalSpentCents = 0;
+          const serviceCounts: Record<string, number> = {};
+
+          // Conta serviços e valores via comandas fechadas e abertas
+          for (const t of client.tickets) {
+            totalSpentCents += t.totalCents;
+            const dt = DateTime.fromISO(t.openedAt);
+            if (dt.hasSame(now, "month") && dt.hasSame(now, "year")) {
+              visitsThisMonth++;
+            }
+            for (const i of t.items) {
+              serviceCounts[i.description] = (serviceCounts[i.description] || 0) + i.quantity;
+            }
+          }
+
+          // Para capturar serviços agendados que não viraram comanda (depende da operação do salão)
+          for (const a of client.appointments) {
+            if (a.status === "COMPLETED" || a.status === "IN_SERVICE") {
+              // Se o mês for igual, e não quisermos somar com a comanda pra não duplicar,
+              // vamos usar a comanda como fonte de "visitas financeiras". 
+              // Mas adicionamos à contagem de favoritos:
+              for (const i of a.items) {
+                // Tenta não duplicar se a string do agendamento bater com o da comanda
+                if (!serviceCounts[i.service.name]) {
+                  serviceCounts[i.service.name] = 0;
+                }
+                // Em salões grandes, geralmente o que dita favorito é a intenção da agenda
+                serviceCounts[i.service.name] += 1; 
+              }
+            }
+          }
+
+          const topServices = Object.entries(serviceCounts).sort((a, b) => b[1] - a[1]);
+          const favoriteService = topServices.length > 0 ? topServices[0][0] : "-";
+
+          return (
+            <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-white/10 dark:bg-zinc-800/50">
+                <p className="text-xs font-medium text-zinc-500 dark:text-stone-400">Visitas Neste Mês</p>
+                <p className="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{visitsThisMonth}</p>
+              </div>
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-white/10 dark:bg-zinc-800/50">
+                <p className="text-xs font-medium text-zinc-500 dark:text-stone-400">Mais Realizado</p>
+                <p className="mt-1 truncate text-lg font-bold text-zinc-900 dark:text-white" title={favoriteService}>
+                  {favoriteService}
+                </p>
+              </div>
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-white/10 dark:bg-zinc-800/50">
+                <p className="text-xs font-medium text-zinc-500 dark:text-stone-400">Balanço Total</p>
+                <p className="mt-1 truncate text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                  {brl(totalSpentCents)}
+                </p>
+              </div>
+            </div>
+          );
+        })()}
+      </section>
+
+      <section className="mt-10">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">Anamnese</h2>
         <FieldHint>Perguntas de saúde e preferências feitas pela equipe. Clique em “Preencher” ou “Editar” em cada ficha.</FieldHint>
         <div className="mt-3">
