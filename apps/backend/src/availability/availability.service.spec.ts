@@ -20,11 +20,25 @@ describe("AvailabilityService", () => {
   let prisma: ReturnType<typeof buildPrismaMock>;
   let service: AvailabilityService;
 
+  beforeAll(() => {
+    jest.useFakeTimers();
+    // Fixamos o momento "agora" como 2024-01-01 às 06:00 BRT (09:00 UTC)
+    jest.setSystemTime(new Date("2024-01-01T09:00:00.000Z"));
+  });
+
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
   beforeEach(() => {
     prisma = buildPrismaMock();
     service = new AvailabilityService(prisma);
 
-    (prisma.tenant.findUnique as jest.Mock).mockResolvedValue({ id: "tenant-1" });
+    (prisma.tenant.findUnique as jest.Mock).mockResolvedValue({ 
+      id: "tenant-1",
+      minSchedulingLeadTimeMinutes: 0,
+      maxSchedulingLeadTimeDays: 365,
+    });
     (prisma.professional.findFirst as jest.Mock).mockResolvedValue({
       id: "prof-1",
       slotGranularityMinutes: 15,
@@ -150,5 +164,47 @@ describe("AvailabilityService", () => {
         }),
       }),
     );
+  });
+
+  it("não retorna slots cuja antecedência seja menor que minSchedulingLeadTimeMinutes", async () => {
+    (prisma.tenant.findUnique as jest.Mock).mockResolvedValue({ 
+      id: "tenant-1",
+      minSchedulingLeadTimeMinutes: 120, // 2 horas de antecedência
+      maxSchedulingLeadTimeDays: 365,
+    });
+    
+    // Configura a agenda para começar 08:00
+    (prisma.workingHours.findMany as jest.Mock).mockResolvedValue([
+      { startMinute: 480, endMinute: 600 }, // 08:00–10:00
+    ]);
+
+    // O "agora" é 06:30. Slots devem ter no mínimo 2h de antecedência (só a partir das 08:30).
+    jest.setSystemTime(new Date("2024-01-01T09:30:00.000Z")); // 06:30 BRT
+
+    const slots = await service.getAvailableSlots("slug", "prof-1", "svc-1", MONDAY);
+
+    // Candidatos possíveis: 08:00, 08:15, 08:30, 08:45, 09:00
+    // Rejeitados por antecedência < 120min (08:30): 08:00, 08:15
+    // Aceitos: 08:30, 08:45, 09:00
+    expect(slots).toHaveLength(3);
+    expect(slots[0].startAt).toContain("08:30:00");
+  });
+
+  it("retorna array vazio se o dia solicitado for além do maxSchedulingLeadTimeDays", async () => {
+    (prisma.tenant.findUnique as jest.Mock).mockResolvedValue({ 
+      id: "tenant-1",
+      minSchedulingLeadTimeMinutes: 0,
+      maxSchedulingLeadTimeDays: 5, // Limite de 5 dias
+    });
+
+    // Hoje é dia 01. Máximo é dia 06.
+    jest.setSystemTime(new Date("2024-01-01T09:00:00.000Z"));
+
+    // Solicitando para dia 08
+    const slots = await service.getAvailableSlots("slug", "prof-1", "svc-1", "2024-01-08");
+
+    // Deve retornar vazio e nem chamar o prisma.workingHours (otimização)
+    expect(slots).toHaveLength(0);
+    expect(prisma.workingHours.findMany).not.toHaveBeenCalled();
   });
 });
