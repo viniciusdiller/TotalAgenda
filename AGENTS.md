@@ -65,6 +65,8 @@ Este documento consolida as regras de negócio, funcionamento dos data-layers e 
 
 ## 5. Regras de Testes e Qualidade (Obrigatório)
 1. **Regra Ouro de Testes**: Validação de segurança, tratamento de erros em limites (boundaries) e cenários críticos transacionais **têm que ter testes**. Nunca podem ser cortados por motivos de "simplicidade".
+   - **SEMPRE que houver uma nova feature, adicione testes unitários para ela**.
+   - Os testes **precisam garantir e simular tentativas de falhas de segurança**: Teste acessos por todos os papéis (roles) possíveis e simule a tentativa de um dono (tenantId) acessar ou manipular dados de um recurso atrelado a outro dono.
 2. **Backend (Jest)**:
    - Services cobertos com testes unitários usando o Prisma mockado (`*.spec.ts` ao lado do arquivo com `jest` + `ts-jest`).
 3. **E2E e Smoke Tests**:
@@ -73,3 +75,8 @@ Este documento consolida as regras de negócio, funcionamento dos data-layers e 
    - Os testes e2e usam Playwright (`apps/frontend/e2e/`).
    - Testes de componentes usam Vitest e React Testing Library (`apps/frontend/src/**/*.test.tsx`).
    - Rotas de alto risco do dashboard possuem cobertura para confirmações destrutivas. Sempre que adicionar uma função crítica ou criar novas ações destrutivas, expanda a suíte do frontend. Ausência de spec em uma funcionalidade legada não é permissão para não testar a nova feature equivalente.
+
+## 6. Fluxo Git e Versionamento
+- **Sempre crie uma branch** para uma nova feature (ex: `feat/...`, `fix/...`) e só realize o merge na main quando solicitado.
+- Faça **commits segmentados e organizados** dos arquivos alterados em vez de um único commit com todas as mudanças de uma vez.
+- Ao finalizar os testes e a feature na branch local, envie-a para o repositório remoto (GitHub) e aguarde o comando para prosseguir com o merge.
