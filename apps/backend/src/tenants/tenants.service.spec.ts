@@ -90,6 +90,23 @@ describe("TenantsService", () => {
         }),
       });
     });
+
+    it("previne IDOR garantindo que o update ocorra estritamente no ID do salão autenticado", async () => {
+      // Regra de Segurança: Em /tenants/me, não confiamos em um ID enviado no payload pelo front.
+      // A chamada do banco é engessada com o ID extraído localmente pela camada de Auth.
+      (prisma.tenant.update as jest.Mock).mockResolvedValue({});
+
+      await service.updateProfile("tenant-logado-seguro", {
+        minSchedulingLeadTimeMinutes: 50,
+      } as any);
+
+      expect(prisma.tenant.update).toHaveBeenCalledWith({
+        where: { id: "tenant-logado-seguro" }, // <- a garantia anti-IDOR no banco
+        data: expect.objectContaining({
+          minSchedulingLeadTimeMinutes: 50,
+        }),
+      });
+    });
   });
 
   describe("getMarketplaceSettings", () => {
