@@ -3,6 +3,9 @@ import "server-only";
 import { authedFetch } from "@/lib/api-server";
 
 export interface GeneralBalanceReport {
+  totalRevenueCents: number;
+  totalTickets: number;
+  averageTicketCents: number;
   totalServices: number;
   mostRequestedService: { name: string; count: number } | null;
   totalProducts: number;

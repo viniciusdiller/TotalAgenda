@@ -18,8 +18,18 @@ export class ReportsService {
       },
       select: {
         id: true,
+        discountCents: true,
+        items: { select: { unitPriceCents: true, quantity: true } }
       },
     });
+
+    let totalRevenueCents = 0;
+    for (const t of closedTickets) {
+      const subtotal = t.items.reduce((sum, i) => sum + i.unitPriceCents * i.quantity, 0);
+      totalRevenueCents += Math.max(0, subtotal - t.discountCents);
+    }
+    const totalTickets = closedTickets.length;
+    const averageTicketCents = totalTickets > 0 ? Math.floor(totalRevenueCents / totalTickets) : 0;
 
     const ticketIds = closedTickets.map((t) => t.id);
 
@@ -84,6 +94,9 @@ export class ReportsService {
     }
 
     return {
+      totalRevenueCents,
+      totalTickets,
+      averageTicketCents,
       totalServices,
       mostRequestedService,
       totalProducts,
