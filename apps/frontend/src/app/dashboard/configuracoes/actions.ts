@@ -50,6 +50,12 @@ export async function updateTenantProfileAction(
         showTeam: formData.get("showTeam") === "on",
         showGallery: formData.get("showGallery") === "on",
         showContact: formData.get("showContact") === "on",
+        minSchedulingLeadTimeMinutes: formData.get("minSchedulingLeadTimeMinutes") 
+          ? parseInt(String(formData.get("minSchedulingLeadTimeMinutes")), 10) 
+          : undefined,
+        maxSchedulingLeadTimeDays: formData.get("maxSchedulingLeadTimeDays") 
+          ? parseInt(String(formData.get("maxSchedulingLeadTimeDays")), 10) 
+          : undefined,
       }),
     });
   } catch (error) {

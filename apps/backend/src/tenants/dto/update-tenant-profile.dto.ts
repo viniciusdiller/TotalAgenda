@@ -1,5 +1,5 @@
 import { Trim } from "../../common/decorators/trim.decorator";
-import { IsBoolean, IsOptional, IsString, Matches, MaxLength, ValidateIf } from "class-validator";
+import { IsBoolean, IsInt, IsOptional, IsString, Matches, MaxLength, Min, ValidateIf } from "class-validator";
 
 export class UpdateTenantProfileDto {
   @IsOptional()
@@ -62,4 +62,14 @@ export class UpdateTenantProfileDto {
   @IsOptional()
   @IsBoolean()
   showContact?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  minSchedulingLeadTimeMinutes?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  maxSchedulingLeadTimeDays?: number;
 }

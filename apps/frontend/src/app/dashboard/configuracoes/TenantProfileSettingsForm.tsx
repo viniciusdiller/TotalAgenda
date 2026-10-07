@@ -33,6 +33,8 @@ interface TenantProfile {
   showTeam: boolean;
   showGallery: boolean;
   showContact: boolean;
+  minSchedulingLeadTimeMinutes: number;
+  maxSchedulingLeadTimeDays: number;
 }
 
 const SECTION_TOGGLES = [
@@ -230,6 +232,29 @@ export function TenantProfileSettingsForm({ tenant }: { tenant: TenantProfile })
           <p className="text-xs text-zinc-400 dark:text-stone-500">
             Uma seção só aparece se também tiver conteúdo cadastrado.
           </p>
+        </div>
+
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <div className="flex-1">
+            <Input
+              type="number"
+              min="0"
+              label="Antecedência mínima (minutos)"
+              name="minSchedulingLeadTimeMinutes"
+              defaultValue={tenant.minSchedulingLeadTimeMinutes ?? 120}
+              hint="Ex: 120 para não permitirem agendar com menos de 2h."
+            />
+          </div>
+          <div className="flex-1">
+            <Input
+              type="number"
+              min="1"
+              label="Agenda aberta por (dias)"
+              name="maxSchedulingLeadTimeDays"
+              defaultValue={tenant.maxSchedulingLeadTimeDays ?? 60}
+              hint="Ex: 60 para não marcarem muito para o futuro."
+            />
+          </div>
         </div>
 
         {profileState?.error ? (

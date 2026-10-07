@@ -41,6 +41,8 @@ export class TenantsService {
         showTeam: true,
         showGallery: true,
         showContact: true,
+        minSchedulingLeadTimeMinutes: true,
+        maxSchedulingLeadTimeDays: true,
         galleryImages: { orderBy: { position: "asc" } },
       },
     });
@@ -65,6 +67,8 @@ export class TenantsService {
         showTeam: true,
         showGallery: true,
         showContact: true,
+        minSchedulingLeadTimeMinutes: true,
+        maxSchedulingLeadTimeDays: true,
         galleryImages: {
           select: { id: true, url: true },
           orderBy: { position: "asc" },

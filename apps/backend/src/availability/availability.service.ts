@@ -33,7 +33,7 @@ export class AvailabilityService {
   ): Promise<AvailableSlot[]> {
     const tenant = await this.prisma.tenant.findUnique({
       where: { slug: tenantSlug },
-      select: { id: true },
+      select: { id: true, minSchedulingLeadTimeMinutes: true, maxSchedulingLeadTimeDays: true },
     });
     if (!tenant) {
       throw new NotFoundException("Negócio não encontrado.");
@@ -46,8 +46,6 @@ export class AvailabilityService {
       throw new NotFoundException("Profissional não encontrado.");
     }
 
-    // findFirst com o tenantId do serviço na própria cláusula WHERE (não findUnique + checagem
-    // em JS depois) — evita a janela de IDOR que a checagem posterior abriria.
     const professionalService = await this.prisma.professionalService.findFirst({
       where: {
         professionalId,
@@ -68,6 +66,16 @@ export class AvailabilityService {
     if (!dayStart.isValid) {
       throw new BadRequestException("Data inválida.");
     }
+
+    const now = DateTime.now().setZone(TENANT_TIMEZONE);
+    const minLeadTimeBoundary = now.plus({ minutes: tenant.minSchedulingLeadTimeMinutes });
+    const maxLeadTimeBoundary = now.startOf("day").plus({ days: tenant.maxSchedulingLeadTimeDays }).endOf("day");
+
+    // Rejeitar dia inteiro se estiver no passado (antes de hoje) ou depois do limite máximo
+    if (dayStart < now.startOf("day") || dayStart > maxLeadTimeBoundary) {
+      return [];
+    }
+
     const dayEnd = dayStart.plus({ days: 1 });
     const weekday = WEEKDAY_BY_LUXON_INDEX[dayStart.weekday % 7];
 
@@ -78,7 +86,6 @@ export class AvailabilityService {
       this.prisma.appointment.findMany({
         where: {
           professionalId,
-          // Estados que ocupam a agenda (mesmo conjunto do WHERE da constraint EXCLUDE).
           status: { in: ["SCHEDULED", "CONFIRMED", "IN_SERVICE"] },
           startAt: { lt: dayEnd.toJSDate() },
           endAt: { gt: dayStart.toJSDate() },
@@ -100,10 +107,7 @@ export class AvailabilityService {
       endMinute: Math.ceil(DateTime.fromJSDate(item.endAt).diff(dayStart, "minutes").minutes),
     }));
 
-    const now = DateTime.now().setZone(TENANT_TIMEZONE);
-    const isToday = dayStart.hasSame(now, "day");
     const granularity = professional.slotGranularityMinutes;
-
     const slots: AvailableSlot[] = [];
 
     for (const interval of workingHours) {
@@ -115,7 +119,7 @@ export class AvailabilityService {
         const candidateEnd = candidateStart + durationMinutes;
         const candidateStartAt = dayStart.plus({ minutes: candidateStart });
 
-        if (isToday && candidateStartAt <= now) {
+        if (candidateStartAt < minLeadTimeBoundary) {
           continue;
         }
 

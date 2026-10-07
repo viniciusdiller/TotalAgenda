@@ -162,6 +162,10 @@ model Tenant {
   longitude           Float?
   priceRange          Int?   // 1..4 ($ a $$$$)
 
+  // Limites de agendamento público (antecedência e horizonte máximo)
+  minSchedulingLeadTimeMinutes Int @default(120) // mínimo de 2 horas de antecedência
+  maxSchedulingLeadTimeDays    Int @default(60)  // agenda aberta por no máximo 60 dias
+
   users         User[]
   professionals Professional[]
   services      Service[]
