@@ -33,6 +33,7 @@ import { MarketplaceModule } from "./marketplace/marketplace.module";
 import { ReviewsModule } from "./reviews/reviews.module";
 import { SignupModule } from "./signup/signup.module";
 import { InternalModule } from "./internal/internal.module";
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { InternalModule } from "./internal/internal.module";
     ReviewsModule,
     SignupModule,
     InternalModule,
+    ReportsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ClientIpThrottlerGuard },
