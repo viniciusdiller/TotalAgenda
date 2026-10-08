@@ -39,7 +39,7 @@ export default async function ComandaDetailPage({
   ]);
 
   return (
-    <div className="max-w-3xl">
+    <div className="mx-auto w-full max-w-7xl">
       <Link
         href="/dashboard/comandas"
         className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900 dark:text-stone-400 dark:hover:text-white"

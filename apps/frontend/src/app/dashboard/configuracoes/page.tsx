@@ -40,7 +40,7 @@ export default async function ConfiguracoesPage() {
   const tenant = await authedFetch<TenantMe>("/tenants/me");
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-7xl">
       <PageHeader
         title="Configurações"
         description={
@@ -54,22 +54,27 @@ export default async function ConfiguracoesPage() {
         }
       />
 
-      <HowItWorks>
-        <p>
-          Esta tela controla <strong>o que o cliente vê na sua página pública</strong>, a que
-          ele abre para agendar.
-        </p>
-        <ul className="list-disc space-y-1 pl-5">
-          <li>Descrição, endereço, horário e contatos aparecem na página. WhatsApp e Instagram viram botões.</li>
-          <li><strong>Seções visíveis</strong> liga e desliga blocos (serviços, equipe, galeria, contato). Uma seção só aparece se tiver conteúdo cadastrado.</li>
-          <li>A <strong>galeria</strong> aceita até 12 fotos. Passe o mouse numa foto para removê-la.</li>
-          <li>Esta tela não altera plano nem cobrança; isso fica em Plano e cobrança.</li>
-        </ul>
-      </HowItWorks>
+      <div className="mt-6 grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+        <div className="flex flex-col gap-6 lg:col-span-5 xl:col-span-4">
+          <HowItWorks>
+            <p>
+              Esta tela controla <strong>o que o cliente vê na sua página pública</strong>, a que
+              ele abre para agendar.
+            </p>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>Descrição, endereço, horário e contatos aparecem na página. WhatsApp e Instagram viram botões.</li>
+              <li><strong>Seções visíveis</strong> liga e desliga blocos (serviços, equipe, galeria, contato). Uma seção só aparece se tiver conteúdo cadastrado.</li>
+              <li>A <strong>galeria</strong> aceita até 12 fotos. Passe o mouse numa foto para removê-la.</li>
+              <li>Esta tela não altera plano nem cobrança; isso fica em Plano e cobrança.</li>
+            </ul>
+          </HowItWorks>
 
-      <div className="mt-6 flex flex-col gap-8">
-        <TenantProfileSettingsForm tenant={tenant} />
-        <GalleryManager images={tenant.galleryImages} />
+          <TenantProfileSettingsForm tenant={tenant} />
+        </div>
+
+        <div className="flex min-w-0 flex-col lg:col-span-7 xl:col-span-8">
+          <GalleryManager images={tenant.galleryImages} />
+        </div>
       </div>
     </div>
   );

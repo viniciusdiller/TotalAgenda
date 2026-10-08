@@ -61,7 +61,7 @@ export default async function PlanoPage({ searchParams }: { searchParams: Promis
   ]);
 
   return (
-    <div className="max-w-5xl">
+    <div className="mx-auto w-full max-w-7xl">
       <PageHeader
         title="Plano e cobrança"
         description="Escolha o plano do seu negócio e gerencie o pagamento."
@@ -88,45 +88,49 @@ export default async function PlanoPage({ searchParams }: { searchParams: Promis
           Não foi possível carregar as informações do seu plano agora. Tente novamente em instantes.
         </p>
       ) : (
-        <>
-          <section className="mt-6 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-900">
-            <p className="text-sm text-zinc-700 dark:text-stone-200">{statusSummary(billing)}</p>
-            {isOwner && canOpenPortal(billing) ? (
-              <div className="mt-4">
-                <PortalButton label={billing.status === "PAST_DUE" || billing.status === "UNPAID" ? "Regularizar pagamento" : "Gerenciar pagamento"} />
-              </div>
-            ) : null}
-            {!isOwner ? (
-              <p className="mt-3 text-sm text-zinc-500 dark:text-stone-400">
-                Só o dono do negócio pode alterar o plano e o pagamento.
+        <div className="mt-8 grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+          <div className="flex flex-col gap-6 lg:col-span-7 xl:col-span-8">
+            <section className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-900">
+              <p className="text-sm text-zinc-700 dark:text-stone-200">{statusSummary(billing)}</p>
+              {isOwner && canOpenPortal(billing) ? (
+                <div className="mt-4">
+                  <PortalButton label={billing.status === "PAST_DUE" || billing.status === "UNPAID" ? "Regularizar pagamento" : "Gerenciar pagamento"} />
+                </div>
+              ) : null}
+              {!isOwner ? (
+                <p className="mt-3 text-sm text-zinc-500 dark:text-stone-400">
+                  Só o dono do negócio pode alterar o plano e o pagamento.
+                </p>
+              ) : null}
+            </section>
+
+            <HowItWorks>
+              <p>
+                O plano define <strong>quantos profissionais ativos</strong> você pode ter. Todas as
+                contas começam com um período de teste, sem cartão.
               </p>
-            ) : null}
-          </section>
+              <ul className="list-disc space-y-1 pl-5">
+                <li>Ao fim do teste, o painel é bloqueado até você assinar um plano.</li>
+                <li><strong>Gerenciar pagamento</strong> abre o portal seguro da Stripe, onde você troca o cartão, vê faturas e cancela.</li>
+                <li><strong>Trocar de plano</strong> vale na hora, com crédito ou cobrança proporcional. Se o novo plano tiver menos vagas, você escolhe quais profissionais desativar (só quem não tem atendimentos futuros).</li>
+                <li>Cancelando, você mantém o acesso até o fim do período já pago.</li>
+              </ul>
+            </HowItWorks>
+          </div>
 
-          <HowItWorks>
-            <p>
-              O plano define <strong>quantos profissionais ativos</strong> você pode ter. Todas as
-              contas começam com um período de teste, sem cartão.
-            </p>
-            <ul className="list-disc space-y-1 pl-5">
-              <li>Ao fim do teste, o painel é bloqueado até você assinar um plano.</li>
-              <li><strong>Gerenciar pagamento</strong> abre o portal seguro da Stripe, onde você troca o cartão, vê faturas e cancela.</li>
-              <li><strong>Trocar de plano</strong> vale na hora, com crédito ou cobrança proporcional. Se o novo plano tiver menos vagas, você escolhe quais profissionais desativar (só quem não tem atendimentos futuros).</li>
-              <li>Cancelando, você mantém o acesso até o fim do período já pago.</li>
-            </ul>
-          </HowItWorks>
-
-          <section className="mt-8">
-            <h2 className="font-display text-lg font-semibold text-zinc-900 dark:text-white">Planos</h2>
-            <div className="mt-4">
-              <PlanCards plans={plans} billing={billing} isOwner={isOwner} suggestedTier={suggestedTier} />
-            </div>
-            <p className="mt-4 text-xs text-zinc-500 dark:text-stone-400">
-              Cobrança mensal no cartão, processada pela Stripe. Você pode cancelar quando quiser e mantém o acesso
-              até o fim do período pago.
-            </p>
-          </section>
-        </>
+          <div className="flex flex-col gap-6 lg:col-span-5 xl:col-span-4 lg:sticky lg:top-24">
+            <section>
+              <h2 className="font-display text-lg font-semibold text-zinc-900 dark:text-white">Planos</h2>
+              <div className="mt-4">
+                <PlanCards plans={plans} billing={billing} isOwner={isOwner} suggestedTier={suggestedTier} />
+              </div>
+              <p className="mt-4 text-xs text-zinc-500 dark:text-stone-400">
+                Cobrança mensal no cartão, processada pela Stripe. Você pode cancelar quando quiser e mantém o acesso
+                até o fim do período pago.
+              </p>
+            </section>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -17,34 +17,40 @@ export default async function MarketplacePage() {
   ]);
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto w-full max-w-7xl">
       <PageHeader
         title="Marketplace"
         description="Apareça no portal de descoberta e modere as avaliações dos clientes."
       />
 
-      <HowItWorks>
-        <p>
-          O marketplace (<code>/descobrir</code>) é um portal público onde pessoas
-          <strong> procuram salões por serviço, cidade ou bairro</strong>. Se você ativar,
-          seu negócio aparece nos resultados.
-        </p>
-        <ul className="list-disc space-y-1 pl-5">
-          <li>Vem <strong>desligado</strong> por padrão e não afeta plano nem cobrança.</li>
-          <li>Preencha cidade, bairro, categorias e faixa de preço para ser encontrado nas buscas.</li>
-          <li>Em <strong>Avaliações</strong> você vê o que os clientes escreveram. Pode <strong>ocultar</strong> (some da página pública; hoje não dá para reexibir) ou <strong>denunciar</strong> com um motivo.</li>
-        </ul>
-      </HowItWorks>
+      <div className="mt-6 grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+        <div className="flex flex-col gap-6 lg:col-span-5 xl:col-span-4">
+          <HowItWorks>
+            <p>
+              O marketplace (<code>/descobrir</code>) é um portal público onde pessoas
+              <strong> procuram salões por serviço, cidade ou bairro</strong>. Se você ativar,
+              seu negócio aparece nos resultados.
+            </p>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>Vem <strong>desligado</strong> por padrão e não afeta plano nem cobrança.</li>
+              <li>Preencha cidade, bairro, categorias e faixa de preço para ser encontrado nas buscas.</li>
+              <li>Em <strong>Avaliações</strong> você vê o que os clientes escreveram. Pode <strong>ocultar</strong> (some da página pública; hoje não dá para reexibir) ou <strong>denunciar</strong> com um motivo.</li>
+            </ul>
+          </HowItWorks>
 
-      <section className="mt-6">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">Listagem</h2>
-        <MarketplaceSettings settings={settings} />
-      </section>
+          <section>
+            <h2 className="mb-4 text-sm font-semibold text-zinc-900 dark:text-white">Listagem</h2>
+            <MarketplaceSettings settings={settings} />
+          </section>
+        </div>
 
-      <section className="mt-10">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">Avaliações</h2>
-        <ReviewsModeration reviews={reviews} />
-      </section>
+        <div className="flex min-w-0 flex-col lg:col-span-7 xl:col-span-8">
+          <section>
+            <h2 className="mb-4 text-sm font-semibold text-zinc-900 dark:text-white">Avaliações</h2>
+            <ReviewsModeration reviews={reviews} />
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

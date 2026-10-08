@@ -53,7 +53,7 @@ export function PlanCards({
 
   return (
     <div>
-      <ul className="grid gap-4 md:grid-cols-3">
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-1">
         {plans.map((plan, i) => {
           const action = planCardAction(billing, plan.tier);
           const isSuggested = plan.tier === suggestedTier && action !== "CURRENT";

@@ -35,46 +35,50 @@ export default async function WaitlistPage() {
   );
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-7xl">
       <PageHeader
         title="Lista de espera"
         description="Clientes aguardando um horário livre. Entre em contato quando abrir uma vaga."
       />
 
-      <HowItWorks>
-        <p>
-          Quando o horário que o cliente quer está cheio, ele pode entrar na lista de espera
-          pela sua página pública. Aqui você vê quem está esperando e para qual serviço.
-        </p>
-        <ul className="list-disc space-y-1 pl-5">
-          <li>O sistema <strong>não avisa o cliente sozinho</strong>: quando abrir uma vaga, ligue ou chame no WhatsApp.</li>
-          <li><strong>Marcar como contatado</strong> só registra que você já falou com ele; ele continua na lista.</li>
-          <li><strong>Resolver</strong> tira da lista (ele agendou ou desistiu).</li>
-        </ul>
-      </HowItWorks>
-
-      {entries.length === 0 ? (
-        <div className="mt-8">
-          <EmptyState
-            icon={ClockCounterClockwise}
-            title="Ninguém na lista de espera"
-            description="Clientes aguardando horário aparecem aqui assim que forem adicionados."
-          />
+      <div className="mt-6 grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+        <div className="flex flex-col gap-6 lg:col-span-5 xl:col-span-4">
+          <HowItWorks>
+            <p>
+              Quando o horário que o cliente quer está cheio, ele pode entrar na lista de espera
+              pela sua página pública. Aqui você vê quem está esperando e para qual serviço.
+            </p>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>O sistema <strong>não avisa o cliente sozinho</strong>: quando abrir uma vaga, ligue ou chame no WhatsApp.</li>
+              <li><strong>Marcar como contatado</strong> só registra que você já falou com ele; ele continua na lista.</li>
+              <li><strong>Resolver</strong> tira da lista (ele agendou ou desistiu).</li>
+            </ul>
+          </HowItWorks>
         </div>
-      ) : (
-        <ul className="mt-8 flex flex-col divide-y divide-zinc-200 dark:divide-white/10">
-          {entries.map((entry, i) => (
-            <WaitlistRow
-              key={entry.id}
-              id={entry.id}
-              clientName={entry.clientName}
-              clientPhone={entry.clientPhone}
-              serviceName={entry.service.name}
-              index={i}
+
+        <div className="flex min-w-0 flex-col lg:col-span-7 xl:col-span-8">
+          {entries.length === 0 ? (
+            <EmptyState
+              icon={ClockCounterClockwise}
+              title="Ninguém na lista de espera"
+              description="Clientes aguardando horário aparecem aqui assim que forem adicionados."
             />
-          ))}
-        </ul>
-      )}
+          ) : (
+            <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-white/10">
+              {entries.map((entry, i) => (
+                <WaitlistRow
+                  key={entry.id}
+                  id={entry.id}
+                  clientName={entry.clientName}
+                  clientPhone={entry.clientPhone}
+                  serviceName={entry.service.name}
+                  index={i}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

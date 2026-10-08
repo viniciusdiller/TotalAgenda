@@ -73,122 +73,130 @@ function StockControl({ product }: { product: AdminProduct }) {
   );
 }
 
-export function ProductsManager({ products }: { products: AdminProduct[] }) {
+export function ProductsManager({ products, children }: { products: AdminProduct[]; children?: React.ReactNode }) {
   const [state, formAction, pending] = useActionState(createProductAction, initial);
   const [showForm, setShowForm] = useState(false);
   const [, startTransition] = useTransition();
   const [confirmingDeactivate, setConfirmingDeactivate] = useState<AdminProduct | null>(null);
 
   return (
-    <div className="mt-6">
-      {showForm ? (
-        <form
-          action={formAction}
-          className="mb-6 grid gap-3 rounded-2xl border border-zinc-200 p-4 sm:grid-cols-2 dark:border-white/10"
-        >
-          <Input label="Nome" name="name" required minLength={2} maxLength={120} />
-          <Input label="SKU (opcional)" name="sku" maxLength={60} hint="Seu código interno ou o código de barras, para achar o produto depois." />
-          <MaskedInput mask="money" label="Preço de venda (R$)" name="price" required hint="O que o cliente paga. É copiado para a comanda na hora da venda." />
-          <MaskedInput mask="money" label="Custo (R$, opcional)" name="cost" hint="O que você paga por unidade. Entra no cálculo do lucro (CMV)." />
-          <Input label="Estoque inicial" name="initialStock" type="number" min={0} max={1000000} step={1} hint="Quantas unidades você tem agora. Depois use entrada e saída." />
-          {state.error ? (
-            <p className="text-sm text-red-600 sm:col-span-2 dark:text-red-400">{state.error}</p>
-          ) : null}
-          <div className="flex gap-2 sm:col-span-2">
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-full bg-accent-500 px-5 py-2 text-sm font-semibold text-white hover:bg-accent-600 disabled:opacity-50"
+    <div className="mt-6 grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+      <div className="flex flex-col gap-6 lg:col-span-5 xl:col-span-4">
+        {children}
+
+        <div>
+          {showForm ? (
+            <form
+              action={formAction}
+              className="grid gap-3 rounded-2xl border border-zinc-200 p-4 sm:grid-cols-2 dark:border-white/10"
             >
-              {pending ? "Salvando..." : "Cadastrar"}
-            </button>
+              <Input label="Nome" name="name" required minLength={2} maxLength={120} />
+              <Input label="SKU (opcional)" name="sku" maxLength={60} hint="Seu código interno ou o código de barras, para achar o produto depois." />
+              <MaskedInput mask="money" label="Preço de venda (R$)" name="price" required hint="O que o cliente paga. É copiado para a comanda na hora da venda." />
+              <MaskedInput mask="money" label="Custo (R$, opcional)" name="cost" hint="O que você paga por unidade. Entra no cálculo do lucro (CMV)." />
+              <Input label="Estoque inicial" name="initialStock" type="number" min={0} max={1000000} step={1} hint="Quantas unidades você tem agora. Depois use entrada e saída." />
+              {state.error ? (
+                <p className="text-sm text-red-600 sm:col-span-2 dark:text-red-400">{state.error}</p>
+              ) : null}
+              <div className="mt-2 flex gap-2 sm:col-span-2">
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="rounded-full bg-accent-500 px-5 py-2 text-sm font-semibold text-white hover:bg-accent-600 disabled:opacity-50"
+                >
+                  {pending ? "Salvando..." : "Cadastrar"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="rounded-full border border-zinc-300 px-5 py-2 text-sm dark:border-white/15 dark:text-stone-200"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          ) : (
             <button
               type="button"
-              onClick={() => setShowForm(false)}
-              className="rounded-full border border-zinc-300 px-5 py-2 text-sm dark:border-white/15 dark:text-stone-200"
+              onClick={() => setShowForm(true)}
+              className="inline-flex items-center gap-2 rounded-full bg-accent-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-600"
             >
-              Cancelar
+              <Plus size={16} weight="bold" />
+              Novo produto
             </button>
-          </div>
-        </form>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setShowForm(true)}
-          className="mb-6 inline-flex items-center gap-2 rounded-full bg-accent-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-600"
-        >
-          <Plus size={16} weight="bold" />
-          Novo produto
-        </button>
-      )}
-
-      {products.length === 0 ? (
-        <EmptyState
-          icon={Package}
-          title="Nenhum produto cadastrado"
-          description="Use o botão acima pra cadastrar o primeiro."
-        />
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead className="text-left text-xs text-zinc-400">
-              <tr className="border-b border-zinc-200 dark:border-white/10">
-                <th className="py-2">Produto</th>
-                <th className="py-2">Preço</th>
-                <th className="py-2">Estoque</th>
-                <th className="py-2">Movimentar</th>
-                <th className="py-2"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
-              {products.map((product, i) => (
-                <tr
-                  key={product.id}
-                  style={riseIn(i)}
-                  className={clsx("animate-rise-in", !product.isActive && "opacity-50")}
-                >
-                  <td className="py-2.5 font-medium text-zinc-900 dark:text-white">
-                    {product.name}
-                    {product.sku ? (
-                      <span className="ml-2 text-xs text-zinc-400">{product.sku}</span>
-                    ) : null}
-                  </td>
-                  <td className="py-2.5 text-zinc-600 dark:text-stone-300">
-                    {brl(product.priceCents)}
-                  </td>
-                  <td
-                    className={
-                      product.stock <= 0
-                        ? "py-2.5 font-semibold text-red-600 dark:text-red-400"
-                        : "py-2.5 text-zinc-600 dark:text-stone-300"
-                    }
-                  >
-                    {product.stock}
-                  </td>
-                  <td className="py-2.5">
-                    <StockControl product={product} />
-                  </td>
-                  <td className="py-2.5 text-right">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        product.isActive
-                          ? setConfirmingDeactivate(product)
-                          : startTransition(() => {
-                              void updateProductAction(product.id, { isActive: true });
-                            })
-                      }
-                      className="text-xs font-medium text-zinc-400 hover:text-zinc-700 dark:hover:text-stone-200"
-                    >
-                      {product.isActive ? "Desativar" : "Ativar"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          )}
         </div>
-      )}
+      </div>
+
+      <div className="flex min-w-0 flex-col lg:col-span-7 xl:col-span-8">
+        {products.length === 0 ? (
+          <EmptyState
+            icon={Package}
+            title="Nenhum produto cadastrado"
+            description="Use o botão ao lado pra cadastrar o primeiro."
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-sm">
+              <thead className="text-left text-xs text-zinc-400">
+                <tr className="border-b border-zinc-200 dark:border-white/10">
+                  <th className="py-2">Produto</th>
+                  <th className="py-2">Preço</th>
+                  <th className="py-2">Estoque</th>
+                  <th className="py-2">Movimentar</th>
+                  <th className="py-2"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
+                {products.map((product, i) => (
+                  <tr
+                    key={product.id}
+                    style={riseIn(i)}
+                    className={clsx("animate-rise-in", !product.isActive && "opacity-50")}
+                  >
+                    <td className="py-2.5 font-medium text-zinc-900 dark:text-white">
+                      {product.name}
+                      {product.sku ? (
+                        <span className="ml-2 text-xs text-zinc-400">{product.sku}</span>
+                      ) : null}
+                    </td>
+                    <td className="py-2.5 text-zinc-600 dark:text-stone-300">
+                      {brl(product.priceCents)}
+                    </td>
+                    <td
+                      className={
+                        product.stock <= 0
+                          ? "py-2.5 font-semibold text-red-600 dark:text-red-400"
+                          : "py-2.5 text-zinc-600 dark:text-stone-300"
+                      }
+                    >
+                      {product.stock}
+                    </td>
+                    <td className="py-2.5">
+                      <StockControl product={product} />
+                    </td>
+                    <td className="py-2.5 text-right">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          product.isActive
+                            ? setConfirmingDeactivate(product)
+                            : startTransition(() => {
+                                void updateProductAction(product.id, { isActive: true });
+                              })
+                        }
+                        className="text-xs font-medium text-zinc-400 hover:text-zinc-700 dark:hover:text-stone-200"
+                      >
+                        {product.isActive ? "Desativar" : "Ativar"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       <ConfirmDialog
         open={confirmingDeactivate !== null}
