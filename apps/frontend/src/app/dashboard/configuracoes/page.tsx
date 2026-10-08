@@ -21,6 +21,8 @@ interface TenantMe {
   showGallery: boolean;
   showContact: boolean;
   galleryImages: { id: string; url: string }[];
+  minSchedulingLeadTimeMinutes: number;
+  maxSchedulingLeadTimeDays: number;
 }
 
 export default async function ConfiguracoesPage() {

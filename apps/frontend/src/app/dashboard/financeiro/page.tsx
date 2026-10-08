@@ -32,7 +32,7 @@ export default async function FinanceiroPage() {
   ]);
 
   return (
-    <div className="max-w-3xl">
+    <div className="mx-auto w-full max-w-7xl">
       <PageHeader
         title="Financeiro"
         description="Receitas das comandas entram automáticas. Despesas e contas a pagar você lança aqui."

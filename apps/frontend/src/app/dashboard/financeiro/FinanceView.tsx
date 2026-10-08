@@ -144,55 +144,36 @@ export function FinanceView({
   }
 
   return (
-    <div className="mt-6">
-      <div className="grid gap-3 sm:grid-cols-4">
-        <Card
-          label="A receber"
-          value={brl(overview.receivableCents)}
-          hint={overview.receivableOverdueCents ? `${brl(overview.receivableOverdueCents)} vencido` : undefined}
-        />
-        <Card
-          label="A pagar"
-          value={brl(overview.payableCents)}
-          hint={overview.payableOverdueCents ? `${brl(overview.payableOverdueCents)} vencido` : undefined}
-        />
-        <Card label="Entrou no mês" value={brl(overview.monthIncomeCents)} />
-        <Card label="Resultado do mês" value={brl(overview.monthNetCents)} />
-      </div>
+    <div className="mt-6 grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+      <div className="flex flex-col gap-6 lg:col-span-5 xl:col-span-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Card
+            label="A receber"
+            value={brl(overview.receivableCents)}
+            hint={overview.receivableOverdueCents ? `${brl(overview.receivableOverdueCents)} vencido` : undefined}
+          />
+          <Card
+            label="A pagar"
+            value={brl(overview.payableCents)}
+            hint={overview.payableOverdueCents ? `${brl(overview.payableOverdueCents)} vencido` : undefined}
+          />
+          <Card label="Entrou no mês" value={brl(overview.monthIncomeCents)} />
+          <Card label="Resultado do mês" value={brl(overview.monthNetCents)} />
+        </div>
 
-      <div className="mt-6 flex flex-wrap gap-1 border-b border-zinc-200 dark:border-white/10">
-        {TABS.filter((t) => t !== "DRE" || isOwner).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => {
-              setTab(t);
-              if ((t === "Fluxo de caixa" || t === "DRE") && !cf) loadReports();
-            }}
-            className={
-              tab === t
-                ? "border-b-2 border-accent-500 px-3 py-2 text-sm font-medium text-accent-700 dark:text-accent-300"
-                : "px-3 py-2 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-stone-400 dark:hover:text-white"
-            }
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-
-      {tab === "Lançamentos" ? (
-        <>
-          <form action={formAction} className="mt-5 grid gap-2 rounded-2xl border border-zinc-200 p-4 sm:grid-cols-2 dark:border-white/10">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-zinc-900/30">
+          <h2 className="mb-4 font-semibold text-zinc-900 dark:text-white">Novo Lançamento</h2>
+          <form action={formAction} className="grid gap-2 sm:grid-cols-2">
             <select
               name="direction"
               value={direction}
               onChange={(e) => setDirection(e.target.value as "INCOME" | "EXPENSE")}
-              className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white"
+              className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-950 dark:text-white"
             >
               <option value="EXPENSE">Despesa</option>
               <option value="INCOME">Receita</option>
             </select>
-            <select name="categoryId" className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white">
+            <select name="categoryId" className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-950 dark:text-white">
               <option value="">Sem categoria</option>
               {categories
                 .filter((c) => c.direction === direction && !c.isArchived)
@@ -202,37 +183,53 @@ export function FinanceView({
                   </option>
                 ))}
             </select>
-            <input name="description" placeholder="Descrição" required maxLength={200} className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white" />
-            <input name="counterparty" placeholder="Fornecedor / cliente (opcional)" maxLength={200} className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white" />
-            <MoneyInput name="amount" placeholder="Valor (R$)" aria-label="Valor (R$)" required className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white" />
-            <input name="dueDate" type="date" required defaultValue={DateTime.now().toISODate()!} className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-900 dark:text-white" />
+            <input name="description" placeholder="Descrição" required maxLength={200} className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-950 dark:text-white sm:col-span-2" />
+            <input name="counterparty" placeholder="Fornecedor / cliente (opcional)" maxLength={200} className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-950 dark:text-white sm:col-span-2" />
+            <MoneyInput name="amount" placeholder="Valor (R$)" aria-label="Valor (R$)" required className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-950 dark:text-white" />
+            <input name="dueDate" type="date" required defaultValue={DateTime.now().toISODate()!} className="rounded-lg border border-zinc-300 px-2 py-2 text-sm dark:border-white/15 dark:bg-zinc-950 dark:text-white" />
             <label className="flex items-center gap-2 text-sm text-zinc-600 sm:col-span-2 dark:text-stone-300">
               <input type="checkbox" name="paidNow" /> Já quitado
             </label>
-            <p className="-mt-1 text-xs text-zinc-400 sm:col-span-2 dark:text-stone-500">
-              Despesa é dinheiro que sai; Receita é dinheiro que entra fora das comandas. A data é o
-              vencimento. Marque “Já quitado” se já foi paga ou recebida; senão fica pendente em A pagar / A receber.
-            </p>
             {state.error ? (
               <p className="text-sm text-red-600 sm:col-span-2 dark:text-red-400">{state.error}</p>
             ) : null}
             <button
               type="submit"
               disabled={pending}
-              className="w-fit rounded-full bg-accent-500 px-5 py-2 text-sm font-semibold text-white hover:bg-accent-600 disabled:opacity-50 sm:col-span-2"
+              className="mt-2 w-full rounded-full bg-accent-500 px-5 py-2 text-sm font-semibold text-white hover:bg-accent-600 disabled:opacity-50 sm:col-span-2"
             >
               {pending ? "Salvando..." : "Lançar"}
             </button>
           </form>
-          <EntryList items={entries} />
-        </>
+        </div>
+      </div>
+
+      <div className="flex min-w-0 flex-col lg:col-span-7 xl:col-span-8">
+        <div className="flex flex-wrap gap-1 border-b border-zinc-200 dark:border-white/10">
+          {TABS.filter((t) => t !== "DRE" || isOwner).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => {
+                setTab(t);
+                if ((t === "Fluxo de caixa" || t === "DRE") && !cf) loadReports();
+              }}
+              className={
+                tab === t
+                  ? "border-b-2 border-accent-500 px-3 py-2 text-sm font-medium text-accent-700 dark:text-accent-300"
+                  : "px-3 py-2 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-stone-400 dark:hover:text-white"
+              }
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+
+      {tab === "Lançamentos" ? (
+        <EntryList items={entries} />
       ) : null}
 
-      {tab === "A pagar" ? (
-        <div>
-          <EntryList items={payables} />
-        </div>
-      ) : null}
+      {tab === "A pagar" ? <EntryList items={payables} /> : null}
       {tab === "A receber" ? <EntryList items={receivables} /> : null}
 
       {tab === "Fluxo de caixa" || tab === "DRE" ? (
@@ -312,6 +309,7 @@ export function FinanceView({
           );
         }}
       />
+      </div>
     </div>
   );
 }

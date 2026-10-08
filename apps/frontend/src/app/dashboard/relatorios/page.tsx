@@ -64,7 +64,6 @@ export default async function ReportsPage(props: PageProps) {
             <Card
               label="Faturamento Total"
               value={brl(report.totalRevenueCents)}
-              tone="positive"
             />
             <Card
               label="Ticket Médio"
