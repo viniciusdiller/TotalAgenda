@@ -80,8 +80,8 @@ export function ProductsManager({ products, children }: { products: AdminProduct
   const [confirmingDeactivate, setConfirmingDeactivate] = useState<AdminProduct | null>(null);
 
   return (
-    <div className="mt-6 grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
-      <div className="flex flex-col gap-6 lg:col-span-5 xl:col-span-4">
+    <div className="mt-6 flex flex-col gap-8">
+      <div className="flex flex-col gap-6">
         {children}
 
         <div>
@@ -128,7 +128,7 @@ export function ProductsManager({ products, children }: { products: AdminProduct
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-col lg:col-span-7 xl:col-span-8">
+      <div className="flex min-w-0 flex-col">
         {products.length === 0 ? (
           <EmptyState
             icon={Package}

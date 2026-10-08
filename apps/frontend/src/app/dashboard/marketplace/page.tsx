@@ -23,8 +23,8 @@ export default async function MarketplacePage() {
         description="Apareça no portal de descoberta e modere as avaliações dos clientes."
       />
 
-      <div className="mt-6 grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
-        <div className="flex flex-col gap-6 lg:col-span-5 xl:col-span-4">
+      <div className="mt-6 flex flex-col gap-8">
+        <div className="flex flex-col gap-6">
           <HowItWorks>
             <p>
               O marketplace (<code>/descobrir</code>) é um portal público onde pessoas
@@ -44,7 +44,7 @@ export default async function MarketplacePage() {
           </section>
         </div>
 
-        <div className="flex min-w-0 flex-col lg:col-span-7 xl:col-span-8">
+        <div className="flex min-w-0 flex-col">
           <section>
             <h2 className="mb-4 text-sm font-semibold text-zinc-900 dark:text-white">Avaliações</h2>
             <ReviewsModeration reviews={reviews} />

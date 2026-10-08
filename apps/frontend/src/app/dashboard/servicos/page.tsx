@@ -29,8 +29,8 @@ export default async function ServicesPage() {
         description="Depois de cadastrar, vincule cada serviço aos profissionais que o realizam."
       />
 
-      <div className="mt-6 grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
-        <div className="flex flex-col gap-6 lg:col-span-5 xl:col-span-4">
+      <div className="mt-6 flex flex-col gap-8">
+        <div className="flex flex-col gap-6">
           <HowItWorks>
             <p>
               Serviços são o que o cliente <strong>agenda por horário</strong> (corte, barba,
@@ -51,7 +51,7 @@ export default async function ServicesPage() {
           ) : null}
         </div>
 
-        <div className="flex min-w-0 flex-col lg:col-span-7 xl:col-span-8">
+        <div className="flex min-w-0 flex-col">
           {services.length === 0 ? (
             <EmptyState
               icon={Scissors}

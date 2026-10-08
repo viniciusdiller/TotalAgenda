@@ -26,8 +26,8 @@ export default async function ComandasPage() {
         action={<OpenTicketButton />}
       />
 
-      <div className="mt-6 grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
-        <div className="flex flex-col gap-6 lg:col-span-5 xl:col-span-4">
+      <div className="mt-6 flex flex-col gap-8">
+        <div className="flex flex-col gap-6">
           <HowItWorks>
             <p>
               A <strong>comanda</strong> é a conta de um atendimento, como a ficha de consumo do
@@ -48,7 +48,7 @@ export default async function ComandasPage() {
           </HowItWorks>
         </div>
 
-        <div className="flex min-w-0 flex-col lg:col-span-7 xl:col-span-8">
+        <div className="flex min-w-0 flex-col">
           {tickets.length === 0 ? (
             <EmptyState icon={Receipt} title="Nenhuma comanda aberta" />
           ) : (

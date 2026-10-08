@@ -20,8 +20,8 @@ export default async function CaixaPage() {
         title="Caixa"
         description="Abertura com fundo de troco, sangria/suprimento e fechamento com conferência."
       />
-      <div className="mt-6 grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
-        <div className="flex flex-col gap-6 lg:col-span-5 xl:col-span-4">
+      <div className="mt-6 flex flex-col gap-8">
+        <div className="flex flex-col gap-6">
           <HowItWorks>
             <p>
               O caixa controla o <strong>dinheiro físico</strong> da gaveta no dia. Só pagamentos
@@ -35,7 +35,7 @@ export default async function CaixaPage() {
             <p>Fechar o caixa não tem volta: depois não dá para reabrir nem editar os lançamentos.</p>
           </HowItWorks>
         </div>
-        <div className="flex min-w-0 flex-col lg:col-span-7 xl:col-span-8">
+        <div className="flex min-w-0 flex-col">
           <CaixaView summary={summary} />
         </div>
       </div>
