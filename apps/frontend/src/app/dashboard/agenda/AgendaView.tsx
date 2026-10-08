@@ -201,18 +201,7 @@ export function AgendaView({
             ) : null}
           </div>
 
-          <HowItWorks>
-            <p>
-              A agenda mostra o dia, com <strong>uma coluna por profissional</strong>. A faixa mais
-              clara de cada coluna é o horário de trabalho dele.
-            </p>
-            <ul className="list-disc space-y-1 pl-5">
-              <li><strong>Clique num horário livre</strong> para marcar um atendimento (o horário é arredondado de 15 em 15 minutos).</li>
-              <li><strong>Clique num atendimento</strong> para ver os detalhes, confirmar, marcar falta, remarcar, cancelar ou abrir a comanda.</li>
-              <li>A cor do bloco é o status; a legenda está logo abaixo.</li>
-              <li>O sistema impede dois atendimentos no mesmo profissional e horário.</li>
-            </ul>
-          </HowItWorks>
+
 
           {canManage ? (
             <button
