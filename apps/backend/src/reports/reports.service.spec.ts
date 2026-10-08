@@ -55,8 +55,8 @@ describe('ReportsService', () => {
 
     it('should correctly aggregate services and products from different tickets', async () => {
       jest.spyOn(prisma.ticket, 'findMany').mockResolvedValue([
-        { id: 'ticket-1' },
-        { id: 'ticket-2' },
+        { id: 'ticket-1', discountCents: 0, items: [] },
+        { id: 'ticket-2', discountCents: 0, items: [] },
       ] as any);
 
       jest.spyOn(prisma.ticketItem, 'findMany').mockResolvedValue([
@@ -69,6 +69,9 @@ describe('ReportsService', () => {
       const result = await service.getGeneralBalance('tenant-1', new Date(), new Date());
 
       expect(result).toEqual({
+        totalRevenueCents: 0,
+        totalTickets: 2,
+        averageTicketCents: 0,
         totalServices: 4,
         mostRequestedService: { name: 'Corte', count: 3 },
         totalProducts: 3,
